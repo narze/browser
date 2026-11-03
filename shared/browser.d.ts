@@ -14,6 +14,8 @@ export interface BrowserSettings {
   showShortcuts: boolean;
 }
 export interface BrowserState {
+  split: { tabIds: [number, number]; ratio: number } | null;
+  splitResizing: boolean;
   settings: BrowserSettings;
   settingsOpen: boolean;
   tabLayout: TabLayout;
@@ -22,6 +24,10 @@ export interface BrowserState {
   platform: string;
 }
 export interface BrowserApi {
+  toggleSplit(): Promise<void>;
+  setSplitTab(side: number, id: number): Promise<void>;
+  resizeSplit(ratio: number): Promise<void>;
+  setSplitResizing(resizing: boolean): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
   openSettings(): Promise<void>;

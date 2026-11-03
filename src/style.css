@@ -796,3 +796,142 @@ kbd {
     padding: 12px 6px;
   }
 }
+
+.split-workspace {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+}
+.split-pane {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f5f7fa;
+}
+.pane-toolbar {
+  height: 36px;
+  flex: 0 0 36px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  background: #e9edf4;
+  border-bottom: 2px solid transparent;
+}
+.split-pane.focused .pane-toolbar {
+  background: #edf3ff;
+  border-bottom-color: #7396d4;
+}
+.pane-focus {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  border: 0;
+  background: transparent;
+  padding: 5px 2px;
+  color: #728198;
+  font-size: 11px;
+}
+.pane-focus span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #bac5d5;
+}
+.split-pane.focused .pane-focus span {
+  background: #537abf;
+}
+.pane-toolbar select {
+  min-width: 0;
+  width: 100%;
+  color: #46566e;
+  font: inherit;
+  font-size: 11px;
+  border: 0;
+  background: transparent;
+  text-overflow: ellipsis;
+}
+.pane-toolbar select:focus-visible {
+  outline: 2px solid #6388d9;
+}
+.pane-content {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+.split-divider {
+  position: relative;
+  background: #dfe5ef;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.split-divider::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: calc(50% - 18px);
+  height: 36px;
+  width: 2px;
+  border-radius: 2px;
+  background: #94a6c3;
+}
+.split-divider:hover,
+.split-divider.dragging,
+.split-divider:focus-visible {
+  background: #a9bfe5;
+  outline: none;
+}
+.pane-placeholder {
+  max-width: 420px;
+  margin: 70px auto;
+  padding: 24px;
+  color: #8492a8;
+}
+.pane-placeholder h2 {
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.5px;
+  font-weight: 500;
+  color: #46566e;
+  overflow-wrap: anywhere;
+}
+.pane-placeholder p {
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.pane-search {
+  display: flex;
+  gap: 6px;
+  margin-top: 24px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #d5dfed;
+  border-radius: 8px;
+}
+.pane-search:focus-within {
+  border-color: #7396d4;
+}
+.pane-search input {
+  min-width: 0;
+  width: 100%;
+  padding: 4px;
+  font-size: 12px;
+  border: 0;
+  outline: none;
+}
+.pane-search button {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  border: 0;
+  background: #edf3ff;
+  color: #537abf;
+  border-radius: 5px;
+  width: 28px;
+}

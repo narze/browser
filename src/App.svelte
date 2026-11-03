@@ -2,10 +2,11 @@
   import { onMount, tick } from 'svelte';
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
+  import SplitView from './SplitView.svelte';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top', settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true } });
+  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true } });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let address = $state('');
   let query = $state('');
@@ -131,6 +132,7 @@
         <span class="address-shortcut">{modifier}L</span>
       </form>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
+      <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title="Settings ({modifier},)" disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
     </div>
     {#if current?.loading}<div class="loading-bar"></div>{/if}
@@ -139,6 +141,8 @@
   <main>
     {#if browserState.settingsOpen && api}
       <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
+    {:else if browserState.split && api}
+      <SplitView state={browserState} {api} />
     {:else if current?.error}
       <section class="error-page">
         <span class="error-icon"><Icon name="globe" size={38} /></span>

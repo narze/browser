@@ -3,6 +3,10 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 /** @type {import('../shared/browser').BrowserApi} */
 const browser = {
+  toggleSplit: () => ipcRenderer.invoke("browser:toggle-split"),
+  setSplitTab: (side, id) => ipcRenderer.invoke("browser:set-split-tab", side, id),
+  resizeSplit: (ratio) => ipcRenderer.invoke("browser:resize-split", ratio),
+  setSplitResizing: (resizing) => ipcRenderer.invoke("browser:set-split-resizing", resizing),
   updateSettings: (settings) => ipcRenderer.invoke("browser:update-settings", settings),
   openSettings: () => ipcRenderer.invoke("browser:open-settings"),
   closeSettings: () => ipcRenderer.invoke("browser:close-settings"),

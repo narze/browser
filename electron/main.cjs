@@ -14,11 +14,15 @@ let window;
 let tabs = [];
 let activeId;
 let nextId = 1;
+let split = null;
+let splitResizing = false;
 
 const activeTab = () => tabs.find((tab) => tab.id === activeId);
 
 function getState() {
   return {
+    split,
+    splitResizing,
     tabLayout: settings.tabLayout,
     settings,
     settingsOpen,
@@ -44,14 +48,28 @@ function layout() {
   if (!window || window.isDestroyed()) return;
   const [width, height] = window.getContentSize();
   const sidebarWidth = settings.tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
+  const contentWidth = width - sidebarWidth;
+  const originX = settings.tabLayout === "left" ? sidebarWidth : 0;
+  const leftWidth = split ? Math.round((contentWidth - 8) * split.ratio) : contentWidth;
   for (const tab of tabs) {
+    const side = split ? split.tabIds.indexOf(tab.id) : -1;
+    const inSplit = side !== -1;
     tab.view.setBounds({
-      x: settings.tabLayout === "left" ? sidebarWidth : 0,
-      y: CHROME_HEIGHT,
-      width: Math.max(1, width - sidebarWidth),
-      height: Math.max(1, height - CHROME_HEIGHT),
+      x: originX + (side === 1 ? leftWidth + 8 : 0),
+      y: CHROME_HEIGHT + (inSplit ? 36 : 0),
+      width: Math.max(
+        1,
+        inSplit ? (side === 0 ? leftWidth : contentWidth - leftWidth - 8) : contentWidth,
+      ),
+      height: Math.max(1, height - CHROME_HEIGHT - (inSplit ? 36 : 0)),
     });
-    tab.view.setVisible(!settingsOpen && tab.id === activeId && !!tab.url && !tab.error);
+    tab.view.setVisible(
+      !settingsOpen &&
+        !splitResizing &&
+        (split ? inSplit : tab.id === activeId) &&
+        !!tab.url &&
+        !tab.error,
+    );
   }
 }
 
@@ -63,6 +81,10 @@ function focusAddress() {
 
 function selectTab(id) {
   if (!tabs.some((tab) => tab.id === id)) return;
+  if (split && !split.tabIds.includes(id)) {
+    split.tabIds[split.tabIds.indexOf(activeId) === 1 ? 1 : 0] = id;
+  }
+  splitResizing = false;
   settingsOpen = false;
   activeId = id;
   layout();
@@ -105,6 +127,18 @@ function newTab(url = "") {
   tabs.push(tab);
   window.contentView.addChildView(view);
   const contents = view.webContents;
+  contents.on("focus", () => {
+    if (
+      split &&
+      split.tabIds.includes(tab.id) &&
+      !settingsOpen &&
+      !splitResizing &&
+      activeId !== tab.id
+    ) {
+      activeId = tab.id;
+      publish();
+    }
+  });
   let lastPopupAt = -Infinity;
   contents.on("did-start-loading", () => {
     if (tab.url) tab.loading = true;
@@ -178,12 +212,34 @@ function newTab(url = "") {
 function closeTab(id) {
   const index = tabs.findIndex((tab) => tab.id === id);
   if (index < 0) return;
+  if (split?.tabIds.includes(id)) {
+    activeId = split.tabIds.find((tabId) => tabId !== id);
+    split = null;
+    splitResizing = false;
+  }
   const [tab] = tabs.splice(index, 1);
   window.contentView.removeChildView(tab.view);
   tab.view.webContents.close({ waitForBeforeUnload: false });
   if (!tabs.length) newTab();
   else if (activeId === id) selectTab(tabs[Math.min(index, tabs.length - 1)].id);
-  else publish();
+  else {
+    layout();
+    publish();
+  }
+}
+
+function toggleSplit() {
+  if (split) {
+    split = null;
+    splitResizing = false;
+    selectTab(activeId);
+    return;
+  }
+  const originalId = activeId;
+  const other = tabs.find((tab) => tab.id !== originalId);
+  const otherId = other?.id ?? newTab();
+  split = { tabIds: [originalId, otherId], ratio: 0.5 };
+  selectTab(other ? originalId : otherId);
 }
 
 function cycleTab(direction) {
@@ -205,6 +261,7 @@ function history(direction) {
 }
 
 function showSettings(open) {
+  splitResizing = false;
   settingsOpen = open;
   layout();
   publish();
@@ -225,6 +282,30 @@ function updateSettings(patch) {
 
 function installIpc() {
   const handlers = {
+    "toggle-split": toggleSplit,
+    "set-split-tab": (side, id) => {
+      if (!split || ![0, 1].includes(side) || !isTabId(id) || !tabs.some((tab) => tab.id === id))
+        throw new Error("Invalid split tab.");
+      const opposite = 1 - side;
+      if (split.tabIds[opposite] === id) split.tabIds[opposite] = split.tabIds[side];
+      split.tabIds[side] = id;
+      selectTab(id);
+    },
+    "resize-split": (ratio) => {
+      if (typeof ratio !== "number" || !Number.isFinite(ratio))
+        throw new Error("Invalid split ratio.");
+      if (split) {
+        split.ratio = Math.max(0.25, Math.min(0.75, ratio));
+        layout();
+        publish();
+      }
+    },
+    "set-split-resizing": (resizing) => {
+      if (typeof resizing !== "boolean") throw new Error("Invalid resize state.");
+      splitResizing = !!split && !settingsOpen && resizing;
+      layout();
+      publish();
+    },
     "open-settings": () => showSettings(true),
     "close-settings": () => showSettings(false),
     "update-settings": updateSettings,
@@ -272,6 +353,8 @@ function installIpc() {
 
 function createWindow() {
   settingsOpen = false;
+  split = null;
+  splitResizing = false;
   window = new BrowserWindow({
     width: 1280,
     height: 850,
