@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import Icon from './Icon.svelte';
-  import type { BrowserState } from '../shared/browser';
+  import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '' });
+  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top' });
+  let vertical = $derived(browserState.tabLayout !== 'top');
   let address = $state('');
   let query = $state('');
   let inputError = $state('');
@@ -19,6 +20,7 @@
   ];
 
   function update(next: BrowserState) {
+    const revealTab = next.activeId !== browserState.activeId || next.tabLayout !== browserState.tabLayout;
     const nextTab = next.tabs.find((tab) => tab.id === next.activeId);
     if (next.activeId !== browserState.activeId || nextTab?.url !== current?.url) {
       address = nextTab?.url || '';
@@ -26,6 +28,7 @@
       query = '';
     }
     browserState = next;
+    if (revealTab) void tick().then(() => document.getElementById(`tab-${next.activeId}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' }));
   }
 
   async function navigate(value: string) {
@@ -40,11 +43,16 @@
     addressInput?.select();
   }
 
-  function tabKey(event: KeyboardEvent, index: number) {
-    if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+  async function tabKey(event: KeyboardEvent, index: number) {
+    const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
+    const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
+    if (event.key === previousKey || event.key === nextKey) {
       event.preventDefault();
-      const direction = event.key === 'ArrowRight' ? 1 : -1;
-      void api?.selectTab(browserState.tabs[(index + direction + browserState.tabs.length) % browserState.tabs.length].id);
+      const direction = event.key === nextKey ? 1 : -1;
+      const id = browserState.tabs[(index + direction + browserState.tabs.length) % browserState.tabs.length].id;
+      await api?.selectTab(id);
+      await tick();
+      document.getElementById(`tab-${id}`)?.focus();
     }
   }
 
@@ -78,13 +86,14 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'}>
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'}>
+  {#if vertical}<div class="tab-rail" aria-hidden="true"></div>{/if}
   <header class="chrome">
     <div class="tab-row">
-      <div class="tabs" role="tablist" aria-label="Browser tabs">
+      <div class="tabs" role="tablist" aria-label="Browser tabs" aria-orientation={vertical ? 'vertical' : 'horizontal'}>
         {#each browserState.tabs as tab, index (tab.id)}
           <div class="tab" class:active={tab.id === browserState.activeId}>
-            <button class="tab-select" role="tab" aria-label={tab.title} aria-selected={tab.id === browserState.activeId}
+            <button id={`tab-${tab.id}`} class="tab-select" role="tab" aria-label={tab.title} aria-selected={tab.id === browserState.activeId}
               tabindex={tab.id === browserState.activeId ? 0 : -1} onkeydown={(event) => tabKey(event, index)}
               onclick={() => api?.selectTab(tab.id)} onauxclick={(event) => { if (event.button === 1) void api?.closeTab(tab.id); }}>
               {#if tab.loading}<span class="spinner" aria-label="Loading"></span>
@@ -95,8 +104,16 @@
           </div>
         {/each}
       </div>
-      <button class="icon-button new-tab" aria-label="New tab" title="New tab ({modifier}T)" disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} /></button>
+      <button class="icon-button new-tab" aria-label="New tab" title="New tab ({modifier}T)" disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span><kbd>{modifier}T</kbd>{/if}</button>
       <div class="drag-space"></div>
+      <label class="layout-control">
+        <span>Tabs</span>
+        <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={(event) => api?.setTabLayout(event.currentTarget.value as TabLayout)}>
+          <option value="top">Top</option>
+          <option value="left">Left</option>
+          <option value="right">Right</option>
+        </select>
+      </label>
       <span class="window-name">Browser</span>
     </div>
     <div class="toolbar">

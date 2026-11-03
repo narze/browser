@@ -14,6 +14,7 @@ pnpm dev
 Features:
 
 - Create, switch, and close tabs, including links that open a new tab.
+- Use the **Tabs** selector in the title bar to place tabs at the top, left, or right. Vertical tabs support Up/Down arrow navigation; the choice lasts for the current app session.
 - Enter an HTTP(S) address or search DuckDuckGo from either search field.
 - Go back, forward, reload, stop, or return to the new-tab page.
 - Each tab has a separate `WebContentsView`. Background pages keep their state.

@@ -61,6 +61,43 @@ test("real tabs, history, popups, isolation, and close-last-tab behavior", async
       return page.executeJavaScript('document.querySelector("a").click()', true);
     });
     await expect(chrome.getByRole("tab", { name: "Second page" })).toBeVisible();
+    // Switching the tab rail must resize native web content without reloading it.
+    const pageIdentity = await app.evaluate(({ webContents }) => {
+      const page = webContents.getAllWebContents().find((c) => c.getURL().endsWith("/second"))!;
+      return page.executeJavaScript('window.layoutMarker = "kept"');
+    });
+    expect(pageIdentity).toBe("kept");
+    for (const position of ["left", "right", "top"]) {
+      await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption(position);
+      await expect(chrome.getByRole("tablist")).toHaveAttribute(
+        "aria-orientation",
+        position === "top" ? "horizontal" : "vertical",
+      );
+      await app.evaluate(({ BrowserWindow }) => {
+        BrowserWindow.getAllWindows()[0].setContentSize(900, 680);
+      });
+      await expect.poll(() => chrome.evaluate(() => innerWidth)).toBe(900);
+      const main = await chrome.locator("main").boundingBox();
+      const nativeBounds = await app.evaluate(({ BrowserWindow }) => {
+        const win = BrowserWindow.getAllWindows()[0];
+        return win.contentView.children.at(-1)!.getBounds();
+      });
+      expect(nativeBounds).toEqual(main);
+      const marker = await app.evaluate(({ webContents }) => {
+        const page = webContents.getAllWebContents().find((c) => c.getURL().endsWith("/second"))!;
+        return page.executeJavaScript("window.layoutMarker");
+      });
+      expect(marker).toBe("kept");
+      await chrome.getByRole("button", { name: "New tab", exact: true }).click();
+      await expect(chrome.getByRole("tab")).toHaveCount(2);
+      await expect(chrome.getByRole("heading", { name: "Where to next?" })).toBeVisible();
+      if (position !== "top")
+        await chrome.screenshot({ path: test.info().outputPath(`tabs-${position}.png`) });
+      await chrome.getByRole("tab", { name: "Second page" }).click();
+      await expect(address).toHaveValue(`http://127.0.0.1:${port}/second`);
+      await chrome.getByRole("button", { name: "Close tab: New tab", exact: true }).click();
+      await expect(chrome.getByRole("tab")).toHaveCount(1);
+    }
     await expect
       .poll(() => chrome.evaluate(async () => (await window.browser!.getState()).tabs[0].loading))
       .toBe(false);

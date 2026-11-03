@@ -7,12 +7,15 @@ export interface BrowserTab {
   canGoBack: boolean;
   canGoForward: boolean;
 }
+export type TabLayout = "top" | "left" | "right";
 export interface BrowserState {
+  tabLayout: TabLayout;
   tabs: BrowserTab[];
   activeId: number;
   platform: string;
 }
 export interface BrowserApi {
+  setTabLayout(layout: TabLayout): Promise<void>;
   getState(): Promise<BrowserState>;
   newTab(): Promise<number>;
   selectTab(id: number): Promise<void>;

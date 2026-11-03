@@ -5,6 +5,8 @@ const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
 
 // Prototype: tabs are in memory. Remote pages never receive the chrome preload.
 const CHROME_HEIGHT = 100;
+const SIDEBAR_WIDTH = 220;
+let tabLayout = "top";
 let window;
 let tabs = [];
 let activeId;
@@ -14,6 +16,7 @@ const activeTab = () => tabs.find((tab) => tab.id === activeId);
 
 function getState() {
   return {
+    tabLayout,
     activeId,
     platform: process.platform,
     tabs: tabs.map(({ id, url, title, loading, error, view }) => ({
@@ -35,11 +38,12 @@ function publish() {
 function layout() {
   if (!window || window.isDestroyed()) return;
   const [width, height] = window.getContentSize();
+  const sidebarWidth = tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
   for (const tab of tabs) {
     tab.view.setBounds({
-      x: 0,
+      x: tabLayout === "left" ? sidebarWidth : 0,
       y: CHROME_HEIGHT,
-      width,
+      width: Math.max(1, width - sidebarWidth),
       height: Math.max(1, height - CHROME_HEIGHT),
     });
     tab.view.setVisible(tab.id === activeId && !!tab.url && !tab.error);
@@ -194,6 +198,12 @@ function history(direction) {
 
 function installIpc() {
   const handlers = {
+    "set-tab-layout": (value) => {
+      if (!["top", "left", "right"].includes(value)) throw new Error("Invalid tab layout.");
+      tabLayout = value;
+      layout();
+      publish();
+    },
     state: getState,
     "new-tab": () => newTab(),
     "select-tab": (id) => {
