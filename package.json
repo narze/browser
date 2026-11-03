@@ -1,0 +1,34 @@
+{
+  "name": "browser-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/start.mjs --dev",
+    "dev:ui": "vp dev",
+    "build": "vp build",
+    "start": "node scripts/start.mjs",
+    "check": "vp check && svelte-check --tsconfig ./tsconfig.json",
+    "fmt": "vp fmt",
+    "test": "vp test run",
+    "test:e2e": "pnpm build && playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.1",
+    "@types/node": "^26.0.0",
+    "electron": "^45.2.1",
+    "svelte": "^5.57.3",
+    "svelte-check": "^4.4.0",
+    "typescript": "^6.0.2",
+    "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
+    "vite-plus": "1.4.0"
+  },
+  "packageManager": "pnpm@10.17.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron"
+    ]
+  }
+}
