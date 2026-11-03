@@ -21,7 +21,7 @@ Features:
 - Go back, forward, reload, stop, or return to the new-tab page.
 - Each tab has a separate `WebContentsView`. Background pages keep their state.
 - Show navigation errors with a retry action.
-- Click **Split tabs** in the toolbar to show two tabs side by side. Choose tabs from each pane's dropdown, click a page to control it with the address bar, and drag the divider to resize (or focus it and use Left/Right arrow keys). With one tab open, splitting creates a new tab for the second pane. Selecting a third tab replaces the focused pane. **Exit split view** keeps the focused page visible; closing either split tab expands the remaining page. Splits last for the current app session.
+- Click **Split tabs** in the toolbar to show two tabs side by side. The pair shares one tab slot, with a clickable segment for each page in left-to-right pane order. In a vertical tab rail, Left/Right arrow keys switch between the segments. Choose tabs from each pane's dropdown, click a page to control it with the address bar, and drag the divider to resize (or focus it and use Left/Right arrow keys). With one tab open, splitting creates a new tab for the second pane. Selecting a third tab replaces the focused pane. **Exit split view** keeps the focused page visible; closing either split tab expands the remaining page. Splits last for the current app session.
 
 | Shortcut                  | Action                              |
 | ------------------------- | ----------------------------------- |

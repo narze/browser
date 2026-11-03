@@ -3,12 +3,28 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
-  import type { BrowserState, TabLayout } from '../shared/browser';
+  import type { BrowserState, BrowserTab, TabLayout } from '../shared/browser';
 
   const api = window.browser;
   let browserState = $state<BrowserState>({ resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
+  let tabRows = $derived.by(() => {
+    const rows: BrowserTab[][] = [];
+    const splitIds: number[] = browserState.split?.tabIds ?? [];
+    const pair = splitIds.map((id) => browserState.tabs.find((tab) => tab.id === id)).filter((tab) => tab !== undefined);
+    let grouped = false;
+    for (const tab of browserState.tabs) {
+      if (!splitIds.includes(tab.id)) rows.push([tab]);
+      else if (!grouped) {
+        rows.push(pair);
+        grouped = true;
+      }
+    }
+    return rows;
+  });
+  let visibleTabs = $derived(tabRows.flat());
+
   let address = $state('');
   let query = $state('');
   let inputError = $state('');
@@ -46,13 +62,19 @@
     addressInput?.select();
   }
 
-  async function tabKey(event: KeyboardEvent, index: number) {
+  async function tabKey(event: KeyboardEvent, tabId: number) {
     const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
     const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
-    if (event.key === previousKey || event.key === nextKey) {
-      event.preventDefault();
+    let id: number | undefined;
+    if (vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId)) {
+      id = browserState.split.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
+    } else if (event.key === previousKey || event.key === nextKey) {
+      const index = visibleTabs.findIndex((tab) => tab.id === tabId);
       const direction = event.key === nextKey ? 1 : -1;
-      const id = browserState.tabs[(index + direction + browserState.tabs.length) % browserState.tabs.length].id;
+      id = visibleTabs[(index + direction + visibleTabs.length) % visibleTabs.length].id;
+    }
+    if (id !== undefined) {
+      event.preventDefault();
       await api?.selectTab(id);
       await tick();
       document.getElementById(`tab-${id}`)?.focus();
@@ -95,16 +117,20 @@
   <header class="chrome">
     <div class="tab-row">
       <div class="tabs" role="tablist" aria-label="Browser tabs" aria-orientation={vertical ? 'vertical' : 'horizontal'}>
-        {#each browserState.tabs as tab, index (tab.id)}
-          <div class="tab" class:active={tab.id === browserState.activeId}>
-            <button id={`tab-${tab.id}`} class="tab-select" role="tab" aria-label={tab.title} aria-selected={tab.id === browserState.activeId}
-              tabindex={tab.id === browserState.activeId ? 0 : -1} onkeydown={(event) => tabKey(event, index)}
-              onclick={() => api?.selectTab(tab.id)} onauxclick={(event) => { if (event.button === 1) void api?.closeTab(tab.id); }}>
-              {#if tab.loading}<span class="spinner" aria-label="Loading"></span>
-              {:else}<span class="tab-icon"><Icon name={tab.url ? 'globe' : 'plus'} size={14} /></span>{/if}
-              <span class="tab-title">{tab.title}</span>
-            </button>
-            <button class="close-tab" aria-label={`Close tab: ${tab.title}`} title="Close tab ({modifier}W)" onclick={() => api?.closeTab(tab.id)}><Icon name="close" size={13} /></button>
+        {#each tabRows as row (row.length > 1 ? 'split' : row[0].id)}
+          <div class="tab-entry" class:split-tab-group={row.length > 1} role={row.length > 1 ? 'group' : undefined} aria-label={row.length > 1 ? 'Split tabs' : undefined}>
+            {#each row as tab (tab.id)}
+              <div class="tab" class:active={tab.id === browserState.activeId}>
+                <button id={`tab-${tab.id}`} class="tab-select" role="tab" aria-label={tab.title} title={tab.title} aria-selected={tab.id === browserState.activeId}
+                  tabindex={tab.id === browserState.activeId ? 0 : -1} onkeydown={(event) => tabKey(event, tab.id)}
+                  onclick={() => api?.selectTab(tab.id)} onauxclick={(event) => { if (event.button === 1) void api?.closeTab(tab.id); }}>
+                  {#if tab.loading}<span class="spinner" aria-label="Loading"></span>
+                  {:else}<span class="tab-icon"><Icon name={tab.url ? 'globe' : 'plus'} size={14} /></span>{/if}
+                  <span class="tab-title">{tab.title}</span>
+                </button>
+                <button class="close-tab" aria-label={`Close tab: ${tab.title}`} title="Close tab ({modifier}W)" onclick={() => api?.closeTab(tab.id)}><Icon name="close" size={13} /></button>
+              </div>
+            {/each}
           </div>
         {/each}
       </div>

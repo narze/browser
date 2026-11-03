@@ -28,6 +28,11 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await expect(chrome.getByRole("tab", { name: "Page /a" })).toBeVisible();
     await chrome.getByRole("button", { name: "Split tabs", exact: true }).click();
     await expect(chrome.getByRole("tab")).toHaveCount(2);
+    const group = chrome.getByRole("group", { name: "Split tabs", exact: true });
+    await expect(group).toBeVisible();
+    await expect(group.getByRole("tab")).toHaveCount(2);
+    await expect(chrome.locator(".tabs > .tab-entry")).toHaveCount(1);
+
     await expect(chrome.getByRole("textbox", { name: "Search right pane" })).toBeVisible();
     await chrome.screenshot({ path: test.info().outputPath("split-view.png") });
     await chrome.getByRole("textbox", { name: "Search right pane" }).fill(`${origin}/b`);
@@ -57,11 +62,18 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await expect
       .poll(async () => (await visibleViews())[0]?.width)
       .toBeGreaterThan(initial[0].width + 40);
+    await group.getByRole("tab", { name: "Page /b" }).click();
+    await expect(address).toHaveValue(`${origin}/b`);
+    await group.getByRole("tab", { name: "Page /a" }).click();
+    await expect(address).toHaveValue(`${origin}/a`);
     // A third tab replaces the focused pane; selecting the opposite tab swaps sides.
     await chrome.getByRole("button", { name: "New tab", exact: true }).click();
     await address.fill(`${origin}/c`);
     await address.press("Enter");
     await expect(chrome.getByRole("tab", { name: "Page /c" })).toBeVisible();
+    await expect(group.getByRole("tab")).toHaveText(["Page /c", "Page /b"]);
+    await expect(chrome.locator(".tabs > .tab-entry")).toHaveCount(2);
+
     await chrome
       .getByRole("combobox", { name: "Left pane tab" })
       .selectOption({ label: "Page /a" });
@@ -71,6 +83,8 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await expect(
       chrome.getByRole("combobox", { name: "Left pane tab" }).locator("option:checked"),
     ).toHaveText("Page /b");
+    await expect(group.getByRole("tab")).toHaveText(["Page /b", "Page /a"]);
+
     await chrome
       .getByRole("combobox", { name: "Left pane tab" })
       .selectOption({ label: "Page /a" });
@@ -88,6 +102,21 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
       await expect.poll(async () => (await visibleViews()).length).toBe(2);
       const views = await visibleViews();
       expect(views[0].x + views[0].width + 8).toBe(views[1].x);
+      const firstTab = (await group.getByRole("tab").nth(0).boundingBox())!;
+      const secondTab = (await group.getByRole("tab").nth(1).boundingBox())!;
+      expect(firstTab.y).toBe(secondTab.y);
+      expect(firstTab.x + firstTab.width).toBeLessThanOrEqual(secondTab.x);
+      expect(Math.abs(firstTab.width - secondTab.width)).toBeLessThanOrEqual(1);
+      await expect(chrome.locator(".tabs > .tab-entry")).toHaveCount(1);
+      if (position === "left") {
+        await group.getByRole("tab", { name: "Page /a" }).focus();
+        await chrome.keyboard.press("ArrowRight");
+        await expect(address).toHaveValue(`${origin}/b`);
+        await expect(group.getByRole("tab", { name: "Page /b" })).toBeFocused();
+        await chrome.keyboard.press("ArrowLeft");
+        await expect(address).toHaveValue(`${origin}/a`);
+        await chrome.screenshot({ path: test.info().outputPath("grouped-split-tabs.png") });
+      }
     }
     expect(
       await app.evaluate(({ webContents }) =>
@@ -98,11 +127,16 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
       ),
     ).toBe(17);
     await chrome.getByRole("button", { name: "Exit split view" }).click();
+    await expect(group).toHaveCount(0);
+    await expect(chrome.locator(".tabs > .tab-entry")).toHaveCount(2);
+
     await expect.poll(async () => (await visibleViews()).length).toBe(1);
     await chrome.getByRole("button", { name: "Split tabs", exact: true }).click();
     await expect.poll(async () => (await visibleViews()).length).toBe(2);
     await chrome.getByRole("button", { name: "Close tab: Page /b" }).click();
     await expect(chrome.getByRole("button", { name: "Split tabs", exact: true })).toBeVisible();
+    await expect(group).toHaveCount(0);
+    await expect(chrome.locator(".tabs > .tab-entry")).toHaveCount(1);
     await expect(address).toHaveValue(`${origin}/a`);
     await expect.poll(async () => (await visibleViews()).length).toBe(1);
   } finally {
