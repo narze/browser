@@ -1,0 +1,72 @@
+import { afterEach, describe, expect, it } from "vite-plus/test";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createSettingsStore } from "../electron/settings.cjs";
+import { resolveAddress } from "../electron/navigation.cjs";
+
+const directories: string[] = [];
+function profile() {
+  const directory = mkdtempSync(join(tmpdir(), "browser-settings-"));
+  directories.push(directory);
+  return join(directory, "settings.json");
+}
+afterEach(() =>
+  directories.splice(0).forEach((directory) => rmSync(directory, { recursive: true, force: true })),
+);
+
+describe("browser preferences", () => {
+  it("persists changes and merges later changes without losing other preferences", () => {
+    const file = profile();
+    const store = createSettingsStore(file);
+    store.update({ tabLayout: "right", showShortcuts: false });
+    store.update({ searchEngine: "google" });
+    expect(createSettingsStore(file).get()).toEqual({
+      tabLayout: "right",
+      showShortcuts: false,
+      searchEngine: "google",
+    });
+  });
+  it("rejects invalid settings without changing memory or disk", () => {
+    const file = profile();
+    const store = createSettingsStore(file);
+    store.update({ tabLayout: "left" });
+    const saved = readFileSync(file, "utf8");
+    for (const patch of [
+      null,
+      [],
+      { tabLayout: "bottom" },
+      { searchEngine: "evil" },
+      { showShortcuts: "yes" },
+      { unknown: true },
+    ]) {
+      expect(() => store.update(patch)).toThrow();
+      expect(readFileSync(file, "utf8")).toBe(saved);
+      expect(store.get().tabLayout).toBe("left");
+    }
+  });
+  it("recovers defaults from corrupt files and preserves valid fields in older files", () => {
+    const file = profile();
+    writeFileSync(file, "{broken");
+    expect(createSettingsStore(file).get()).toEqual({
+      tabLayout: "top",
+      searchEngine: "duckduckgo",
+      showShortcuts: true,
+    });
+    writeFileSync(file, JSON.stringify({ tabLayout: "left", searchEngine: "unknown" }));
+    expect(createSettingsStore(file).get()).toEqual({
+      tabLayout: "left",
+      searchEngine: "duckduckgo",
+      showShortcuts: true,
+    });
+  });
+  it("uses the selected search engine while preserving direct addresses", () => {
+    expect(resolveAddress("hello world", "google")).toBe(
+      "https://www.google.com/search?q=hello%20world",
+    );
+    expect(resolveAddress("hello world", "bing")).toBe(
+      "https://www.bing.com/search?q=hello%20world",
+    );
+    expect(resolveAddress("example.com", "google")).toBe("https://example.com/");
+  });
+});

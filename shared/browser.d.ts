@@ -8,14 +8,24 @@ export interface BrowserTab {
   canGoForward: boolean;
 }
 export type TabLayout = "top" | "left" | "right";
+export interface BrowserSettings {
+  tabLayout: TabLayout;
+  searchEngine: "duckduckgo" | "google" | "bing";
+  showShortcuts: boolean;
+}
 export interface BrowserState {
+  settings: BrowserSettings;
+  settingsOpen: boolean;
   tabLayout: TabLayout;
   tabs: BrowserTab[];
   activeId: number;
   platform: string;
 }
 export interface BrowserApi {
-  setTabLayout(layout: TabLayout): Promise<void>;
+  setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
+  updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
+  openSettings(): Promise<void>;
+  closeSettings(): Promise<void>;
   getState(): Promise<BrowserState>;
   newTab(): Promise<number>;
   selectTab(id: number): Promise<void>;

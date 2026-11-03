@@ -2,6 +2,7 @@
   export let name: string;
   export let size = 18;
   const paths: Record<string, string> = {
+    settings: 'M4 7h16 M4 17h16 M8 4v6 M16 14v6',
     back: 'm14 6-6 6 6 6',
     forward: 'm10 6 6 6-6 6',
     reload: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 7l-2.3-2.3',

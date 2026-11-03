@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import Icon from './Icon.svelte';
+  import Settings from './Settings.svelte';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top' });
+  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top', settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true } });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let address = $state('');
   let query = $state('');
@@ -68,6 +69,7 @@
       if (browserState.tabs[index]) void api?.selectTab(browserState.tabs[index].id);
     }
     if (event.key === 'Escape') {
+      if (browserState.settingsOpen) { void api?.closeSettings(); return; }
       address = current?.url || '';
       inputError = '';
       addressInput.blur();
@@ -108,7 +110,7 @@
       <div class="drag-space"></div>
       <label class="layout-control">
         <span>Tabs</span>
-        <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={(event) => api?.setTabLayout(event.currentTarget.value as TabLayout)}>
+        <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={async (event) => { const result = await api?.setTabLayout(event.currentTarget.value as TabLayout); inputError = result?.error || ''; }}>
           <option value="top">Top</option>
           <option value="left">Left</option>
           <option value="right">Right</option>
@@ -129,12 +131,15 @@
         <span class="address-shortcut">{modifier}L</span>
       </form>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
+      <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title="Settings ({modifier},)" disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
     </div>
     {#if current?.loading}<div class="loading-bar"></div>{/if}
   </header>
 
   <main>
-    {#if current?.error}
+    {#if browserState.settingsOpen && api}
+      <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
+    {:else if current?.error}
       <section class="error-page">
         <span class="error-icon"><Icon name="globe" size={38} /></span>
         <h1>This page couldn’t load.</h1>
@@ -153,14 +158,14 @@
           <input bind:value={query} aria-label="Search the web" placeholder="Search the web or enter a URL" autocomplete="off" spellcheck="false" disabled={!api} />
           <button aria-label="Go" disabled={!api || !query.trim()}><Icon name="arrow" size={20} /></button>
         </form>
-        <div class="quick-links">
+        {#if browserState.settings.showShortcuts}<div class="quick-links">
           {#each shortcuts as shortcut}
             <button class="quick-link" disabled={!api} onclick={() => navigate(shortcut.url)}>
               <span class="quick-icon" style:color={shortcut.color}><Icon name={shortcut.icon} size={22} /></span>
               <span><strong>{shortcut.name}</strong><small>{shortcut.detail}</small></span>
             </button>
           {/each}
-        </div>
+        </div>{/if}
         {#if !api}<p class="desktop-notice">Run <code>pnpm dev</code> to open the Electron browser.</p>{/if}
       </section>
       <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore <span class="footer-shortcut">New tab <kbd>{modifier}T</kbd></span></footer>

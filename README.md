@@ -14,8 +14,9 @@ pnpm dev
 Features:
 
 - Create, switch, and close tabs, including links that open a new tab.
-- Use the **Tabs** selector in the title bar to place tabs at the top, left, or right. Vertical tabs support Up/Down arrow navigation; the choice lasts for the current app session.
-- Enter an HTTP(S) address or search DuckDuckGo from either search field.
+- Use the **Tabs** selector in the title bar to place tabs at the top, left, or right. Vertical tabs support Up/Down arrow navigation.
+- Open **Settings** from the toolbar or Cmd/Ctrl+, to choose tab placement, a search engine (DuckDuckGo, Google, or Bing), and whether new-tab shortcuts appear. Preferences save automatically in the app's local profile and survive a restart.
+- Enter an HTTP(S) address or search with your selected engine from either search field.
 - Go back, forward, reload, stop, or return to the new-tab page.
 - Each tab has a separate `WebContentsView`. Background pages keep their state.
 - Show navigation errors with a retry action.
@@ -26,6 +27,7 @@ Features:
 | Cmd/Ctrl+W                | Close tab                           |
 | Cmd/Ctrl+L                | Focus address bar                   |
 | Cmd/Ctrl+R                | Reload                              |
+| Cmd/Ctrl+,                | Settings                            |
 | Alt+Left / Alt+Right      | Back / forward                      |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab                 |
 | Cmd/Ctrl+1 to 8 / 9       | Select tab by position / last tab   |

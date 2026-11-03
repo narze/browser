@@ -2,11 +2,14 @@ const { app, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require(
 const path = require("node:path");
 const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
+const { createSettingsStore } = require("./settings.cjs");
 
 // Prototype: tabs are in memory. Remote pages never receive the chrome preload.
 const CHROME_HEIGHT = 100;
 const SIDEBAR_WIDTH = 220;
-let tabLayout = "top";
+let settingsStore;
+let settings;
+let settingsOpen = false;
 let window;
 let tabs = [];
 let activeId;
@@ -16,7 +19,9 @@ const activeTab = () => tabs.find((tab) => tab.id === activeId);
 
 function getState() {
   return {
-    tabLayout,
+    tabLayout: settings.tabLayout,
+    settings,
+    settingsOpen,
     activeId,
     platform: process.platform,
     tabs: tabs.map(({ id, url, title, loading, error, view }) => ({
@@ -38,25 +43,27 @@ function publish() {
 function layout() {
   if (!window || window.isDestroyed()) return;
   const [width, height] = window.getContentSize();
-  const sidebarWidth = tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
+  const sidebarWidth = settings.tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
   for (const tab of tabs) {
     tab.view.setBounds({
-      x: tabLayout === "left" ? sidebarWidth : 0,
+      x: settings.tabLayout === "left" ? sidebarWidth : 0,
       y: CHROME_HEIGHT,
       width: Math.max(1, width - sidebarWidth),
       height: Math.max(1, height - CHROME_HEIGHT),
     });
-    tab.view.setVisible(tab.id === activeId && !!tab.url && !tab.error);
+    tab.view.setVisible(!settingsOpen && tab.id === activeId && !!tab.url && !tab.error);
   }
 }
 
 function focusAddress() {
+  if (settingsOpen) showSettings(false);
   window.webContents.focus();
   window.webContents.send("browser:focus-address");
 }
 
 function selectTab(id) {
   if (!tabs.some((tab) => tab.id === id)) return;
+  settingsOpen = false;
   activeId = id;
   layout();
   publish();
@@ -66,6 +73,7 @@ function selectTab(id) {
 }
 
 function load(tab, url) {
+  settingsOpen = false;
   tab.url = url;
   tab.error = null;
   tab.loading = !!url;
@@ -196,14 +204,31 @@ function history(direction) {
   if (direction === "forward" && navigation?.canGoForward()) navigation.goForward();
 }
 
+function showSettings(open) {
+  settingsOpen = open;
+  layout();
+  publish();
+  if (!open && activeTab()?.url && !activeTab()?.error) activeTab().view.webContents.focus();
+  else window.webContents.focus();
+}
+
+function updateSettings(patch) {
+  try {
+    settings = settingsStore.update(patch);
+    layout();
+    publish();
+    return {};
+  } catch {
+    return { error: "Could not save these settings. Please try again." };
+  }
+}
+
 function installIpc() {
   const handlers = {
-    "set-tab-layout": (value) => {
-      if (!["top", "left", "right"].includes(value)) throw new Error("Invalid tab layout.");
-      tabLayout = value;
-      layout();
-      publish();
-    },
+    "open-settings": () => showSettings(true),
+    "close-settings": () => showSettings(false),
+    "update-settings": updateSettings,
+    "set-tab-layout": (value) => updateSettings({ tabLayout: value }),
     state: getState,
     "new-tab": () => newTab(),
     "select-tab": (id) => {
@@ -219,7 +244,7 @@ function installIpc() {
         return { error: "Enter a valid address." };
       try {
         const tab = activeTab();
-        const url = resolveAddress(input);
+        const url = resolveAddress(input, settings.searchEngine);
         load(tab, url);
         if (url) tab.view.webContents.focus();
         return {};
@@ -246,6 +271,7 @@ function installIpc() {
 }
 
 function createWindow() {
+  settingsOpen = false;
   window = new BrowserWindow({
     width: 1280,
     height: 850,
@@ -283,7 +309,11 @@ function createWindow() {
 }
 
 app.setName("Browser");
+const profileDirectory = app.commandLine.getSwitchValue("user-data-dir");
+if (profileDirectory) app.setPath("userData", path.resolve(profileDirectory));
 app.whenReady().then(() => {
+  settingsStore = createSettingsStore(path.join(app.getPath("userData"), "settings.json"));
+  settings = settingsStore.get();
   session
     .fromPartition("persist:browsing")
     .setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
@@ -307,7 +337,10 @@ app.whenReady().then(() => {
             label: "Close tab",
             accelerator: "CmdOrCtrl+W",
             click: () => {
-              if (window) closeTab(activeId);
+              if (window) {
+                if (settingsOpen) showSettings(false);
+                else closeTab(activeId);
+              }
             },
           },
           { type: "separator" },
@@ -318,6 +351,13 @@ app.whenReady().then(() => {
       {
         label: "View",
         submenu: [
+          {
+            label: "Settings…",
+            accelerator: "CmdOrCtrl+,",
+            click: () => {
+              if (window) showSettings(true);
+            },
+          },
           {
             label: "Focus address",
             accelerator: "CmdOrCtrl+L",

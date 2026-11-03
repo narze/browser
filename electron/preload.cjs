@@ -3,6 +3,9 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 /** @type {import('../shared/browser').BrowserApi} */
 const browser = {
+  updateSettings: (settings) => ipcRenderer.invoke("browser:update-settings", settings),
+  openSettings: () => ipcRenderer.invoke("browser:open-settings"),
+  closeSettings: () => ipcRenderer.invoke("browser:close-settings"),
   setTabLayout: (layout) => ipcRenderer.invoke("browser:set-tab-layout", layout),
   getState: () => ipcRenderer.invoke("browser:state"),
   newTab: () => ipcRenderer.invoke("browser:new-tab"),
