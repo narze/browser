@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite-plus/client", "node"]
+  },
+  "include": [
+    "src/**/*",
+    "shared/**/*.d.ts",
+    "electron/preload.cjs",
+    "vite.config.ts",
+    "tests/**/*.ts",
+    "playwright.config.ts"
+  ]
+}
