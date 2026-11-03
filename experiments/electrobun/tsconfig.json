@@ -1,0 +1,17 @@
+{
+  "extends": "./.hutch/devkit/tsconfig.json",
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "allowJs": true,
+    "checkJs": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["vite-plus/client", "bun"]
+  },
+  "include": ["src/**/*", "shared/**/*", "*.ts"]
+}
