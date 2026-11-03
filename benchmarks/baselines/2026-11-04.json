@@ -1,0 +1,2978 @@
+{
+  "schemaVersion": 1,
+  "measuredOn": "2026-11-04 (Asia/Bangkok)",
+  "baselineCommit": "011d155",
+  "decision": "Continue developing the browser in Electron. Keep Electrobun + CEF as an experiment.",
+  "artifactAvailability": "Runtime-generated reports, full BrowserBench workload data, screenshots and logs stay in ignored benchmarks/results/. This archive preserves local per-run samples, feature checks, BrowserBench scores and environments, excluded attempts, and raw-data SHA-256 digests. Run the documented commands to collect full artifacts on another machine.",
+  "local": {
+    "schemaVersion": 1,
+    "recordedAt": "2026-11-03T18:31:23.061Z",
+    "machine": {
+      "platform": "darwin",
+      "arch": "arm64",
+      "release": "25.6.0",
+      "cpu": "Apple M4 Pro",
+      "logicalCpus": 12,
+      "memoryGiB": 24,
+      "node": "v26.10.0"
+    },
+    "baselineCommit": "011d155",
+    "runs": 5,
+    "warmups": 1,
+    "versions": {
+      "electron": "Chrome/156.0.8078.75",
+      "electrobun": "Chrome/156.0.8078.17"
+    },
+    "features": {
+      "electron": [
+        {
+          "name": "New-tab screen and close-last-tab",
+          "status": "pass"
+        },
+        {
+          "name": "Address bar, HTTP page and title",
+          "status": "pass"
+        },
+        {
+          "name": "Remote page has no Node, Bun or BrowserApi",
+          "status": "pass"
+        },
+        {
+          "name": "Remote page cannot invoke native view commands",
+          "status": "pass"
+        },
+        {
+          "name": "Links, back and forward",
+          "status": "pass"
+        },
+        {
+          "name": "Reload replaces page document",
+          "status": "pass"
+        },
+        {
+          "name": "Tabs preserve separate page state",
+          "status": "pass"
+        },
+        {
+          "name": "left tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "right tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "top tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "Popup link opens a controlled new tab",
+          "status": "pass"
+        },
+        {
+          "name": "Iframe history does not change the address bar",
+          "status": "pass"
+        },
+        {
+          "name": "SPA pushState updates the address bar",
+          "status": "pass"
+        },
+        {
+          "name": "HTTP redirects update URL",
+          "status": "pass"
+        },
+        {
+          "name": "Invalid schemes are rejected",
+          "status": "pass"
+        },
+        {
+          "name": "Page cannot navigate to file URLs",
+          "status": "pass"
+        },
+        {
+          "name": "Stop cancels a slow navigation",
+          "status": "pass"
+        },
+        {
+          "name": "Failed navigation has a recoverable error screen",
+          "status": "pass"
+        },
+        {
+          "name": "Local storage and cookies shared across tabs",
+          "status": "pass"
+        },
+        {
+          "name": "Web Worker and WebAssembly",
+          "status": "pass"
+        },
+        {
+          "name": "Canvas 2D and WebGL2",
+          "status": "pass"
+        },
+        {
+          "name": "Editable page controls receive input",
+          "status": "pass"
+        },
+        {
+          "name": "Native menu shortcuts while web page is focused",
+          "status": "manual",
+          "detail": "Cmd/Ctrl+L/T/W/R and native clipboard roles need an OS-level manual check."
+        },
+        {
+          "name": "DRM, Chrome extensions, downloads and session restore",
+          "status": "not-tested",
+          "detail": "Outside this prototype benchmark; no compatibility claim."
+        },
+        {
+          "name": "Chromium renderer OS sandbox",
+          "status": "pass",
+          "detail": "Renderer processes have no --no-sandbox flag. Separate from application RPC isolation."
+        }
+      ],
+      "electrobun": [
+        {
+          "name": "New-tab screen and close-last-tab",
+          "status": "pass"
+        },
+        {
+          "name": "Address bar, HTTP page and title",
+          "status": "pass"
+        },
+        {
+          "name": "Remote page has no Node, Bun or BrowserApi",
+          "status": "pass"
+        },
+        {
+          "name": "Remote page cannot invoke native view commands",
+          "status": "pass"
+        },
+        {
+          "name": "Links, back and forward",
+          "status": "pass"
+        },
+        {
+          "name": "Reload replaces page document",
+          "status": "pass"
+        },
+        {
+          "name": "Tabs preserve separate page state",
+          "status": "pass"
+        },
+        {
+          "name": "left tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "right tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "top tabs preserve document and native viewport",
+          "status": "pass"
+        },
+        {
+          "name": "Popup link opens a controlled new tab",
+          "status": "pass"
+        },
+        {
+          "name": "Iframe history does not change the address bar",
+          "status": "pass"
+        },
+        {
+          "name": "SPA pushState updates the address bar",
+          "status": "pass"
+        },
+        {
+          "name": "HTTP redirects update URL",
+          "status": "pass"
+        },
+        {
+          "name": "Invalid schemes are rejected",
+          "status": "pass"
+        },
+        {
+          "name": "Page cannot navigate to file URLs",
+          "status": "pass"
+        },
+        {
+          "name": "Stop cancels a slow navigation",
+          "status": "pass"
+        },
+        {
+          "name": "Failed navigation has a recoverable error screen",
+          "status": "fail",
+          "detail": "Timed out: error screen"
+        },
+        {
+          "name": "Local storage and cookies shared across tabs",
+          "status": "pass"
+        },
+        {
+          "name": "Web Worker and WebAssembly",
+          "status": "pass"
+        },
+        {
+          "name": "Canvas 2D and WebGL2",
+          "status": "pass"
+        },
+        {
+          "name": "Editable page controls receive input",
+          "status": "pass"
+        },
+        {
+          "name": "Native menu shortcuts while web page is focused",
+          "status": "manual",
+          "detail": "Cmd/Ctrl+L/T/W/R and native clipboard roles need an OS-level manual check."
+        },
+        {
+          "name": "DRM, Chrome extensions, downloads and session restore",
+          "status": "not-tested",
+          "detail": "Outside this prototype benchmark; no compatibility claim."
+        },
+        {
+          "name": "Chromium renderer OS sandbox",
+          "status": "unsupported",
+          "detail": "Electrobun 2.0.5 macOS CEF launches renderer processes with --no-sandbox. Its sandbox attribute disables RPC; it is not the Chromium OS sandbox."
+        }
+      ]
+    },
+    "trials": [
+      {
+        "kind": "electron",
+        "round": 0,
+        "metrics": {
+          "startupMs": 283.1665409999987,
+          "navigationMs": 72.12791699999798,
+          "page": {
+            "domContentLoadedMs": 44.69999998807907,
+            "loadMs": 49.400000005960464,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 511.00694444444446,
+            "peakRssMiB": 512.125,
+            "cpuPercent": 0,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 16.900000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.899999976158142,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.199999988079071,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.600000023841858,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.299999982118607,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 8.200000017881393,
+              "height": 111000
+            },
+            {
+              "ms": 6.699999988079071,
+              "height": 111000
+            },
+            {
+              "ms": 6.700000017881393,
+              "height": 111000
+            },
+            {
+              "ms": 6.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1466.6024305555557,
+            "peakRssMiB": 1469.40625,
+            "cpuPercent": 0.4784545248246297,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            24.135416000004625, 15.500749999999243, 16.596708000004583, 17.498665999999503,
+            15.880875000002561
+          ],
+          "afterClose": {
+            "rssMiB": 613.703125,
+            "peakRssMiB": 613.703125,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      },
+      {
+        "kind": "electrobun",
+        "round": 0,
+        "metrics": {
+          "startupMs": 729.9833750000034,
+          "navigationMs": 819.333375000002,
+          "page": {
+            "domContentLoadedMs": 44.20000001788139,
+            "loadMs": 56.10000002384186,
+            "firstContentfulPaintMs": 64
+          },
+          "oneTab": {
+            "rssMiB": 636.5381944444445,
+            "peakRssMiB": 645.65625,
+            "cpuPercent": 9.097958010298791,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.400000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.800000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.900000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.099999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.899999976158142,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.199999988079071,
+              "height": 111000
+            },
+            {
+              "ms": 7.700000017881393,
+              "height": 111000
+            },
+            {
+              "ms": 8.300000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 12,
+              "height": 111000
+            },
+            {
+              "ms": 8.200000017881393,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1487.5225694444443,
+            "peakRssMiB": 1491.375,
+            "cpuPercent": 5.264396433416975,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            17.483666000000085, 8.325458999999682, 8.369041999998444, 8.595333000004757,
+            7.818207999996957
+          ],
+          "afterClose": {
+            "rssMiB": 667.209375,
+            "peakRssMiB": 667.234375,
+            "cpuPercent": 1.6726052278328418,
+            "processes": 8
+          }
+        }
+      },
+      {
+        "kind": "electrobun",
+        "round": 1,
+        "metrics": {
+          "startupMs": 983.8860419999983,
+          "navigationMs": 830.4718339999963,
+          "page": {
+            "domContentLoadedMs": 35.69999998807907,
+            "loadMs": 48.099999994039536,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 645.765625,
+            "peakRssMiB": 654.875,
+            "cpuPercent": 7.113259351686611,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.599999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.300000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.599999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.199999988079071,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.400000005960464,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.400000005960464,
+              "height": 111000
+            },
+            {
+              "ms": 7.699999988079071,
+              "height": 111000
+            },
+            {
+              "ms": 8,
+              "height": 111000
+            },
+            {
+              "ms": 7.800000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 7.299999982118607,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1541.671875,
+            "peakRssMiB": 1545.546875,
+            "cpuPercent": 6.632053009309941,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            16.268416999999317, 8.33262499999546, 8.15320800000336, 8.464332999996259,
+            15.784333000003244
+          ],
+          "afterClose": {
+            "rssMiB": 719.803125,
+            "peakRssMiB": 719.8125,
+            "cpuPercent": 1.6749897956481599,
+            "processes": 8
+          }
+        }
+      },
+      {
+        "kind": "electron",
+        "round": 1,
+        "metrics": {
+          "startupMs": 288.4241670000047,
+          "navigationMs": 70.64074999999139,
+          "page": {
+            "domContentLoadedMs": 43.69999998807907,
+            "loadMs": 48,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 510.88715277777777,
+            "peakRssMiB": 512.515625,
+            "cpuPercent": 0.4757467668905068,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 13,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.400000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.700000017881393,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.200000017881393,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 7.799999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 6.299999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            },
+            {
+              "ms": 6,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1466.8506944444443,
+            "peakRssMiB": 1469.96875,
+            "cpuPercent": 0.47973952062986813,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            17.028000000005704, 16.517084000006435, 16.25008299999172, 17.181291999993846,
+            16.630208000002312
+          ],
+          "afterClose": {
+            "rssMiB": 614.375,
+            "peakRssMiB": 614.375,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      },
+      {
+        "kind": "electron",
+        "round": 2,
+        "metrics": {
+          "startupMs": 297.7559579999943,
+          "navigationMs": 71.57608299999265,
+          "page": {
+            "domContentLoadedMs": 44.099999994039536,
+            "loadMs": 48.900000005960464,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 510.3854166666667,
+            "peakRssMiB": 511.96875,
+            "cpuPercent": 0.47005974060222344,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.700000017881393,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.800000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.599999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.099999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.199999988079071,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 7.799999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 6.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 6.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 6.800000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1467.078125,
+            "peakRssMiB": 1469.75,
+            "cpuPercent": 0,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            17.228957999992417, 15.737000000008265, 25.166874999995343, 16.567624999996042,
+            16.74079100000381
+          ],
+          "afterClose": {
+            "rssMiB": 613.6875,
+            "peakRssMiB": 613.6875,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      },
+      {
+        "kind": "electrobun",
+        "round": 2,
+        "metrics": {
+          "startupMs": 373.4752080000035,
+          "navigationMs": 828.528416000001,
+          "page": {
+            "domContentLoadedMs": 37.80000001192093,
+            "loadMs": 50.30000001192093,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 642.6770833333334,
+            "peakRssMiB": 652.03125,
+            "cpuPercent": 7.27536256954886,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 16.099999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.5,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.700000017881393,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.5,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.300000011920929,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.599999994039536,
+              "height": 111000
+            },
+            {
+              "ms": 7.800000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 7.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 7.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 7.9000000059604645,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1538.1597222222222,
+            "peakRssMiB": 1542,
+            "cpuPercent": 5.756709695927284,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            47.113083000003826, 13.04991699999664, 8.87225000000035, 16.654666999995243,
+            16.581292000002577
+          ],
+          "afterClose": {
+            "rssMiB": 714.34375,
+            "peakRssMiB": 714.34375,
+            "cpuPercent": 0.8786171383707296,
+            "processes": 8
+          }
+        }
+      },
+      {
+        "kind": "electrobun",
+        "round": 3,
+        "metrics": {
+          "startupMs": 883.492957999988,
+          "navigationMs": 812.9602499999892,
+          "page": {
+            "domContentLoadedMs": 40.400000005960464,
+            "loadMs": 54.19999998807907,
+            "firstContentfulPaintMs": 64
+          },
+          "oneTab": {
+            "rssMiB": 644.2638888888889,
+            "peakRssMiB": 653.609375,
+            "cpuPercent": 8.114685325033124,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 15,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.699999988079071,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.400000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.300000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.800000011920929,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.300000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 7.9000000059604645,
+              "height": 111000
+            },
+            {
+              "ms": 8.599999994039536,
+              "height": 111000
+            },
+            {
+              "ms": 7.9000000059604645,
+              "height": 111000
+            },
+            {
+              "ms": 7.600000023841858,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1471.720486111111,
+            "peakRssMiB": 1475.71875,
+            "cpuPercent": 5.820813884387367,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            19.545250000010128, 7.901167000003625, 8.292499999995925, 8.392000000007101,
+            8.318249999996624
+          ],
+          "afterClose": {
+            "rssMiB": 652.9125,
+            "peakRssMiB": 652.921875,
+            "cpuPercent": 0.8789023766497431,
+            "processes": 8
+          }
+        }
+      },
+      {
+        "kind": "electron",
+        "round": 3,
+        "metrics": {
+          "startupMs": 340.8217500000028,
+          "navigationMs": 82.01970799999253,
+          "page": {
+            "domContentLoadedMs": 54.599999994039536,
+            "loadMs": 59.400000005960464,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 513.7204861111111,
+            "peakRssMiB": 514.84375,
+            "cpuPercent": 0.4807369118435911,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.700000017881393,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.299999982118607,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.299999982118607,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 12.899999976158142,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 8.299999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 6.800000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 6.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 6.4000000059604645,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1469.970486111111,
+            "peakRssMiB": 1472.640625,
+            "cpuPercent": 0.46934224207487973,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            21.23750000000291, 16.41579100000672, 16.729833000004874, 16.662540999997873,
+            16.53224999998929
+          ],
+          "afterClose": {
+            "rssMiB": 616.828125,
+            "peakRssMiB": 616.828125,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      },
+      {
+        "kind": "electron",
+        "round": 4,
+        "metrics": {
+          "startupMs": 266.93087500000547,
+          "navigationMs": 70.60825000000477,
+          "page": {
+            "domContentLoadedMs": 43.599999994039536,
+            "loadMs": 47.69999998807907,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 510.6423611111111,
+            "peakRssMiB": 511.765625,
+            "cpuPercent": 0,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.800000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.400000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.799999982118607,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.300000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.099999994039536,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 8.099999994039536,
+              "height": 111000
+            },
+            {
+              "ms": 6.700000017881393,
+              "height": 111000
+            },
+            {
+              "ms": 6.699999988079071,
+              "height": 111000
+            },
+            {
+              "ms": 6.699999988079071,
+              "height": 111000
+            },
+            {
+              "ms": 6.299999982118607,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1466.6944444444443,
+            "peakRssMiB": 1469.90625,
+            "cpuPercent": 0.46725627674070835,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            18.165208999998868, 17.30045799999789, 24.937249999988126, 16.646708000000217,
+            16.679458000013256
+          ],
+          "afterClose": {
+            "rssMiB": 613.359375,
+            "peakRssMiB": 613.359375,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      },
+      {
+        "kind": "electrobun",
+        "round": 4,
+        "metrics": {
+          "startupMs": 755.9216670000023,
+          "navigationMs": 807.9141250000102,
+          "page": {
+            "domContentLoadedMs": 39.5,
+            "loadMs": 51.19999998807907,
+            "firstContentfulPaintMs": 64
+          },
+          "oneTab": {
+            "rssMiB": 638.4131944444445,
+            "peakRssMiB": 647.578125,
+            "cpuPercent": 7.317851808012503,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 14.400000005960464,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.800000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.799999982118607,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.600000023841858,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.5,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.099999994039536,
+              "height": 111000
+            },
+            {
+              "ms": 7.5,
+              "height": 111000
+            },
+            {
+              "ms": 8.299999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 8.099999994039536,
+              "height": 111000
+            },
+            {
+              "ms": 7.800000011920929,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1495.5121527777778,
+            "peakRssMiB": 1499.375,
+            "cpuPercent": 6.609591921377579,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            22.944499999997788, 15.401040999990073, 16.673915999999736, 16.715584000005038,
+            16.780375000002095
+          ],
+          "afterClose": {
+            "rssMiB": 671.375,
+            "peakRssMiB": 671.375,
+            "cpuPercent": 1.78185942376449,
+            "processes": 8
+          }
+        }
+      }
+    ],
+    "warmupTrials": [
+      {
+        "kind": "electrobun",
+        "round": -1,
+        "metrics": {
+          "startupMs": 902.6065830000007,
+          "navigationMs": 802.3256250000013,
+          "page": {
+            "domContentLoadedMs": 45.39999997615814,
+            "loadMs": 57.599999994039536,
+            "firstContentfulPaintMs": null
+          },
+          "oneTab": {
+            "rssMiB": 643.6649305555555,
+            "peakRssMiB": 652.84375,
+            "cpuPercent": 9.367045877858757,
+            "processes": 8
+          },
+          "scriptSamples": [
+            {
+              "ms": 15.799999982118607,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.300000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.600000023841858,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.799999982118607,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 9.400000005960464,
+              "height": 111000
+            },
+            {
+              "ms": 7.799999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 7.600000023841858,
+              "height": 111000
+            },
+            {
+              "ms": 7.5999999940395355,
+              "height": 111000
+            },
+            {
+              "ms": 7.600000023841858,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1538.46875,
+            "peakRssMiB": 1542.328125,
+            "cpuPercent": 6.581946824686679,
+            "processes": 17
+          },
+          "tabSwitchMs": [
+            22.082166000000143, 15.698416000002908, 8.527124999996886, 8.010416999997688,
+            8.244084000001749
+          ],
+          "afterClose": {
+            "rssMiB": 715.703125,
+            "peakRssMiB": 715.703125,
+            "cpuPercent": 1.6678967989322289,
+            "processes": 8
+          }
+        }
+      },
+      {
+        "kind": "electron",
+        "round": -1,
+        "metrics": {
+          "startupMs": 294.2741249999999,
+          "navigationMs": 69.76116700000057,
+          "page": {
+            "domContentLoadedMs": 42.599999994039536,
+            "loadMs": 47.400000005960464,
+            "firstContentfulPaintMs": 68
+          },
+          "oneTab": {
+            "rssMiB": 512.875,
+            "peakRssMiB": 513.984375,
+            "cpuPercent": 0.48001637815882325,
+            "processes": 5
+          },
+          "scriptSamples": [
+            {
+              "ms": 16,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 14.5,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.599999994039536,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.300000011920929,
+              "checksum": 8403331975
+            },
+            {
+              "ms": 13.400000005960464,
+              "checksum": 8403331975
+            }
+          ],
+          "domSamples": [
+            {
+              "ms": 8.299999982118607,
+              "height": 111000
+            },
+            {
+              "ms": 6.5,
+              "height": 111000
+            },
+            {
+              "ms": 6.4000000059604645,
+              "height": 111000
+            },
+            {
+              "ms": 6.300000011920929,
+              "height": 111000
+            },
+            {
+              "ms": 6.699999988079071,
+              "height": 111000
+            }
+          ],
+          "tenTabs": {
+            "rssMiB": 1228.1180555555557,
+            "peakRssMiB": 1280.53125,
+            "cpuPercent": 0.47128534949402273,
+            "processes": 14
+          },
+          "tabSwitchMs": [
+            21.919083000000683, 16.60479199999827, 16.65983299999789, 25.156666000002588,
+            16.47541700000147
+          ],
+          "afterClose": {
+            "rssMiB": 494.609375,
+            "peakRssMiB": 494.609375,
+            "cpuPercent": 0,
+            "processes": 5
+          }
+        }
+      }
+    ],
+    "failures": [],
+    "methodology": [
+      "Production-built Svelte assets; unsigned development desktop runtimes; no Vite dev server or HMR.",
+      "One app at a time. One excluded warmup per app, then alternating Electron/Electrobun run order.",
+      "CEF disables occluded-window backgrounding by default. Electron receives the matching --disable-backgrounding-occluded-windows flag so desktop overlap cannot suspend animation frames. Other background defaults are retained.",
+      "Startup: OS spawn to interactive new-tab DOM plus two animation frames, observed over direct page CDP (25 ms discovery polling). Not cold disk-cache startup or physical screen presentation.",
+      "Same no-store HTTP fixture: 300 rows, no external assets, network requests, fonts, or public websites.",
+      "Electron gets a temporary user-data directory; Electrobun gets a unique storage partition. Electrobun still uses its shared CEF root/UI cache. OS caches are warm; this is not full-profile cold-start parity.",
+      "RSS is summed across the detached OS process group, including launcher, backend, GPU, storage, network and renderer helpers. Shared pages can be counted more than once; this is not private memory/physical footprint.",
+      "Idle CPU uses deltas in cumulative process-group CPU time over 2 seconds (1 second after tab close); 100% equals one CPU core. Very small differences are noisy.",
+      "Page JS and DOM timings use performance.now inside the same fixture, with one excluded JS workload warmup. DOM metric includes forced layout, not GPU presentation.",
+      "Tab switching: BrowserApi command through two requestAnimationFrame callbacks in the selected content page, including CDP discovery/transport. This is a responsiveness proxy, not input-to-photon latency.",
+      "UI feature tests invoke real DOM form/button handlers or BrowserApi and use CDP to inspect content. Native OS menus/clipboard, live window resizing, DRM, extensions, downloads and session restore are not verified.",
+      "These are the two prototype implementations on this host, not a framework-wide speed or security guarantee. Chromium versions and implementation architecture are recorded.",
+      "Feature checks were re-run after adding an explicit native-target teardown wait between checks. Initial check outcomes are retained in featureVerification.initialChecks; all ten performance trials and app artifacts are unchanged."
+    ],
+    "artifacts": {
+      "electronMain": "a037365fc239e28c76469773d01664863e149999b70dc5a5441af65e915ea1fa",
+      "electronUi": "e438662f724234f9e8245ec0a5f205982124d13f6faeda1fbdbd240501e2bcc4",
+      "electrobunMain": "8afb61682280f0f2bd82abaad23996d043781cf23cd132a2bbfa2a8b8cd001c7",
+      "electrobunUi": "b1744944671e1fa9ac56919129a359d21dc63a6fac8f0417ea2c4c56a536d1c9"
+    },
+    "distributionBytes": {
+      "electron": 264367582,
+      "electrobun": 441307343
+    },
+    "electrobunBuild": {
+      "mainProcess": "bun",
+      "electrobunVersion": "2.0.5",
+      "runtimeVersions": {
+        "bun": "1.4.4"
+      },
+      "defaultRenderer": "cef",
+      "availableRenderers": ["native", "cef"],
+      "buildEnvironment": "dev",
+      "runtime": {}
+    },
+    "summary": [
+      {
+        "label": "Startup",
+        "unit": "ms",
+        "values": {
+          "electron": {
+            "median": 288.4241670000047,
+            "min": 266.93087500000547,
+            "max": 340.8217500000028,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 755.9216670000023,
+            "min": 373.4752080000035,
+            "max": 983.8860419999983,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Local navigation",
+        "unit": "ms",
+        "values": {
+          "electron": {
+            "median": 71.57608299999265,
+            "min": 70.60825000000477,
+            "max": 82.01970799999253,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 819.333375000002,
+            "min": 807.9141250000102,
+            "max": 830.4718339999963,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Idle memory · 1 tab",
+        "unit": "MiB",
+        "values": {
+          "electron": {
+            "median": 510.88715277777777,
+            "min": 510.3854166666667,
+            "max": 513.7204861111111,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 642.6770833333334,
+            "min": 636.5381944444445,
+            "max": 645.765625,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Idle memory · 10 tabs",
+        "unit": "MiB",
+        "values": {
+          "electron": {
+            "median": 1466.8506944444443,
+            "min": 1466.6024305555557,
+            "max": 1469.970486111111,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 1495.5121527777778,
+            "min": 1471.720486111111,
+            "max": 1541.671875,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Memory after closing 9 tabs",
+        "unit": "MiB",
+        "values": {
+          "electron": {
+            "median": 613.703125,
+            "min": 613.359375,
+            "max": 616.828125,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 671.375,
+            "min": 652.9125,
+            "max": 719.803125,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Idle CPU · 1 tab",
+        "unit": "% of a core",
+        "values": {
+          "electron": {
+            "median": 0.47005974060222344,
+            "min": 0,
+            "max": 0.4807369118435911,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 7.317851808012503,
+            "min": 7.113259351686611,
+            "max": 9.097958010298791,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Idle CPU · 10 tabs",
+        "unit": "% of a core",
+        "values": {
+          "electron": {
+            "median": 0.46934224207487973,
+            "min": 0,
+            "max": 0.47973952062986813,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 5.820813884387367,
+            "min": 5.264396433416975,
+            "max": 6.632053009309941,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Script workload",
+        "unit": "ms",
+        "values": {
+          "electron": {
+            "median": 13.400000005960464,
+            "min": 13.200000017881393,
+            "max": 14.199999988079071,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 13.700000017881393,
+            "min": 13.599999994039536,
+            "max": 13.900000005960464,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "3,000 DOM rows + layout",
+        "unit": "ms",
+        "values": {
+          "electron": {
+            "median": 6.5999999940395355,
+            "min": 6.5,
+            "max": 6.699999988079071,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 7.9000000059604645,
+            "min": 7.800000011920929,
+            "max": 8.300000011920929,
+            "n": 5
+          }
+        }
+      },
+      {
+        "label": "Tab-switch proxy",
+        "unit": "ms",
+        "values": {
+          "electron": {
+            "median": 16.662540999997873,
+            "min": 16.596708000004583,
+            "max": 17.30045799999789,
+            "n": 5
+          },
+          "electrobun": {
+            "median": 8.464332999996259,
+            "min": 8.318249999996624,
+            "max": 16.715584000005038,
+            "n": 5
+          }
+        }
+      }
+    ],
+    "featureVerification": {
+      "verifiedAt": "2026-11-03T18:33:51.356Z",
+      "reason": "Feature isolation now waits for previous native CDP targets to disappear. The earlier tab-state timeout attached to a previous test target during asynchronous CEF teardown. Initial checks are retained below; performance trials and app artifacts are unchanged.",
+      "initialChecks": {
+        "electron": [
+          {
+            "name": "New-tab screen and close-last-tab",
+            "status": "pass"
+          },
+          {
+            "name": "Address bar, HTTP page and title",
+            "status": "pass"
+          },
+          {
+            "name": "Remote page has no Node, Bun or BrowserApi",
+            "status": "pass"
+          },
+          {
+            "name": "Remote page cannot invoke native view commands",
+            "status": "pass"
+          },
+          {
+            "name": "Links, back and forward",
+            "status": "pass"
+          },
+          {
+            "name": "Reload replaces page document",
+            "status": "pass"
+          },
+          {
+            "name": "Tabs preserve separate page state",
+            "status": "pass"
+          },
+          {
+            "name": "left tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "right tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "top tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "Popup link opens a controlled new tab",
+            "status": "pass"
+          },
+          {
+            "name": "Iframe history does not change the address bar",
+            "status": "pass"
+          },
+          {
+            "name": "SPA pushState updates the address bar",
+            "status": "pass"
+          },
+          {
+            "name": "HTTP redirects update URL",
+            "status": "pass"
+          },
+          {
+            "name": "Invalid schemes are rejected",
+            "status": "pass"
+          },
+          {
+            "name": "Page cannot navigate to file URLs",
+            "status": "pass"
+          },
+          {
+            "name": "Stop cancels a slow navigation",
+            "status": "pass"
+          },
+          {
+            "name": "Failed navigation has a recoverable error screen",
+            "status": "pass"
+          },
+          {
+            "name": "Local storage and cookies shared across tabs",
+            "status": "pass"
+          },
+          {
+            "name": "Web Worker and WebAssembly",
+            "status": "pass"
+          },
+          {
+            "name": "Canvas 2D and WebGL2",
+            "status": "pass"
+          },
+          {
+            "name": "Editable page controls receive input",
+            "status": "pass"
+          },
+          {
+            "name": "Native menu shortcuts while web page is focused",
+            "status": "manual",
+            "detail": "Cmd/Ctrl+L/T/W/R and native clipboard roles need an OS-level manual check."
+          },
+          {
+            "name": "DRM, Chrome extensions, downloads and session restore",
+            "status": "not-tested",
+            "detail": "Outside this prototype benchmark; no compatibility claim."
+          },
+          {
+            "name": "Chromium renderer OS sandbox",
+            "status": "pass",
+            "detail": "Renderer processes have no --no-sandbox flag. Separate from application RPC isolation."
+          }
+        ],
+        "electrobun": [
+          {
+            "name": "New-tab screen and close-last-tab",
+            "status": "pass"
+          },
+          {
+            "name": "Address bar, HTTP page and title",
+            "status": "pass"
+          },
+          {
+            "name": "Remote page has no Node, Bun or BrowserApi",
+            "status": "pass"
+          },
+          {
+            "name": "Remote page cannot invoke native view commands",
+            "status": "pass"
+          },
+          {
+            "name": "Links, back and forward",
+            "status": "pass"
+          },
+          {
+            "name": "Reload replaces page document",
+            "status": "pass"
+          },
+          {
+            "name": "Tabs preserve separate page state",
+            "status": "fail",
+            "detail": "CDP timeout: Runtime.evaluate"
+          },
+          {
+            "name": "left tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "right tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "top tabs preserve document and native viewport",
+            "status": "pass"
+          },
+          {
+            "name": "Popup link opens a controlled new tab",
+            "status": "pass"
+          },
+          {
+            "name": "Iframe history does not change the address bar",
+            "status": "pass"
+          },
+          {
+            "name": "SPA pushState updates the address bar",
+            "status": "pass"
+          },
+          {
+            "name": "HTTP redirects update URL",
+            "status": "pass"
+          },
+          {
+            "name": "Invalid schemes are rejected",
+            "status": "pass"
+          },
+          {
+            "name": "Page cannot navigate to file URLs",
+            "status": "pass"
+          },
+          {
+            "name": "Stop cancels a slow navigation",
+            "status": "pass"
+          },
+          {
+            "name": "Failed navigation has a recoverable error screen",
+            "status": "fail",
+            "detail": "Timed out: error screen"
+          },
+          {
+            "name": "Local storage and cookies shared across tabs",
+            "status": "pass"
+          },
+          {
+            "name": "Web Worker and WebAssembly",
+            "status": "pass"
+          },
+          {
+            "name": "Canvas 2D and WebGL2",
+            "status": "pass"
+          },
+          {
+            "name": "Editable page controls receive input",
+            "status": "pass"
+          },
+          {
+            "name": "Native menu shortcuts while web page is focused",
+            "status": "manual",
+            "detail": "Cmd/Ctrl+L/T/W/R and native clipboard roles need an OS-level manual check."
+          },
+          {
+            "name": "DRM, Chrome extensions, downloads and session restore",
+            "status": "not-tested",
+            "detail": "Outside this prototype benchmark; no compatibility claim."
+          },
+          {
+            "name": "Chromium renderer OS sandbox",
+            "status": "unsupported",
+            "detail": "Electrobun 2.0.5 macOS CEF launches renderer processes with --no-sandbox. Its sandbox attribute disables RPC; it is not the Chromium OS sandbox."
+          }
+        ]
+      }
+    }
+  },
+  "browserBench": {
+    "schemaVersion": 1,
+    "recordedAt": "2026-11-03T18:45:01.938Z",
+    "baselineCommit": "011d155",
+    "runs": 3,
+    "appFilter": "both",
+    "cooldownSeconds": 10,
+    "timeoutSeconds": 1200,
+    "machine": {
+      "cpu": "Apple M4 Pro",
+      "logicalCpus": 12,
+      "arch": "arm64",
+      "release": "25.6.0",
+      "memoryGiB": 24,
+      "node": "v26.10.0",
+      "power": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+    },
+    "suites": [
+      {
+        "id": "speedometer",
+        "name": "Speedometer 3.1",
+        "url": "https://www.browserbench.org/Speedometer3.1/"
+      },
+      {
+        "id": "jetstream",
+        "name": "JetStream 3.0",
+        "url": "https://www.browserbench.org/JetStream3.0/"
+      },
+      {
+        "id": "motionmark",
+        "name": "MotionMark 1.3.2",
+        "url": "https://www.browserbench.org/MotionMark1.3.2/"
+      }
+    ],
+    "versions": {
+      "electron": "Chrome/156.0.8078.75",
+      "electrobun": "Chrome/156.0.8078.17"
+    },
+    "trials": [
+      {
+        "kind": "electron",
+        "suite": "speedometer",
+        "round": 0,
+        "label": "speedometer-electron-1",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:45:01.955Z",
+        "loadBefore": [2.9072265625, 3.40087890625, 3.81689453125],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 39457.068792000005,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 54.95037281031269,
+        "confidence": "± 4.8",
+        "rawSha256": "db7eabaadc955f8846dbc4be0b4bd252796d572794bb7189f634543dd892d223",
+        "score": 54.95037281031269,
+        "finishedAt": "2026-11-03T18:45:44.708Z",
+        "loadAfter": [3.978515625, 3.57763671875, 3.859375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "speedometer",
+        "round": 0,
+        "label": "speedometer-electrobun-1",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:45:55.011Z",
+        "loadBefore": [3.68017578125, 3.525390625, 3.8369140625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 39020.942082999994,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 49.19466182452139,
+        "confidence": "± 4.2",
+        "rawSha256": "20b90d32e14c0a9f445911937cd52e1c5dff4afac1a81f9d6ba6bc918d4d204c",
+        "score": 49.19466182452139,
+        "finishedAt": "2026-11-03T18:46:39.723Z",
+        "loadAfter": [4.67138671875, 3.80859375, 3.9228515625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "speedometer",
+        "round": 1,
+        "label": "speedometer-electrobun-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:46:49.894Z",
+        "loadBefore": [4.62841796875, 3.830078125, 3.9287109375],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 39183.166125,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 49.67946138426292,
+        "confidence": "± 3.9",
+        "rawSha256": "93261abdbe0b43c8e6526a9502a1ded14b33ad6e3a461d4cfe0856d5bd444a01",
+        "score": 49.67946138426292,
+        "finishedAt": "2026-11-03T18:47:33.899Z",
+        "loadAfter": [4.0380859375, 3.763671875, 3.8974609375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "speedometer",
+        "round": 1,
+        "label": "speedometer-electron-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:47:44.094Z",
+        "loadBefore": [4.01220703125, 3.7705078125, 3.8984375],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 38518.513416,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 54.93833295667091,
+        "confidence": "± 4.8",
+        "rawSha256": "98f23824b2bdbd09ce2169f24765b0a503f6a6b438094b29afde2b6acba78551",
+        "score": 54.93833295667091,
+        "finishedAt": "2026-11-03T18:48:26.000Z",
+        "loadAfter": [3.7373046875, 3.73291015625, 3.87890625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "speedometer",
+        "round": 2,
+        "label": "speedometer-electron-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:48:36.424Z",
+        "loadBefore": [3.3896484375, 3.6591796875, 3.8505859375],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 39070.145541000005,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 54.40855650801908,
+        "confidence": "± 4.6",
+        "rawSha256": "7678e700ee0e0902f0f817ead911678ad6f73783fa946944002a200e90565882",
+        "score": 54.40855650801908,
+        "finishedAt": "2026-11-03T18:49:18.616Z",
+        "loadAfter": [3.2841796875, 3.59521484375, 3.81640625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "speedometer",
+        "round": 2,
+        "label": "speedometer-electrobun-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:49:28.916Z",
+        "loadBefore": [3.00634765625, 3.525390625, 3.7890625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/",
+          "title": "Speedometer 3.1",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 39072.44220799999,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/Speedometer3.1/#summary",
+          "title": "Speedometer 3.1 Results Summary",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 49.4542392697421,
+        "confidence": "± 3.7",
+        "rawSha256": "ba1f78e070a5c0f441b80c3a4ab6713f0894ef7c6323de1cda163f87c19fa9af",
+        "score": 49.4542392697421,
+        "finishedAt": "2026-11-03T18:50:13.490Z",
+        "loadAfter": [2.96533203125, 3.4482421875, 3.7451171875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "jetstream",
+        "round": 0,
+        "label": "jetstream-electrobun-1",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:50:23.676Z",
+        "loadBefore": [3.14306640625, 3.466796875, 3.748046875],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 55876.68308300001,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 388.68,
+        "rawSha256": "21a784dd330a05ae8ce1c4160c0dc3ac5258eaa3d2bb697fbfb5ddb530fe0729",
+        "score": 388.68,
+        "finishedAt": "2026-11-03T18:51:33.905Z",
+        "loadAfter": [4.9091796875, 3.96533203125, 3.91552734375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "jetstream",
+        "round": 0,
+        "label": "jetstream-electron-1",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:51:44.106Z",
+        "loadBefore": [4.85546875, 3.98291015625, 3.92236328125],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 55637.77541599999,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 388.97,
+        "rawSha256": "8dd06504d6c8ab99f3c2619372dddf6677868f59e2c13077bf292ecf9e4bf7c9",
+        "score": 388.97,
+        "finishedAt": "2026-11-03T18:52:53.751Z",
+        "loadAfter": [4.3759765625, 4.00537109375, 3.9326171875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "jetstream",
+        "round": 1,
+        "label": "jetstream-electron-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:53:04.045Z",
+        "loadBefore": [4.07763671875, 3.95458984375, 3.9150390625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 56107.962375,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 383.43,
+        "rawSha256": "455874735c857e182bc149567fee2ee0e28eff09e6c7593555b2f320d08b5bd3",
+        "score": 383.43,
+        "finishedAt": "2026-11-03T18:54:13.193Z",
+        "loadAfter": [4.10888671875, 3.9892578125, 3.9287109375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "jetstream",
+        "round": 1,
+        "label": "jetstream-electrobun-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:54:23.480Z",
+        "loadBefore": [4.01171875, 3.97265625, 3.9228515625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 55912.19541599997,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 387.57,
+        "rawSha256": "d58559453aa007bf8e9fd13d618002d0471265d671792296d4da172694370ccf",
+        "score": 387.57,
+        "finishedAt": "2026-11-03T18:55:35.934Z",
+        "loadAfter": [5.2421875, 4.2158203125, 4.0087890625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "jetstream",
+        "round": 2,
+        "label": "jetstream-electrobun-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:55:46.143Z",
+        "loadBefore": [4.8232421875, 4.15869140625, 3.99072265625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 56340.21504199994,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 387.57,
+        "rawSha256": "08aa20f473d6416d3449bb17a63166f54798501fc18172c588c7040e0ccc2322",
+        "score": 387.57,
+        "finishedAt": "2026-11-03T18:56:55.967Z",
+        "loadAfter": [6.1416015625, 4.53564453125, 4.134765625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "jetstream",
+        "round": 2,
+        "label": "jetstream-electron-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T18:57:06.155Z",
+        "loadBefore": [5.578125, 4.4677734375, 4.115234375],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "durationMs": 56662.5614169999,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/JetStream3.0/",
+          "title": "JetStream 3.0",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "observedScore": 387.65,
+        "rawSha256": "42d61772116978ab36c9b56e57f045dfe875dfa09ff152e98ca90a93c0d2b18b",
+        "score": 387.65,
+        "finishedAt": "2026-11-03T18:58:12.968Z",
+        "loadAfter": [4.0966796875, 4.28271484375, 4.07275390625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electrobun-1-attempt-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:13:44.289Z",
+        "loadBefore": [6.05517578125, 4.72412109375, 4.34130859375],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 325002.770916,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 4134.549296082759,
+        "confidence": {
+          "low": 3738.585139346331,
+          "high": 4194.555551001557
+        },
+        "rawSha256": "31fe4a61495fe961d155cf4368b717d773b7fa0594468b6bc4c54a7c4ad67c5d",
+        "score": 4134.549296082759,
+        "finishedAt": "2026-11-03T19:19:17.359Z",
+        "loadAfter": [4.9677734375, 4.59765625, 4.38232421875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "motionmark",
+        "round": 1,
+        "label": "motionmark-electrobun-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:19:27.540Z",
+        "loadBefore": [4.79931640625, 4.57666015625, 4.37744140625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 324039.57608300005,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 4095.0453609693677,
+        "confidence": {
+          "low": 4030.3136737131153,
+          "high": 4153.779441825667
+        },
+        "rawSha256": "e4929bb39dd19fc007eb110108373664aafc1fd00e2f7365aae60fc5b8ab9503",
+        "score": 4095.0453609693677,
+        "finishedAt": "2026-11-03T19:24:59.242Z",
+        "loadAfter": [4.46923828125, 4.40087890625, 4.3369140625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 1,
+        "label": "motionmark-electron-2",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:25:09.432Z",
+        "loadBefore": [4.1630859375, 4.337890625, 4.31494140625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 327043.67729200004,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 5159.844739621976,
+        "confidence": {
+          "low": 5070.325671235809,
+          "high": 5225.737220396464
+        },
+        "rawSha256": "07afa391ddf7cf31fd94f9e9b71dc4170f876315c979f03251045ba46de9925f",
+        "score": 5159.844739621976,
+        "finishedAt": "2026-11-03T19:30:42.284Z",
+        "loadAfter": [5.48828125, 5.1162109375, 4.6865234375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 2,
+        "label": "motionmark-electron-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:30:52.595Z",
+        "loadBefore": [4.71728515625, 4.9638671875, 4.63720703125],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 325427.6250410001,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 5207.6887926389045,
+        "confidence": {
+          "low": 5115.128371997639,
+          "high": 5281.733432710358
+        },
+        "rawSha256": "1055c804f27d930ad366352153fc2f8e5ad74995867873d70c76529e42491845",
+        "score": 5207.6887926389045,
+        "finishedAt": "2026-11-03T19:36:23.616Z",
+        "loadAfter": [4.4599609375, 4.7763671875, 4.66162109375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "motionmark",
+        "round": 2,
+        "label": "motionmark-electrobun-3",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:36:33.921Z",
+        "loadBefore": [4.0126953125, 4.6572265625, 4.62060546875],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 323537.715417,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 4163.764395067785,
+        "confidence": {
+          "low": 4107.207667723626,
+          "high": 4223.432757163564
+        },
+        "rawSha256": "30259065de643f8285c94c62df1773daa7d328dddcd5180e74c9462fb164c41f",
+        "score": 4163.764395067785,
+        "finishedAt": "2026-11-03T19:42:04.846Z",
+        "loadAfter": [4.63671875, 4.5048828125, 4.53857421875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electron-1-attempt-5",
+        "status": "complete",
+        "startedAt": "2026-11-03T19:51:00.117Z",
+        "loadBefore": [6.771484375, 4.4912109375, 4.41650390625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "focusBeforeInput": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "focusInputElement": "SECTION",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 327229.957958,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 5203.014738622803,
+        "confidence": {
+          "low": 5125.137688346544,
+          "high": 5272.657024996376
+        },
+        "rawSha256": "0be02757829f3961bea3768ac663d37a0ca96bc6d0e1c7f03b2c6bdbc5db9e7e",
+        "score": 5203.014738622803,
+        "finishedAt": "2026-11-03T19:56:32.959Z",
+        "loadAfter": [4.32373046875, 4.35498046875, 4.35693359375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      }
+    ],
+    "attempts": [
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electron-1",
+        "status": "invalid",
+        "startedAt": "2026-11-03T18:58:23.262Z",
+        "loadBefore": [4.6708984375, 4.40380859375, 4.1181640625],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "durationMs": 326611.96279100014,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 60,
+        "observedScore": 48.28953837367318,
+        "confidence": {
+          "low": 32.91694900699444,
+          "high": 91.6154561736451
+        },
+        "rawSha256": "44371e179caf328b2d613b484f2b953b5543eedd20925a2aed2fd489f1ea75a7",
+        "score": 48.28953837367318,
+        "finishedAt": "2026-11-03T19:03:52.792Z",
+        "loadAfter": [3.92919921875, 4.18505859375, 4.1025390625],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "error": "MotionMark frame-rate calibration was incomplete or changed during the run"
+      },
+      {
+        "kind": "electrobun",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electrobun-1",
+        "status": "interrupted",
+        "startedAt": "2026-11-03T19:04:03.115Z",
+        "loadBefore": [4.38134765625, 4.2763671875, 4.1357421875],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.0.0 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": true,
+          "visibility": "visible"
+        },
+        "error": "Runner interrupted before the suite completed"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electron-1-attempt-2",
+        "status": "invalid",
+        "startedAt": "2026-11-03T19:07:59.620Z",
+        "loadBefore": [3.138671875, 3.9697265625, 4.0517578125],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "environment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "settingsBefore": {
+          "test-interval": 30,
+          "display": "minimal",
+          "tiles": "big",
+          "controller": "ramp",
+          "kalman-process-error": 1,
+          "kalman-measurement-error": 4,
+          "time-measurement": "performance",
+          "warmup-length": 2000,
+          "warmup-frame-count": 30,
+          "first-frame-minimum-length": 0,
+          "system-frame-rate": 120,
+          "frame-rate": 120
+        },
+        "durationMs": 328540.244834,
+        "endedEnvironment": {
+          "url": "https://www.browserbench.org/MotionMark1.3.2/",
+          "title": "MotionMark 1.3.2",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Browser/0.1.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+          "width": 1280,
+          "height": 750,
+          "dpr": 2,
+          "screenWidth": 1800,
+          "screenHeight": 1169,
+          "colorDepth": 30,
+          "hardwareConcurrency": 12,
+          "focused": false,
+          "visibility": "visible"
+        },
+        "visibilityChanges": [],
+        "hiddenDuringRun": false,
+        "diagnostics": [],
+        "frameRate": 120,
+        "observedScore": 5119.473284160609,
+        "confidence": {
+          "low": 5039.55438397578,
+          "high": 5201.110121349348
+        },
+        "rawSha256": "0f29eb72af70d908b7b6bdb006a09a89f1b640691045f7078c88809fe17c3b5c",
+        "score": 5119.473284160609,
+        "finishedAt": "2026-11-03T19:13:33.991Z",
+        "loadAfter": [5.9638671875, 4.66357421875, 4.31591796875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "error": "Benchmark page was not focused and visible immediately before start"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electron-1-attempt-3",
+        "status": "failed",
+        "startedAt": "2026-11-03T19:45:34.465Z",
+        "loadBefore": [2.8916015625, 3.7607421875, 4.21533203125],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "error": "Timed out: native benchmark focus",
+        "finishedAt": "2026-11-03T19:45:49.930Z",
+        "loadAfter": [3.7705078125, 3.91748046875, 4.26318359375],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      },
+      {
+        "kind": "electron",
+        "suite": "motionmark",
+        "round": 0,
+        "label": "motionmark-electron-1-attempt-4",
+        "status": "failed",
+        "startedAt": "2026-11-03T19:49:30.810Z",
+        "loadBefore": [2.009765625, 3.7021484375, 4.1875],
+        "powerBefore": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true",
+        "activation": "true",
+        "error": "Timed out: native benchmark focus",
+        "finishedAt": "2026-11-03T19:49:46.420Z",
+        "loadAfter": [2.314453125, 3.68408203125, 4.17138671875],
+        "powerAfter": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=24445027)\t80%; AC attached; not charging present: true"
+      }
+    ],
+    "artifacts": {
+      "electronMain": "a037365fc239e28c76469773d01664863e149999b70dc5a5441af65e915ea1fa",
+      "electronUi": "e438662f724234f9e8245ec0a5f205982124d13f6faeda1fbdbd240501e2bcc4",
+      "electrobunMain": "8afb61682280f0f2bd82abaad23996d043781cf23cd132a2bbfa2a8b8cd001c7",
+      "electrobunUi": "b1744944671e1fa9ac56919129a359d21dc63a6fac8f0417ea2c4c56a536d1c9"
+    },
+    "methodology": [
+      "Official HTTPS BrowserBench pages, full default workloads: Speedometer 3.1 (ten iterations), JetStream 3.0 (every default subtest), MotionMark 1.3.2 (all eight 30-second tests, automatic frame-rate detection). No shortened tests, custom suite filters, iteration overrides, or GPU/backend flags.",
+      "Each full pass uses a new app process and a fresh browsing profile/partition. 3 passes per app/suite, with alternating app order in the planned schedule. Resumed retries fill missing slots later; per-pass timestamps preserve the actual chronology. Suite-internal warmups are retained; no separate full-pass warmup in this measurement loop. A 10-second gap separates full passes. Separate full-workload adapter validation passes may precede the recorded comparison.",
+      "Same pinned Electron snapshot and Electrobun + CEF prototype as the local benchmark, optimized Svelte assets inside unsigned development desktop runtimes. Artifact hashes and actual Chromium versions are recorded.",
+      "CEF disables occluded-window backgrounding by default; Electron receives the matching flag. Other browser/runtime defaults are retained. No headless mode or emulated viewport. Native app activation, Page.bringToFront and native tab selection are used before starting each test, with a normal page-margin click if needed to restore content focus; document focus and visible state are required before start.",
+      "Default viewport is 1280 × 750 content pixels; actual viewport, screen, device scale, focus and visibility are recorded for each pass. MotionMark comparisons are withheld when detected target frame rates differ, viewport/scale differs, or a page becomes hidden.",
+      "Completion callbacks/events are observed without changing workloads, score calculation or benchmark settings. A CDP binding signals completion; the runner does not poll the renderer while a benchmark is running. Data serialization and screenshots happen after completion.",
+      "Scores are the suite's official overall scores; higher is better. The report shows median, every full-pass score and sample counts. JetStream's displayed score is rounded by its own UI; full per-subtest results are preserved.",
+      "OS caches are warm. Electron uses a temporary full profile; Electrobun uses a unique named persistent tab partition but retains its CEF root/UI cache. Page resources come from the public HTTPS site, so network/cache conditions are not fully controlled.",
+      "This is a normal desktop session, not a thermally controlled lab run. Power source, system load and browser versions are recorded. Other applications are not closed, and system power/refresh settings are not changed. Caffeinate keeps the display/system awake only while the runner is alive.",
+      "These are measurements of the two prototype implementations on this Mac. They do not establish a framework-wide performance ranking, feature parity, or production browser security.",
+      "MotionMark starts only after its controller has finished frame-rate calibration. Dashboard, system and final option frame rates must agree. Invalid/interrupted attempts are retained separately and excluded from summaries; --resume revalidates stored raw results before reusing completed passes."
+    ],
+    "resumptions": [
+      "2026-11-03T19:07:59.590Z",
+      "2026-11-03T19:45:34.353Z",
+      "2026-11-03T19:49:30.714Z",
+      "2026-11-03T19:51:00.018Z"
+    ],
+    "summary": [
+      {
+        "id": "speedometer",
+        "name": "Speedometer 3.1",
+        "url": "https://www.browserbench.org/Speedometer3.1/",
+        "apps": {
+          "electron": {
+            "n": 3,
+            "median": 54.93833295667091,
+            "min": 54.40855650801908,
+            "max": 54.95037281031269,
+            "scores": [54.95037281031269, 54.93833295667091, 54.40855650801908],
+            "frameRates": []
+          },
+          "electrobun": {
+            "n": 3,
+            "median": 49.4542392697421,
+            "min": 49.19466182452139,
+            "max": 49.67946138426292,
+            "scores": [49.19466182452139, 49.67946138426292, 49.4542392697421],
+            "frameRates": []
+          }
+        },
+        "frameRates": [],
+        "comparable": true,
+        "reasons": [],
+        "cefDifferencePercent": -9.982271743218064
+      },
+      {
+        "id": "jetstream",
+        "name": "JetStream 3.0",
+        "url": "https://www.browserbench.org/JetStream3.0/",
+        "apps": {
+          "electron": {
+            "n": 3,
+            "median": 387.65,
+            "min": 383.43,
+            "max": 388.97,
+            "scores": [388.97, 383.43, 387.65],
+            "frameRates": []
+          },
+          "electrobun": {
+            "n": 3,
+            "median": 387.57,
+            "min": 387.57,
+            "max": 388.68,
+            "scores": [388.68, 387.57, 387.57],
+            "frameRates": []
+          }
+        },
+        "frameRates": [],
+        "comparable": true,
+        "reasons": [],
+        "cefDifferencePercent": -0.020637172707338447
+      },
+      {
+        "id": "motionmark",
+        "name": "MotionMark 1.3.2",
+        "url": "https://www.browserbench.org/MotionMark1.3.2/",
+        "apps": {
+          "electron": {
+            "n": 3,
+            "median": 5203.014738622803,
+            "min": 5159.844739621976,
+            "max": 5207.6887926389045,
+            "scores": [5159.844739621976, 5207.6887926389045, 5203.014738622803],
+            "frameRates": [120]
+          },
+          "electrobun": {
+            "n": 3,
+            "median": 4134.549296082759,
+            "min": 4095.0453609693677,
+            "max": 4163.764395067785,
+            "scores": [4134.549296082759, 4095.0453609693677, 4163.764395067785],
+            "frameRates": [120]
+          }
+        },
+        "frameRates": [120],
+        "comparable": true,
+        "reasons": [],
+        "cefDifferencePercent": -20.535506743977795
+      }
+    ],
+    "completedAt": "2026-11-03T19:56:43.250Z"
+  }
+}
