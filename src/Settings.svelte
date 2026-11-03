@@ -38,6 +38,15 @@
 
   <section class="settings-section" aria-labelledby="appearance-title">
     <h2 id="appearance-title">Appearance</h2>
+    <div class="preference-row theme-preference">
+      <label for="theme"><strong id="theme-label">Theme</strong><span id="theme-description">Choose your look, or follow your system appearance.</span></label>
+      <select id="theme" aria-labelledby="theme-label" aria-describedby="theme-description" value={settings.theme} disabled={busy}
+        onchange={(event) => save({ theme: event.currentTarget.value as BrowserSettings['theme'] })}>
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+    </div>
     <fieldset class="layout-options" disabled={busy}>
       <legend>Tab placement</legend>
       <p>Keep tabs across the top or give them a side of their own.</p>

@@ -6,7 +6,8 @@
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true } });
+  let browserState = $state<BrowserState>({ resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
+  $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let address = $state('');
   let query = $state('');
@@ -15,7 +16,7 @@
   let current = $derived(browserState.tabs.find((tab) => tab.id === browserState.activeId));
   let modifier = $derived(browserState.platform === 'darwin' ? '⌘' : 'Ctrl+');
   const shortcuts = [
-    { name: 'GitHub', url: 'https://github.com', icon: 'code', color: '#303747', detail: 'Build something' },
+    { name: 'GitHub', url: 'https://github.com', icon: 'code', color: 'var(--text)', detail: 'Build something' },
     { name: 'Wikipedia', url: 'https://wikipedia.org', icon: 'globe', color: '#52728a', detail: 'Follow your curiosity' },
     { name: 'Svelte', url: 'https://svelte.dev', icon: 'code', color: '#d75b37', detail: 'Make it reactive' },
     { name: 'Hacker News', url: 'https://news.ycombinator.com', icon: 'arrow', color: '#bc7b2a', detail: 'See what’s happening' },

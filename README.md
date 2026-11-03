@@ -15,7 +15,8 @@ Features:
 
 - Create, switch, and close tabs, including links that open a new tab.
 - Use the **Tabs** selector in the title bar to place tabs at the top, left, or right. Vertical tabs support Up/Down arrow navigation.
-- Open **Settings** from the toolbar or Cmd/Ctrl+, to choose tab placement, a search engine (DuckDuckGo, Google, or Bing), and whether new-tab shortcuts appear. Preferences save automatically in the app's local profile and survive a restart.
+- Open **Settings** from the toolbar or Cmd/Ctrl+, to choose a theme (System, Light, or Dark), tab placement, a search engine (DuckDuckGo, Google, or Bing), and whether new-tab shortcuts appear. Preferences save automatically in the app's local profile and survive a restart.
+- The theme follows your system by default and applies to all browser controls. Websites that support system appearance can follow the selected theme too.
 - Enter an HTTP(S) address or search with your selected engine from either search field.
 - Go back, forward, reload, stop, or return to the new-tab page.
 - Each tab has a separate `WebContentsView`. Background pages keep their state.

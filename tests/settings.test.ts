@@ -20,11 +20,12 @@ describe("browser preferences", () => {
     const file = profile();
     const store = createSettingsStore(file);
     store.update({ tabLayout: "right", showShortcuts: false });
-    store.update({ searchEngine: "google" });
+    store.update({ searchEngine: "google", theme: "dark" });
     expect(createSettingsStore(file).get()).toEqual({
       tabLayout: "right",
       showShortcuts: false,
       searchEngine: "google",
+      theme: "dark",
     });
   });
   it("rejects invalid settings without changing memory or disk", () => {
@@ -39,6 +40,8 @@ describe("browser preferences", () => {
       { searchEngine: "evil" },
       { showShortcuts: "yes" },
       { unknown: true },
+      { theme: "sepia" },
+      { theme: null },
     ]) {
       expect(() => store.update(patch)).toThrow();
       expect(readFileSync(file, "utf8")).toBe(saved);
@@ -52,12 +55,17 @@ describe("browser preferences", () => {
       tabLayout: "top",
       searchEngine: "duckduckgo",
       showShortcuts: true,
+      theme: "system",
     });
-    writeFileSync(file, JSON.stringify({ tabLayout: "left", searchEngine: "unknown" }));
+    writeFileSync(
+      file,
+      JSON.stringify({ tabLayout: "left", searchEngine: "unknown", theme: "invalid" }),
+    );
     expect(createSettingsStore(file).get()).toEqual({
       tabLayout: "left",
       searchEngine: "duckduckgo",
       showShortcuts: true,
+      theme: "system",
     });
   });
   it("uses the selected search engine while preserving direct addresses", () => {

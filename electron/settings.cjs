@@ -1,8 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const defaults = { tabLayout: "top", searchEngine: "duckduckgo", showShortcuts: true };
+const defaults = {
+  tabLayout: "top",
+  searchEngine: "duckduckgo",
+  showShortcuts: true,
+  theme: "system",
+};
 const validators = {
+  theme: (value) => ["system", "light", "dark"].includes(value),
   tabLayout: (value) => ["top", "left", "right"].includes(value),
   searchEngine: (value) => ["duckduckgo", "google", "bing"].includes(value),
   showShortcuts: (value) => typeof value === "boolean",

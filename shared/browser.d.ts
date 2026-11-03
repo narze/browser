@@ -9,11 +9,13 @@ export interface BrowserTab {
 }
 export type TabLayout = "top" | "left" | "right";
 export interface BrowserSettings {
+  theme: "system" | "light" | "dark";
   tabLayout: TabLayout;
   searchEngine: "duckduckgo" | "google" | "bing";
   showShortcuts: boolean;
 }
 export interface BrowserState {
+  resolvedTheme: "light" | "dark";
   split: { tabIds: [number, number]; ratio: number } | null;
   splitResizing: boolean;
   settings: BrowserSettings;

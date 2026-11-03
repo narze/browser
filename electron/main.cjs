@@ -1,4 +1,12 @@
-const { app, BrowserWindow, WebContentsView, ipcMain, Menu, session } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  WebContentsView,
+  ipcMain,
+  Menu,
+  session,
+  nativeTheme,
+} = require("electron");
 const path = require("node:path");
 const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
@@ -23,6 +31,7 @@ function getState() {
   return {
     split,
     splitResizing,
+    resolvedTheme: nativeTheme.shouldUseDarkColors ? "dark" : "light",
     tabLayout: settings.tabLayout,
     settings,
     settingsOpen,
@@ -269,9 +278,17 @@ function showSettings(open) {
   else window.webContents.focus();
 }
 
+function updateTheme() {
+  if (window && !window.isDestroyed())
+    window.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#121722" : "#f5f7fa");
+  publish();
+}
+
 function updateSettings(patch) {
   try {
     settings = settingsStore.update(patch);
+    nativeTheme.themeSource = settings.theme;
+    updateTheme();
     layout();
     publish();
     return {};
@@ -361,7 +378,7 @@ function createWindow() {
     minWidth: 640,
     minHeight: 420,
     title: "Browser",
-    backgroundColor: "#f5f7fa",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#121722" : "#f5f7fa",
     titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
     trafficLightPosition: { x: 16, y: 16 },
     autoHideMenuBar: true,
@@ -397,6 +414,8 @@ if (profileDirectory) app.setPath("userData", path.resolve(profileDirectory));
 app.whenReady().then(() => {
   settingsStore = createSettingsStore(path.join(app.getPath("userData"), "settings.json"));
   settings = settingsStore.get();
+  nativeTheme.themeSource = settings.theme;
+  nativeTheme.on("updated", updateTheme);
   session
     .fromPartition("persist:browsing")
     .setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
