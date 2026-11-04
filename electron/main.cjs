@@ -11,46 +11,79 @@ const path = require("node:path");
 const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
+const { createBrowserSession } = require("./browser-session.cjs");
 
 // Prototype: tabs are in memory. Remote pages never receive the chrome preload.
 const CHROME_HEIGHT = 100;
 const SIDEBAR_WIDTH = 220;
 let settingsStore;
 let settings;
-let settingsOpen = false;
 let window;
-let tabs = [];
-let activeId;
-let nextId = 1;
-let split = null;
-let splitResizing = false;
-let palette = null;
+let browserSession;
+const views = new Map();
 let paletteView;
-let paletteRequestId = 0;
 
-const activeTab = () => tabs.find((tab) => tab.id === activeId);
+const sessionState = () => browserSession.getState();
+const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
+const activeView = () => views.get(sessionState().activeId);
 
 function getState() {
+  const { pages: _pages, ...state } = sessionState();
   return {
-    palette,
-    split,
-    splitResizing,
+    ...state,
     resolvedTheme: nativeTheme.shouldUseDarkColors ? "dark" : "light",
     tabLayout: settings.tabLayout,
     settings,
-    settingsOpen,
-    activeId,
     platform: process.platform,
-    tabs: tabs.map(({ id, url, title, loading, error, view }) => ({
-      id,
-      url,
-      title,
-      loading,
-      error,
-      canGoBack: view.webContents.navigationHistory.canGoBack(),
-      canGoForward: view.webContents.navigationHistory.canGoForward(),
+    tabs: state.tabs.map((tab) => ({
+      ...tab,
+      canGoBack: views.get(tab.id).webContents.navigationHistory.canGoBack(),
+      canGoForward: views.get(tab.id).webContents.navigationHistory.canGoForward(),
     })),
   };
+}
+
+// Session transitions are pure; this adapter owns all native view side effects.
+function dispatch(command) {
+  const result = browserSession.dispatch(command);
+  for (const tab of result.state.tabs) {
+    if (!views.has(tab.id)) {
+      const view = createPageView(tab.id);
+      views.set(tab.id, view);
+      window.contentView.addChildView(view);
+    }
+  }
+  for (const [id, view] of views) {
+    if (result.state.tabs.some((tab) => tab.id === id)) continue;
+    views.delete(id);
+    window.contentView.removeChildView(view);
+    view.webContents.close({ waitForBeforeUnload: false });
+  }
+  if (!result.state.palette && paletteView?.getVisible()) {
+    paletteView.setVisible(false);
+    window.contentView.removeChildView(paletteView);
+  }
+  layout();
+  publish();
+  for (const effect of result.effects) {
+    if (effect.type === "load") {
+      const contents = views.get(effect.id).webContents;
+      if (!effect.url) contents.stop();
+      // did-fail-load owns visible errors, including redirects.
+      void contents.loadURL(effect.url || "about:blank").catch(() => {});
+    } else if (effect.type === "focus") focusActive();
+  }
+  return result;
+}
+
+function focusActive() {
+  const state = sessionState();
+  const tab = activeTab();
+  if (!state.settingsOpen && tab?.url && !tab.error) activeView().webContents.focus();
+  else {
+    window.webContents.focus();
+    if (!state.settingsOpen) window.webContents.send("browser:focus-address");
+  }
 }
 
 function publish() {
@@ -61,16 +94,18 @@ function publish() {
 
 function layout() {
   if (!window || window.isDestroyed()) return;
+  const state = sessionState();
   const [width, height] = window.getContentSize();
-  if (paletteView && palette) paletteView.setBounds({ x: 0, y: 0, width, height });
+  if (paletteView && state.palette) paletteView.setBounds({ x: 0, y: 0, width, height });
   const sidebarWidth = settings.tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
   const contentWidth = width - sidebarWidth;
   const originX = settings.tabLayout === "left" ? sidebarWidth : 0;
-  const leftWidth = split ? Math.round((contentWidth - 8) * split.ratio) : contentWidth;
-  for (const tab of tabs) {
-    const side = split ? split.tabIds.indexOf(tab.id) : -1;
+  const leftWidth = state.split ? Math.round((contentWidth - 8) * state.split.ratio) : contentWidth;
+  for (const page of state.pages) {
+    const view = views.get(page.id);
+    const side = state.split ? state.split.tabIds.indexOf(page.id) : -1;
     const inSplit = side !== -1;
-    tab.view.setBounds({
+    view.setBounds({
       x: originX + (side === 1 ? leftWidth + 8 : 0),
       y: CHROME_HEIGHT + (inSplit ? 36 : 0),
       width: Math.max(
@@ -79,25 +114,14 @@ function layout() {
       ),
       height: Math.max(1, height - CHROME_HEIGHT - (inSplit ? 36 : 0)),
     });
-    tab.view.setVisible(
-      !settingsOpen &&
-        !splitResizing &&
-        (split ? inSplit : tab.id === activeId) &&
-        !!tab.url &&
-        !tab.error,
-    );
+    view.setVisible(page.visible);
   }
 }
 
 // The palette is a trusted local view above the page views, never a website preload.
 function openPalette(mode = "commands") {
   if (!window || !["navigate", "commands"].includes(mode)) return;
-  splitResizing = false;
-  palette = {
-    query: mode === "navigate" ? activeTab()?.url || "" : "",
-    mode,
-    requestId: ++paletteRequestId,
-  };
+  dispatch({ type: "open-palette", mode });
   if (!paletteView) {
     paletteView = new WebContentsView({
       webPreferences: {
@@ -113,7 +137,7 @@ function openPalette(mode = "commands") {
     paletteView.webContents.on("before-input-event", paletteShortcut);
     paletteView.webContents.on("did-finish-load", () => {
       publish();
-      if (palette) paletteView.webContents.focus();
+      if (sessionState().palette) paletteView.webContents.focus();
     });
     paletteView.webContents.on("render-process-gone", () => {
       closePalette();
@@ -135,16 +159,9 @@ function openPalette(mode = "commands") {
 }
 
 function closePalette(restoreFocus = true) {
-  if (!palette) return;
-  palette = null;
-  paletteView.setVisible(false);
-  window.contentView.removeChildView(paletteView);
-  publish();
-  if (restoreFocus) {
-    const tab = activeTab();
-    if (!settingsOpen && tab?.url && !tab.error) tab.view.webContents.focus();
-    else window.webContents.focus();
-  }
+  if (!sessionState().palette) return;
+  dispatch({ type: "close-palette" });
+  if (restoreFocus) focusActive();
 }
 
 function paletteShortcut(event, input) {
@@ -163,7 +180,7 @@ function paletteShortcut(event, input) {
 }
 
 function executePalette(action) {
-  if (!palette || !action || typeof action !== "object")
+  if (!sessionState().palette || !action || typeof action !== "object")
     return { error: "Open the command palette first." };
   try {
     if (action.type === "navigate") {
@@ -180,10 +197,10 @@ function executePalette(action) {
       else {
         const tab = activeTab();
         load(tab, url);
-        tab.view.webContents.focus();
+        activeView().webContents.focus();
       }
     } else if (action.type === "tab") {
-      if (!isTabId(action.id) || !tabs.some((tab) => tab.id === action.id))
+      if (!isTabId(action.id) || !sessionState().tabs.some((tab) => tab.id === action.id))
         throw new Error("That tab is no longer open.");
       selectTab(action.id);
     } else if (action.type === "command") {
@@ -197,7 +214,7 @@ function executePalette(action) {
       };
       const commands = {
         "new-tab": () => newTab(),
-        "close-tab": () => closeTab(activeId),
+        "close-tab": () => closeTab(sessionState().activeId),
         settings: () => showSettings(true),
         split: toggleSplit,
         reload,
@@ -219,50 +236,19 @@ function executePalette(action) {
   }
 }
 
-function focusAddress() {
-  if (settingsOpen) showSettings(false);
-  window.webContents.focus();
-  window.webContents.send("browser:focus-address");
-}
-
 function selectTab(id) {
-  if (!tabs.some((tab) => tab.id === id)) return;
-  closePalette(false);
-  if (split && !split.tabIds.includes(id)) {
-    split.tabIds[split.tabIds.indexOf(activeId) === 1 ? 1 : 0] = id;
-  }
-  splitResizing = false;
-  settingsOpen = false;
-  activeId = id;
-  layout();
-  publish();
-  const tab = activeTab();
-  if (tab.url && !tab.error) tab.view.webContents.focus();
-  else focusAddress();
+  dispatch({ type: "select-tab", id });
 }
 
 function load(tab, url) {
-  closePalette(false);
-  settingsOpen = false;
-  tab.url = url;
-  tab.error = null;
-  tab.loading = !!url;
-  if (!url) {
-    tab.title = "New tab";
-    tab.view.webContents.stop();
-    // Release the previous page when returning to the new-tab screen.
-    void tab.view.webContents.loadURL("about:blank").catch(() => {});
-  } else {
-    tab.title = new URL(url).hostname;
-    void tab.view.webContents.loadURL(url).catch(() => {
-      // did-fail-load owns the visible error state, including redirects.
-    });
-  }
-  layout();
-  publish();
+  dispatch({ type: "navigate", id: tab.id, url });
 }
 
 function newTab(url = "") {
+  return dispatch({ type: "new-tab", url }).state.activeId;
+}
+
+function createPageView(id) {
   const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: false,
@@ -271,152 +257,101 @@ function newTab(url = "") {
       partition: "persist:browsing",
     },
   });
-  const tab = { id: nextId++, url: "", title: "New tab", loading: false, error: null, view };
-  tabs.push(tab);
-  window.contentView.addChildView(view);
   const contents = view.webContents;
+  const tab = () => sessionState().tabs.find((entry) => entry.id === id);
+  const update = (patch) => dispatch({ type: "update-tab", id, patch });
   contents.on("focus", () => {
+    const state = sessionState();
     if (
-      split &&
-      split.tabIds.includes(tab.id) &&
-      !settingsOpen &&
-      !splitResizing &&
-      activeId !== tab.id
-    ) {
-      activeId = tab.id;
-      publish();
-    }
+      state.split?.tabIds.includes(id) &&
+      !state.settingsOpen &&
+      !state.splitResizing &&
+      !state.palette &&
+      state.activeId !== id
+    )
+      dispatch({ type: "focus-tab", id });
   });
   let lastPopupAt = -Infinity;
   contents.on("did-start-loading", () => {
-    if (tab.url) tab.loading = true;
-    publish();
+    if (tab()?.url) update({ loading: true });
   });
-  contents.on("did-stop-loading", () => {
-    tab.loading = false;
-    publish();
-  });
+  contents.on("did-stop-loading", () => update({ loading: false }));
   contents.on("page-title-updated", (_event, title) => {
-    if (tab.url) tab.title = title || new URL(tab.url).hostname;
-    publish();
+    if (tab()?.url) update({ title: title || new URL(tab().url).hostname });
   });
-  const navigated = (_event, nextUrl) => {
-    if (!isWebUrl(nextUrl)) return;
-    tab.url = nextUrl;
-    tab.error = null;
-    layout();
-    publish();
+  const navigated = (_event, url) => {
+    if (isWebUrl(url)) update({ url, error: null });
   };
   contents.on("did-navigate", navigated);
-  contents.on("did-navigate-in-page", (event, nextUrl, isMainFrame) => {
-    if (isMainFrame) navigated(event, nextUrl);
+  contents.on("did-navigate-in-page", (event, url, isMainFrame) => {
+    if (isMainFrame) navigated(event, url);
   });
   contents.on("did-fail-load", (_event, code, description, failedUrl, isMainFrame) => {
-    if (!isMainFrame || code === -3 || !tab.url) return;
-    tab.loading = false;
-    tab.error = `Could not open ${failedUrl || tab.url}. ${description}`;
-    layout();
-    publish();
+    if (isMainFrame && code !== -3 && tab()?.url)
+      update({ loading: false, error: `Could not open ${failedUrl || tab().url}. ${description}` });
   });
-  contents.on("render-process-gone", () => {
-    tab.loading = false;
-    tab.error = "This tab stopped responding. Reload to try again.";
-    layout();
-    publish();
-  });
+  contents.on("render-process-gone", () =>
+    update({ loading: false, error: "This tab stopped responding. Reload to try again." }),
+  );
   for (const event of ["will-navigate", "will-redirect"]) {
     contents.on(event, (event, targetUrl) => {
       if (!isWebUrl(targetUrl)) event.preventDefault();
     });
   }
-  contents.setWindowOpenHandler(({ url: targetUrl }) => {
+  contents.setWindowOpenHandler(({ url }) => {
     const now = performance.now();
-    if (isWebUrl(targetUrl) && canOpenPopup(lastPopupAt, now)) {
+    if (isWebUrl(url) && canOpenPopup(lastPopupAt, now)) {
       lastPopupAt = now;
-      newTab(targetUrl);
+      newTab(url);
     }
     return { action: "deny" };
   });
   contents.on("before-input-event", paletteShortcut);
-  contents.on("before-input-event", (event, input) => {
-    if (input.type !== "keyDown") return;
-    if (input.control && input.key === "Tab") {
-      event.preventDefault();
-      cycleTab(input.shift ? -1 : 1);
-    }
-    if ((input.meta || input.control) && /^[1-9]$/.test(input.key)) {
-      const index = input.key === "9" ? tabs.length - 1 : Number(input.key) - 1;
-      if (tabs[index]) {
-        event.preventDefault();
-        selectTab(tabs[index].id);
-      }
-    }
-    if (input.key === "Escape" && tab.loading) contents.stop();
+  contents.on("before-input-event", tabShortcut);
+  contents.on("before-input-event", (_event, input) => {
+    if (input.type === "keyDown" && input.key === "Escape" && tab()?.loading) contents.stop();
   });
-  if (url) load(tab, url);
-  selectTab(tab.id);
-  return tab.id;
+  return view;
+}
+
+function tabShortcut(event, input) {
+  if (input.type !== "keyDown") return;
+  if (input.control && input.key === "Tab") {
+    event.preventDefault();
+    cycleTab(input.shift ? -1 : 1);
+  } else if ((input.meta || input.control) && /^[1-9]$/.test(input.key)) {
+    event.preventDefault();
+    dispatch({ type: "select-position", position: Number(input.key) });
+  }
 }
 
 function closeTab(id) {
-  const index = tabs.findIndex((tab) => tab.id === id);
-  if (index < 0) return;
-  if (split?.tabIds.includes(id)) {
-    activeId = split.tabIds.find((tabId) => tabId !== id);
-    split = null;
-    splitResizing = false;
-  }
-  const [tab] = tabs.splice(index, 1);
-  window.contentView.removeChildView(tab.view);
-  tab.view.webContents.close({ waitForBeforeUnload: false });
-  if (!tabs.length) newTab();
-  else if (activeId === id) selectTab(tabs[Math.min(index, tabs.length - 1)].id);
-  else {
-    layout();
-    publish();
-  }
+  dispatch({ type: "close-tab", id });
 }
 
 function toggleSplit() {
-  if (split) {
-    split = null;
-    splitResizing = false;
-    selectTab(activeId);
-    return;
-  }
-  const originalId = activeId;
-  const other = tabs.find((tab) => tab.id !== originalId);
-  const otherId = other?.id ?? newTab();
-  split = { tabIds: [originalId, otherId], ratio: 0.5 };
-  selectTab(other ? originalId : otherId);
+  dispatch({ type: "toggle-split" });
 }
 
 function cycleTab(direction) {
-  const index = tabs.findIndex((tab) => tab.id === activeId);
-  selectTab(tabs[(index + direction + tabs.length) % tabs.length].id);
+  dispatch({ type: "cycle-tab", direction });
 }
 
 function reload() {
   const tab = activeTab();
   if (!tab?.url) return;
   if (tab.error) load(tab, tab.url);
-  else tab.view.webContents.reload();
+  else activeView().webContents.reload();
 }
 
 function history(direction) {
-  const navigation = activeTab()?.view.webContents.navigationHistory;
+  const navigation = activeView()?.webContents.navigationHistory;
   if (direction === "back" && navigation?.canGoBack()) navigation.goBack();
   if (direction === "forward" && navigation?.canGoForward()) navigation.goForward();
 }
 
 function showSettings(open) {
-  closePalette(false);
-  splitResizing = false;
-  settingsOpen = open;
-  layout();
-  publish();
-  if (!open && activeTab()?.url && !activeTab()?.error) activeTab().view.webContents.focus();
-  else window.webContents.focus();
+  dispatch({ type: "show-settings", open });
 }
 
 function updateTheme() {
@@ -447,29 +382,9 @@ function installIpc() {
     "palette-close": () => closePalette(),
     "palette-execute": executePalette,
     "toggle-split": toggleSplit,
-    "set-split-tab": (side, id) => {
-      if (!split || ![0, 1].includes(side) || !isTabId(id) || !tabs.some((tab) => tab.id === id))
-        throw new Error("Invalid split tab.");
-      const opposite = 1 - side;
-      if (split.tabIds[opposite] === id) split.tabIds[opposite] = split.tabIds[side];
-      split.tabIds[side] = id;
-      selectTab(id);
-    },
-    "resize-split": (ratio) => {
-      if (typeof ratio !== "number" || !Number.isFinite(ratio))
-        throw new Error("Invalid split ratio.");
-      if (split) {
-        split.ratio = Math.max(0.25, Math.min(0.75, ratio));
-        layout();
-        publish();
-      }
-    },
-    "set-split-resizing": (resizing) => {
-      if (typeof resizing !== "boolean") throw new Error("Invalid resize state.");
-      splitResizing = !!split && !settingsOpen && resizing;
-      layout();
-      publish();
-    },
+    "set-split-tab": (side, id) => dispatch({ type: "set-split-tab", side, id }),
+    "resize-split": (ratio) => dispatch({ type: "resize-split", ratio }),
+    "set-split-resizing": (resizing) => dispatch({ type: "set-split-resizing", resizing }),
     "open-settings": () => showSettings(true),
     "close-settings": () => showSettings(false),
     "update-settings": updateSettings,
@@ -491,7 +406,7 @@ function installIpc() {
         const tab = activeTab();
         const url = resolveAddress(input, settings.searchEngine);
         load(tab, url);
-        if (url) tab.view.webContents.focus();
+        if (url) activeView().webContents.focus();
         return {};
       } catch (error) {
         return { error: error.message };
@@ -500,7 +415,7 @@ function installIpc() {
     back: () => history("back"),
     forward: () => history("forward"),
     reload,
-    stop: () => activeTab()?.view.webContents.stop(),
+    stop: () => activeView()?.webContents.stop(),
   };
   for (const [channel, handler] of Object.entries(handlers)) {
     ipcMain.handle(`browser:${channel}`, (event, ...args) => {
@@ -517,9 +432,7 @@ function installIpc() {
 }
 
 function createWindow() {
-  settingsOpen = false;
-  split = null;
-  splitResizing = false;
+  browserSession = createBrowserSession();
   window = new BrowserWindow({
     width: 1280,
     height: 850,
@@ -538,20 +451,20 @@ function createWindow() {
     },
   });
   window.webContents.on("before-input-event", paletteShortcut);
+  window.webContents.on("before-input-event", tabShortcut);
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.on("resize", layout);
   window.on("closed", () => {
-    palette = null;
     if (paletteView && !paletteView.webContents.isDestroyed())
       paletteView.webContents.close({ waitForBeforeUnload: false });
     paletteView = null;
-    const closingTabs = tabs;
-    tabs = [];
+    const closingViews = [...views.values()];
+    views.clear();
     window = null;
-    for (const tab of closingTabs) {
-      if (!tab.view.webContents.isDestroyed())
-        tab.view.webContents.close({ waitForBeforeUnload: false });
+    browserSession = createBrowserSession();
+    for (const view of closingViews) {
+      if (!view.webContents.isDestroyed()) view.webContents.close({ waitForBeforeUnload: false });
     }
   });
   window.webContents.on("did-finish-load", publish);
@@ -593,9 +506,9 @@ app.whenReady().then(() => {
             accelerator: "CmdOrCtrl+W",
             click: () => {
               if (window) {
-                if (palette) closePalette();
-                else if (settingsOpen) showSettings(false);
-                else closeTab(activeId);
+                if (sessionState().palette) closePalette();
+                else if (sessionState().settingsOpen) showSettings(false);
+                else closeTab(sessionState().activeId);
               }
             },
           },
@@ -658,10 +571,7 @@ app.whenReady().then(() => {
             accelerator: "CmdOrCtrl+Alt+I",
             click: () => {
               if (window)
-                (activeTab()?.url
-                  ? activeTab().view.webContents
-                  : window.webContents
-                ).toggleDevTools();
+                (activeTab()?.url ? activeView().webContents : window.webContents).toggleDevTools();
             },
           },
         ],

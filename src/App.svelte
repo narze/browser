@@ -3,26 +3,13 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
-  import type { BrowserState, BrowserTab, TabLayout } from '../shared/browser';
+  import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
-  let tabRows = $derived.by(() => {
-    const rows: BrowserTab[][] = [];
-    const splitIds: number[] = browserState.split?.tabIds ?? [];
-    const pair = splitIds.map((id) => browserState.tabs.find((tab) => tab.id === id)).filter((tab) => tab !== undefined);
-    let grouped = false;
-    for (const tab of browserState.tabs) {
-      if (!splitIds.includes(tab.id)) rows.push([tab]);
-      else if (!grouped) {
-        rows.push(pair);
-        grouped = true;
-      }
-    }
-    return rows;
-  });
+  let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
   let visibleTabs = $derived(tabRows.flat());
 
   let address = $state('');
@@ -82,16 +69,6 @@
   }
 
   function keydown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 'Tab') {
-      event.preventDefault();
-      const index = browserState.tabs.findIndex((tab) => tab.id === browserState.activeId);
-      void api?.selectTab(browserState.tabs[(index + (event.shiftKey ? -1 : 1) + browserState.tabs.length) % browserState.tabs.length].id);
-    }
-    if ((event.metaKey || event.ctrlKey) && /^[1-9]$/.test(event.key)) {
-      event.preventDefault();
-      const index = event.key === '9' ? browserState.tabs.length - 1 : Number(event.key) - 1;
-      if (browserState.tabs[index]) void api?.selectTab(browserState.tabs[index].id);
-    }
     if (event.key === 'Escape') {
       if (browserState.settingsOpen) { void api?.closeSettings(); return; }
       address = current?.url || '';

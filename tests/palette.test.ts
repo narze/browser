@@ -7,6 +7,7 @@ const state: BrowserState = {
   resolvedTheme: "light",
   platform: "darwin",
   activeId: 2,
+  tabSlots: [[1], [2]],
   tabs: [
     {
       id: 1,

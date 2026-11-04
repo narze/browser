@@ -28,6 +28,7 @@ export interface BrowserState {
   settingsOpen: boolean;
   tabLayout: TabLayout;
   tabs: BrowserTab[];
+  tabSlots: number[][];
   activeId: number;
   platform: string;
 }
