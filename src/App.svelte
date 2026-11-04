@@ -3,9 +3,16 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
+  import { observePageLayout } from './page-layout';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
+  let pageRegion: HTMLElement;
+  $effect(() => {
+    // Rebind observers after Svelte changes which tabs occupy the page regions.
+    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.tabLayout].join(':');
+    if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
+  });
   let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
@@ -69,6 +76,14 @@
   }
 
   function keydown(event: KeyboardEvent) {
+    if (event.ctrlKey && event.key === 'Tab') {
+      event.preventDefault();
+      void api?.cycleTab(event.shiftKey ? -1 : 1);
+    }
+    if ((event.metaKey || event.ctrlKey) && /^[1-9]$/.test(event.key)) {
+      event.preventDefault();
+      void api?.selectTabPosition(Number(event.key));
+    }
     if (event.key === 'Escape') {
       if (browserState.settingsOpen) { void api?.closeSettings(); return; }
       address = current?.url || '';
@@ -143,7 +158,7 @@
     {#if current?.loading}<div class="loading-bar"></div>{/if}
   </header>
 
-  <main>
+  <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen ? browserState.activeId : undefined}>
     {#if browserState.settingsOpen && api}
       <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
     {:else if browserState.split && api}

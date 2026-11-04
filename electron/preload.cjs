@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 /** @type {import('../shared/browser').BrowserApi} */
 const browser = {
+  reportPageLayout: (regions) => ipcRenderer.invoke("browser:page-layout", regions),
   openPalette: (mode = "commands") => ipcRenderer.invoke("browser:palette-open", mode),
   closePalette: () => ipcRenderer.invoke("browser:palette-close"),
   executePalette: (action) => ipcRenderer.invoke("browser:palette-execute", action),
@@ -17,6 +18,8 @@ const browser = {
   getState: () => ipcRenderer.invoke("browser:state"),
   newTab: () => ipcRenderer.invoke("browser:new-tab"),
   selectTab: (id) => ipcRenderer.invoke("browser:select-tab", id),
+  cycleTab: (direction) => ipcRenderer.invoke("browser:cycle-tab", direction),
+  selectTabPosition: (position) => ipcRenderer.invoke("browser:select-tab-position", position),
   closeTab: (id) => ipcRenderer.invoke("browser:close-tab", id),
   navigate: (input) => ipcRenderer.invoke("browser:navigate", input),
   back: () => ipcRenderer.invoke("browser:back"),

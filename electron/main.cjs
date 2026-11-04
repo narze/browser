@@ -12,16 +12,16 @@ const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createBrowserSession } = require("./browser-session.cjs");
+const { normalizePageLayout } = require("./page-layout.cjs");
 
 // Prototype: tabs are in memory. Remote pages never receive the chrome preload.
-const CHROME_HEIGHT = 100;
-const SIDEBAR_WIDTH = 220;
 let settingsStore;
 let settings;
 let window;
 let browserSession;
 const views = new Map();
 let paletteView;
+let pageRegions = [];
 
 const sessionState = () => browserSession.getState();
 const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
@@ -97,24 +97,16 @@ function layout() {
   const state = sessionState();
   const [width, height] = window.getContentSize();
   if (paletteView && state.palette) paletteView.setBounds({ x: 0, y: 0, width, height });
-  const sidebarWidth = settings.tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
-  const contentWidth = width - sidebarWidth;
-  const originX = settings.tabLayout === "left" ? sidebarWidth : 0;
-  const leftWidth = state.split ? Math.round((contentWidth - 8) * state.split.ratio) : contentWidth;
+  const ids = state.split && !state.settingsOpen ? state.split.tabIds : [state.activeId];
+  const currentLayout = pageRegions.map((region) => region.id).join() === ids.join();
+  const regions = normalizePageLayout(pageRegions, width, height);
   for (const page of state.pages) {
     const view = views.get(page.id);
-    const side = state.split ? state.split.tabIds.indexOf(page.id) : -1;
-    const inSplit = side !== -1;
-    view.setBounds({
-      x: originX + (side === 1 ? leftWidth + 8 : 0),
-      y: CHROME_HEIGHT + (inSplit ? 36 : 0),
-      width: Math.max(
-        1,
-        inSplit ? (side === 0 ? leftWidth : contentWidth - leftWidth - 8) : contentWidth,
-      ),
-      height: Math.max(1, height - CHROME_HEIGHT - (inSplit ? 36 : 0)),
-    });
-    view.setVisible(page.visible);
+    const region = currentLayout ? regions.find((entry) => entry.id === page.id) : undefined;
+    if (region?.bounds.width > 0 && region.bounds.height > 0) {
+      view.setBounds(region.bounds);
+      view.setVisible(page.visible);
+    } else view.setVisible(false);
   }
 }
 
@@ -375,6 +367,10 @@ function updateSettings(patch) {
 
 function installIpc() {
   const handlers = {
+    "page-layout": (regions) => {
+      pageRegions = normalizePageLayout(regions, ...window.getContentSize());
+      layout();
+    },
     "palette-open": (mode) => {
       if (!["navigate", "commands"].includes(mode)) throw new Error("Invalid palette mode.");
       openPalette(mode);
@@ -391,6 +387,15 @@ function installIpc() {
     "set-tab-layout": (value) => updateSettings({ tabLayout: value }),
     state: getState,
     "new-tab": () => newTab(),
+    "cycle-tab": (direction) => {
+      if (![1, -1].includes(direction)) throw new Error("Invalid tab direction.");
+      cycleTab(direction);
+    },
+    "select-tab-position": (position) => {
+      if (!Number.isInteger(position) || position < 1 || position > 9)
+        throw new Error("Invalid tab position.");
+      dispatch({ type: "select-position", position });
+    },
     "select-tab": (id) => {
       if (!isTabId(id)) throw new Error("Invalid tab ID.");
       selectTab(id);
@@ -433,6 +438,7 @@ function installIpc() {
 
 function createWindow() {
   browserSession = createBrowserSession();
+  pageRegions = [];
   window = new BrowserWindow({
     width: 1280,
     height: 850,

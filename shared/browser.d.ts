@@ -7,6 +7,10 @@ export interface BrowserTab {
   canGoBack: boolean;
   canGoForward: boolean;
 }
+export interface PageRegion {
+  id: number;
+  bounds: { x: number; y: number; width: number; height: number };
+}
 export type TabLayout = "top" | "left" | "right";
 export interface BrowserSettings {
   theme: "system" | "light" | "dark";
@@ -33,6 +37,7 @@ export interface BrowserState {
   platform: string;
 }
 export interface BrowserApi {
+  reportPageLayout(regions: PageRegion[]): Promise<void>;
   openPalette(mode?: PaletteMode): Promise<void>;
   closePalette(): Promise<void>;
   executePalette(action: PaletteAction): Promise<{ error?: string }>;
@@ -47,6 +52,8 @@ export interface BrowserApi {
   getState(): Promise<BrowserState>;
   newTab(): Promise<number>;
   selectTab(id: number): Promise<void>;
+  cycleTab(direction: number): Promise<void>;
+  selectTabPosition(position: number): Promise<void>;
   closeTab(id: number): Promise<void>;
   navigate(input: string): Promise<{ error?: string }>;
   back(): Promise<void>;

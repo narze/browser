@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-test("number shortcuts follow split segments from chrome and native pages", async () => {
+test("shortcuts follow split segments and native bounds follow chrome geometry", async () => {
   const profile = await mkdtemp(join(tmpdir(), "browser-architecture-"));
   const server = createServer((req, res) => res.end(`<title>Page ${req.url}</title>`));
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -27,7 +27,7 @@ test("number shortcuts follow split segments from chrome and native pages", asyn
     }
     await chrome.getByRole("button", { name: "Split tabs", exact: true }).click();
     await expect(chrome.getByRole("tab")).toHaveText(["Page /c", "Page /a", "Page /b"]);
-    await address.focus();
+    await address.click();
     const modifier = process.platform === "darwin" ? "Meta" : "Control";
     await chrome.keyboard.press(`${modifier}+1`);
     await expect(address).toHaveValue(`${origin}/c`);
@@ -42,15 +42,65 @@ test("number shortcuts follow split segments from chrome and native pages", asyn
         });
     });
     await expect(address).toHaveValue(`${origin}/c`);
-    await address.focus();
+    await address.click();
     await chrome.keyboard.press("Control+Tab");
     await expect(address).toHaveValue(`${origin}/a`);
-    await address.focus();
+    await address.click();
     await chrome.keyboard.press("Control+Shift+Tab");
     await expect(address).toHaveValue(`${origin}/c`);
-    await address.focus();
+    await address.click();
     await chrome.keyboard.press(`${modifier}+9`);
     await expect(address).toHaveValue(`${origin}/b`);
+    // CSS is the owner of chrome dimensions. Native views must follow DOM rectangles.
+    await chrome.addStyleTag({
+      content: `.browser {
+      --chrome-height: 124px;
+      --sidebar-width: 246px;
+      --pane-toolbar-height: 42px;
+      --split-divider-width: 14px;
+    }`,
+    });
+    const expectedBounds = () =>
+      chrome.locator(".pane-content").evaluateAll((elements) =>
+        elements.map((element) => {
+          const bounds = element.getBoundingClientRect();
+          return {
+            x: Math.round(bounds.x),
+            y: Math.round(bounds.y),
+            width: Math.round(bounds.right) - Math.round(bounds.x),
+            height: Math.round(bounds.bottom) - Math.round(bounds.y),
+          };
+        }),
+      );
+    const nativeBounds = () =>
+      app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0]
+          .contentView.children.filter((view) => view.getVisible())
+          .map((view) => view.getBounds())
+          .sort((a, b) => a.x - b.x),
+      );
+    for (const position of ["left", "right", "top"]) {
+      await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption(position);
+      await app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].setContentSize(940, 680),
+      );
+      await expect.poll(nativeBounds).toEqual(await expectedBounds());
+    }
+    const divider = chrome.getByRole("separator", { name: "Resize split panes" });
+    await divider.focus();
+    await chrome.keyboard.press("ArrowRight");
+    await expect.poll(nativeBounds).toEqual(await expectedBounds());
+    const dividerBounds = (await divider.boundingBox())!;
+    await chrome.mouse.move(dividerBounds.x + dividerBounds.width / 2, dividerBounds.y + 100);
+    await chrome.mouse.down();
+    await chrome.mouse.move(940 * 0.65 + 7, dividerBounds.y + 100, { steps: 6 });
+    await chrome.mouse.up();
+    await expect
+      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).split?.ratio)
+      .toBeCloseTo(0.66, 1);
+    await expect.poll(nativeBounds).toEqual(await expectedBounds());
+    await chrome.getByRole("button", { name: "Exit split view" }).click();
+    await expect.poll(nativeBounds).toEqual([await chrome.locator("main").boundingBox()]);
   } finally {
     await app.close();
     server.closeAllConnections();

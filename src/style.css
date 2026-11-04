@@ -106,14 +106,18 @@ input:focus-visible {
   outline-offset: 2px;
 }
 .browser {
+  --chrome-height: 100px;
+  --sidebar-width: 220px;
+  --pane-toolbar-height: 36px;
+  --split-divider-width: 8px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 .chrome {
-  flex: 0 0 100px;
-  height: 100px;
+  flex: 0 0 var(--chrome-height);
+  height: var(--chrome-height);
   background: var(--chrome);
   border-bottom: 1px solid var(--border);
   position: relative;
@@ -569,10 +573,6 @@ kbd {
   }
 }
 
-/* Keep the rail width aligned with SIDEBAR_WIDTH in Electron. */
-.browser {
-  --sidebar-width: 220px;
-}
 .tabs {
   max-width: calc(100% - 210px);
 }
@@ -601,7 +601,7 @@ kbd {
 }
 .tab-rail {
   position: fixed;
-  top: 100px;
+  top: var(--chrome-height);
   bottom: 0;
   width: var(--sidebar-width);
   background: var(--chrome);
@@ -616,7 +616,7 @@ kbd {
 }
 .vertical .tabs {
   position: fixed;
-  top: 158px;
+  top: calc(var(--chrome-height) + 58px);
   bottom: 12px;
   width: calc(var(--sidebar-width) - 24px);
   max-width: none;
@@ -651,7 +651,7 @@ kbd {
 }
 .vertical .new-tab {
   position: fixed;
-  top: 112px;
+  top: calc(var(--chrome-height) + 12px);
   width: calc(var(--sidebar-width) - 24px);
   height: 34px;
   display: flex;
@@ -885,8 +885,8 @@ kbd {
   background: var(--page);
 }
 .pane-toolbar {
-  height: 36px;
-  flex: 0 0 36px;
+  height: var(--pane-toolbar-height);
+  flex: 0 0 var(--pane-toolbar-height);
   display: flex;
   align-items: center;
   gap: 6px;
