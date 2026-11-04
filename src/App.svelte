@@ -6,7 +6,7 @@
   import type { BrowserState, BrowserTab, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let tabRows = $derived.by(() => {
@@ -158,6 +158,7 @@
         {#if inputError}<span class="input-error" role="alert" title={inputError}>{inputError}</span>{/if}
         <span class="address-shortcut">{modifier}L</span>
       </form>
+      <button class="icon-button" aria-label="Command palette" title="Command palette ({modifier}K)" disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
       <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title="Settings ({modifier},)" disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>

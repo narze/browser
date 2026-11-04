@@ -24,11 +24,15 @@ let activeId;
 let nextId = 1;
 let split = null;
 let splitResizing = false;
+let palette = null;
+let paletteView;
+let paletteRequestId = 0;
 
 const activeTab = () => tabs.find((tab) => tab.id === activeId);
 
 function getState() {
   return {
+    palette,
     split,
     splitResizing,
     resolvedTheme: nativeTheme.shouldUseDarkColors ? "dark" : "light",
@@ -51,11 +55,14 @@ function getState() {
 
 function publish() {
   if (window && !window.isDestroyed()) window.webContents.send("browser:state-changed", getState());
+  if (paletteView && !paletteView.webContents.isDestroyed())
+    paletteView.webContents.send("browser:state-changed", getState());
 }
 
 function layout() {
   if (!window || window.isDestroyed()) return;
   const [width, height] = window.getContentSize();
+  if (paletteView && palette) paletteView.setBounds({ x: 0, y: 0, width, height });
   const sidebarWidth = settings.tabLayout === "top" ? 0 : SIDEBAR_WIDTH;
   const contentWidth = width - sidebarWidth;
   const originX = settings.tabLayout === "left" ? sidebarWidth : 0;
@@ -82,6 +89,136 @@ function layout() {
   }
 }
 
+// The palette is a trusted local view above the page views, never a website preload.
+function openPalette(mode = "commands") {
+  if (!window || !["navigate", "commands"].includes(mode)) return;
+  splitResizing = false;
+  palette = {
+    query: mode === "navigate" ? activeTab()?.url || "" : "",
+    mode,
+    requestId: ++paletteRequestId,
+  };
+  if (!paletteView) {
+    paletteView = new WebContentsView({
+      webPreferences: {
+        preload: path.join(__dirname, "preload.cjs"),
+        sandbox: true,
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    paletteView.setBackgroundColor("#00000000");
+    paletteView.webContents.on("will-navigate", (event) => event.preventDefault());
+    paletteView.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+    paletteView.webContents.on("before-input-event", paletteShortcut);
+    paletteView.webContents.on("did-finish-load", () => {
+      publish();
+      if (palette) paletteView.webContents.focus();
+    });
+    paletteView.webContents.on("render-process-gone", () => {
+      closePalette();
+      paletteView.webContents.close({ waitForBeforeUnload: false });
+      paletteView = null;
+    });
+    const devUrl = process.env.ELECTRON_RENDERER_URL;
+    if (devUrl) void paletteView.webContents.loadURL(new URL("#palette", devUrl).href);
+    else
+      void paletteView.webContents.loadFile(path.join(__dirname, "../dist/index.html"), {
+        hash: "palette",
+      });
+  }
+  window.contentView.addChildView(paletteView);
+  paletteView.setVisible(true);
+  layout();
+  publish();
+  paletteView.webContents.focus();
+}
+
+function closePalette(restoreFocus = true) {
+  if (!palette) return;
+  palette = null;
+  paletteView.setVisible(false);
+  window.contentView.removeChildView(paletteView);
+  publish();
+  if (restoreFocus) {
+    const tab = activeTab();
+    if (!settingsOpen && tab?.url && !tab.error) tab.view.webContents.focus();
+    else window.webContents.focus();
+  }
+}
+
+function paletteShortcut(event, input) {
+  if (
+    input.type !== "keyDown" ||
+    !(process.platform === "darwin" ? input.meta : input.control) ||
+    input.alt ||
+    input.shift
+  )
+    return;
+  const key = input.key.toLowerCase();
+  if (key === "l" || key === "k") {
+    event.preventDefault();
+    openPalette(key === "l" ? "navigate" : "commands");
+  }
+}
+
+function executePalette(action) {
+  if (!palette || !action || typeof action !== "object")
+    return { error: "Open the command palette first." };
+  try {
+    if (action.type === "navigate") {
+      if (
+        typeof action.input !== "string" ||
+        action.input.length > 16_384 ||
+        !action.input.trim() ||
+        typeof action.newTab !== "boolean"
+      )
+        throw new Error("Enter a valid address or search.");
+      const url = resolveAddress(action.input, settings.searchEngine);
+      closePalette(false);
+      if (action.newTab) newTab(url);
+      else {
+        const tab = activeTab();
+        load(tab, url);
+        tab.view.webContents.focus();
+      }
+    } else if (action.type === "tab") {
+      if (!isTabId(action.id) || !tabs.some((tab) => tab.id === action.id))
+        throw new Error("That tab is no longer open.");
+      selectTab(action.id);
+    } else if (action.type === "command") {
+      const preferences = {
+        "theme-system": { theme: "system" },
+        "theme-light": { theme: "light" },
+        "theme-dark": { theme: "dark" },
+        "tabs-top": { tabLayout: "top" },
+        "tabs-left": { tabLayout: "left" },
+        "tabs-right": { tabLayout: "right" },
+      };
+      const commands = {
+        "new-tab": () => newTab(),
+        "close-tab": () => closeTab(activeId),
+        settings: () => showSettings(true),
+        split: toggleSplit,
+        reload,
+        back: () => history("back"),
+        forward: () => history("forward"),
+      };
+      if (Object.hasOwn(preferences, action.id)) {
+        const result = updateSettings(preferences[action.id]);
+        if (result.error) return result;
+        closePalette();
+      } else if (Object.hasOwn(commands, action.id)) {
+        closePalette();
+        commands[action.id]();
+      } else throw new Error("Unknown command.");
+    } else throw new Error("Unknown palette action.");
+    return {};
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
 function focusAddress() {
   if (settingsOpen) showSettings(false);
   window.webContents.focus();
@@ -90,6 +227,7 @@ function focusAddress() {
 
 function selectTab(id) {
   if (!tabs.some((tab) => tab.id === id)) return;
+  closePalette(false);
   if (split && !split.tabIds.includes(id)) {
     split.tabIds[split.tabIds.indexOf(activeId) === 1 ? 1 : 0] = id;
   }
@@ -104,6 +242,7 @@ function selectTab(id) {
 }
 
 function load(tab, url) {
+  closePalette(false);
   settingsOpen = false;
   tab.url = url;
   tab.error = null;
@@ -198,6 +337,7 @@ function newTab(url = "") {
     }
     return { action: "deny" };
   });
+  contents.on("before-input-event", paletteShortcut);
   contents.on("before-input-event", (event, input) => {
     if (input.type !== "keyDown") return;
     if (input.control && input.key === "Tab") {
@@ -270,6 +410,7 @@ function history(direction) {
 }
 
 function showSettings(open) {
+  closePalette(false);
   splitResizing = false;
   settingsOpen = open;
   layout();
@@ -299,6 +440,12 @@ function updateSettings(patch) {
 
 function installIpc() {
   const handlers = {
+    "palette-open": (mode) => {
+      if (!["navigate", "commands"].includes(mode)) throw new Error("Invalid palette mode.");
+      openPalette(mode);
+    },
+    "palette-close": () => closePalette(),
+    "palette-execute": executePalette,
     "toggle-split": toggleSplit,
     "set-split-tab": (side, id) => {
       if (!split || ![0, 1].includes(side) || !isTabId(id) || !tabs.some((tab) => tab.id === id))
@@ -357,10 +504,11 @@ function installIpc() {
   };
   for (const [channel, handler] of Object.entries(handlers)) {
     ipcMain.handle(`browser:${channel}`, (event, ...args) => {
-      if (
-        event.sender !== window?.webContents ||
-        event.senderFrame !== window.webContents.mainFrame
-      ) {
+      const fromChrome = event.sender === window?.webContents;
+      const fromPalette =
+        event.sender === paletteView?.webContents &&
+        ["state", "palette-close", "palette-execute"].includes(channel);
+      if ((!fromChrome && !fromPalette) || event.senderFrame !== event.sender.mainFrame) {
         throw new Error("Browser controls are only available to the app interface.");
       }
       return handler(...args);
@@ -389,10 +537,15 @@ function createWindow() {
       sandbox: true,
     },
   });
+  window.webContents.on("before-input-event", paletteShortcut);
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.on("resize", layout);
   window.on("closed", () => {
+    palette = null;
+    if (paletteView && !paletteView.webContents.isDestroyed())
+      paletteView.webContents.close({ waitForBeforeUnload: false });
+    paletteView = null;
     const closingTabs = tabs;
     tabs = [];
     window = null;
@@ -440,7 +593,8 @@ app.whenReady().then(() => {
             accelerator: "CmdOrCtrl+W",
             click: () => {
               if (window) {
-                if (settingsOpen) showSettings(false);
+                if (palette) closePalette();
+                else if (settingsOpen) showSettings(false);
                 else closeTab(activeId);
               }
             },
@@ -461,10 +615,17 @@ app.whenReady().then(() => {
             },
           },
           {
-            label: "Focus address",
+            label: "Open address palette",
             accelerator: "CmdOrCtrl+L",
             click: () => {
-              if (window) focusAddress();
+              if (window) openPalette("navigate");
+            },
+          },
+          {
+            label: "Command palette",
+            accelerator: "CmdOrCtrl+K",
+            click: () => {
+              if (window) openPalette("commands");
             },
           },
           {

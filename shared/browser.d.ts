@@ -14,7 +14,13 @@ export interface BrowserSettings {
   searchEngine: "duckduckgo" | "google" | "bing";
   showShortcuts: boolean;
 }
+export type PaletteMode = "navigate" | "commands";
+export type PaletteAction =
+  | { type: "navigate"; input: string; newTab: boolean }
+  | { type: "tab"; id: number }
+  | { type: "command"; id: string };
 export interface BrowserState {
+  palette: { query: string; mode: PaletteMode; requestId: number } | null;
   resolvedTheme: "light" | "dark";
   split: { tabIds: [number, number]; ratio: number } | null;
   splitResizing: boolean;
@@ -26,6 +32,9 @@ export interface BrowserState {
   platform: string;
 }
 export interface BrowserApi {
+  openPalette(mode?: PaletteMode): Promise<void>;
+  closePalette(): Promise<void>;
+  executePalette(action: PaletteAction): Promise<{ error?: string }>;
   toggleSplit(): Promise<void>;
   setSplitTab(side: number, id: number): Promise<void>;
   resizeSplit(ratio: number): Promise<void>;

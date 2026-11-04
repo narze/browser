@@ -17,6 +17,7 @@ Features:
 - Use the **Tabs** selector in the title bar to place tabs at the top, left, or right. Vertical tabs support Up/Down arrow navigation.
 - Open **Settings** from the toolbar or Cmd/Ctrl+, to choose a theme (System, Light, or Dark), tab placement, a search engine (DuckDuckGo, Google, or Bing), and whether new-tab shortcuts appear. Preferences save automatically in the app's local profile and survive a restart.
 - The theme follows your system by default and applies to all browser controls. Websites that support system appearance can follow the selected theme too.
+- Open the centered **Command palette** from the toolbar or Cmd/Ctrl+K. Search open tabs, enter an address or search, or type `>` to filter browser commands. Cmd/Ctrl+L opens it with the current address selected. Use Up/Down and Enter to choose a result, Shift+Enter to open an address/search in a new tab, and Escape or click outside to cancel. The palette stays above live pages, including split view, and follows the selected theme. Suggestions come from open tabs and local commands.
 - Enter an HTTP(S) address or search with your selected engine from either search field.
 - Go back, forward, reload, stop, or return to the new-tab page.
 - Each tab has a separate `WebContentsView`. Background pages keep their state.
@@ -27,7 +28,8 @@ Features:
 | ------------------------- | ----------------------------------- |
 | Cmd/Ctrl+T                | New tab                             |
 | Cmd/Ctrl+W                | Close tab                           |
-| Cmd/Ctrl+L                | Focus address bar                   |
+| Cmd/Ctrl+L                | Open address palette                |
+| Cmd/Ctrl+K                | Open command palette                |
 | Cmd/Ctrl+R                | Reload                              |
 | Cmd/Ctrl+,                | Settings                            |
 | Alt+Left / Alt+Right      | Back / forward                      |
@@ -50,7 +52,7 @@ pnpm fmt        # Format supported files through Vite+
 
 The local Vite+ CLI is available with `pnpm exec vp`. Global Vite+ installation is optional. Vite+ supplies Vite and Vitest through the pinned overrides in `pnpm-workspace.yaml`.
 
-The Electron main process owns the tab state and page views. The preload exposes a small command/event API to the local Svelte interface. Remote pages have no preload, no Node access, and run with sandboxing and context isolation enabled. The main process checks IPC senders. Browsing uses a separate session from the interface.
+The Electron main process owns the tab state and page views. The command palette uses a separate transparent local `WebContentsView`, with IPC limited to reading state and running palette actions. The preload exposes a small command/event API to the local Svelte interface. Remote pages have no preload, no Node access, and run with sandboxing and context isolation enabled. The main process checks IPC senders. Browsing uses a separate session from the interface.
 
 This is a prototype. Tab lists are kept in memory, while website cookies and storage use Electron's persistent browsing session. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
 

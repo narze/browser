@@ -2,6 +2,7 @@
   export let name: string;
   export let size = 18;
   const paths: Record<string, string> = {
+    command: 'M9 7V5a2 2 0 1 0-2 2h10a2 2 0 1 0-2-2v14a2 2 0 1 0 2-2H7a2 2 0 1 0 2 2V7',
     split: 'M4 4h16v16H4z M12 4v16',
     settings: 'M4 7h16 M4 17h16 M8 4v6 M16 14v6',
     back: 'm14 6-6 6 6 6',
