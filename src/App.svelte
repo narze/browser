@@ -18,7 +18,6 @@
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
-  let visibleTabs = $derived(tabRows.flat());
 
   let address = $state('');
   let query = $state('');
@@ -60,20 +59,16 @@
   async function tabKey(event: KeyboardEvent, tabId: number) {
     const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
     const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
+    const paneSelection = vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId);
+    if (!paneSelection && event.key !== previousKey && event.key !== nextKey) return;
+    event.preventDefault();
     let id: number | undefined;
-    if (vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId)) {
-      id = browserState.split.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
-    } else if (event.key === previousKey || event.key === nextKey) {
-      const index = visibleTabs.findIndex((tab) => tab.id === tabId);
-      const direction = event.key === nextKey ? 1 : -1;
-      id = visibleTabs[(index + direction + visibleTabs.length) % visibleTabs.length].id;
-    }
-    if (id !== undefined) {
-      event.preventDefault();
+    if (paneSelection) {
+      id = browserState.split!.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
       await api?.selectTab(id);
-      await tick();
-      document.getElementById(`tab-${id}`)?.focus();
-    }
+    } else id = await api?.cycleTab(event.key === nextKey ? 1 : -1);
+    await tick();
+    if (id !== undefined) document.getElementById(`tab-${id}`)?.focus();
   }
 
   function keydown(event: KeyboardEvent) {

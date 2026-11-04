@@ -48,6 +48,38 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
     await address.click();
     await chrome.keyboard.press("Control+Shift+Tab");
     await expect(address).toHaveValue(`${origin}/c`);
+    for (const page of ["a", "b", "c", "a", "b", "c"]) {
+      await address.click();
+      await chrome.keyboard.press("Control+Tab");
+      await expect(address).toHaveValue(`${origin}/${page}`);
+    }
+    let from = "c";
+    for (const page of ["a", "b", "c"]) {
+      await app.evaluate(({ webContents }, current) => {
+        const contents = webContents
+          .getAllWebContents()
+          .find((c) => c.getURL().endsWith(`/${current}`))!;
+        contents.focus();
+        for (const type of ["keyDown", "keyUp"] as const)
+          contents.sendInputEvent({ type, keyCode: "Tab", modifiers: ["control"] });
+      }, from);
+      await expect(address).toHaveValue(`${origin}/${page}`);
+      from = page;
+    }
+    for (const page of ["a", "b", "c"]) {
+      await app.evaluate(({ Menu }) => {
+        const view = Menu.getApplicationMenu()!.items.find((item) => item.label === "View")!;
+        view.submenu!.items.find((item) => item.label === "Next tab")!.click();
+      });
+      await expect(address).toHaveValue(`${origin}/${page}`);
+    }
+    await chrome.getByRole("tab", { name: "Page /c" }).click();
+    await expect(chrome.getByRole("tab")).toHaveText(["Page /c", "Page /a", "Page /b"]);
+    for (const page of ["a", "b", "c", "a", "b", "c"]) {
+      await chrome.locator('[role="tab"][aria-selected="true"]').focus();
+      await chrome.keyboard.press("ArrowRight");
+      await expect(address).toHaveValue(`${origin}/${page}`);
+    }
     await address.click();
     await chrome.keyboard.press(`${modifier}+9`);
     await expect(address).toHaveValue(`${origin}/b`);

@@ -48,6 +48,29 @@ describe("browser session", () => {
     expect(session.getState().activeId).toBe(2);
   });
 
+  it.each([
+    { direction: 1, expected: [1, 2, 3, 1, 2, 3] },
+    { direction: -1, expected: [2, 1, 3, 2, 1, 3] },
+  ])(
+    "visits every tab in full cycles with direction $direction while panes are replaced",
+    ({ direction, expected }) => {
+      const session = threeTabs();
+      session.dispatch({ type: "toggle-split" });
+      const visited = expected.map(() => {
+        session.dispatch({ type: "cycle-tab", direction });
+        // Native page events must not reset a keyboard traversal in progress.
+        session.dispatch({ type: "update-tab", id: 1, patch: { loading: false } });
+        return session.getState().activeId;
+      });
+      expect(visited).toEqual(expected);
+      // An explicit selection starts the next traversal from the new visible order.
+      session.dispatch({ type: "select-tab", id: 1 });
+      expect(session.getState().tabSlots).toEqual([[1, 3], [2]]);
+      session.dispatch({ type: "cycle-tab", direction: 1 });
+      expect(session.getState().activeId).toBe(3);
+    },
+  );
+
   it("creates a second tab when splitting one tab and preserves the focused tab on exit", () => {
     const session = createBrowserSession();
     session.dispatch({ type: "new-tab" });

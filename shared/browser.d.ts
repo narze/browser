@@ -52,7 +52,7 @@ export interface BrowserApi {
   getState(): Promise<BrowserState>;
   newTab(): Promise<number>;
   selectTab(id: number): Promise<void>;
-  cycleTab(direction: number): Promise<void>;
+  cycleTab(direction: number): Promise<number>;
   selectTabPosition(position: number): Promise<void>;
   closeTab(id: number): Promise<void>;
   navigate(input: string): Promise<{ error?: string }>;

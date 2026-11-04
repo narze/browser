@@ -25,6 +25,8 @@ function createBrowserSession() {
   /** @type {import('../shared/browser').BrowserState['palette']} */
   let palette = null;
   let paletteRequestId = 0;
+  /** @type {number[] | null} */
+  let cycleOrder = null;
 
   function getState() {
     /** @type {number[][]} */
@@ -72,6 +74,9 @@ function createBrowserSession() {
 
   /** @param {SessionCommand} command */
   function dispatch(command) {
+    // Pane replacement can move a tab slot while cycling. Keep one traversal's
+    // initial visual order so every tab remains reachable in both directions.
+    if (command.type !== "cycle-tab" && command.type !== "update-tab") cycleOrder = null;
     /** @type {({ type: 'load', id: number, url: string } | { type: 'focus' })[]} */
     const effects = [];
     const focus = () => effects.push({ type: "focus" });
@@ -99,7 +104,10 @@ function createBrowserSession() {
         break;
       case "select-position":
       case "cycle-tab": {
-        const order = getState().tabSlots.flat();
+        const order =
+          command.type === "cycle-tab"
+            ? (cycleOrder ??= getState().tabSlots.flat())
+            : getState().tabSlots.flat();
         const index =
           command.type === "select-position"
             ? command.position === 9

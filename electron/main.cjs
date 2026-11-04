@@ -319,7 +319,7 @@ function toggleSplit() {
 }
 
 function cycleTab(direction) {
-  dispatch({ type: "cycle-tab", direction });
+  return dispatch({ type: "cycle-tab", direction }).state.activeId;
 }
 
 function reload() {
@@ -382,7 +382,7 @@ function installIpc() {
     newTab: () => newTab(),
     cycleTab: (direction) => {
       if (![1, -1].includes(direction)) throw new Error("Invalid tab direction.");
-      cycleTab(direction);
+      return cycleTab(direction);
     },
     selectTabPosition: (position) => {
       if (!Number.isInteger(position) || position < 1 || position > 9)
