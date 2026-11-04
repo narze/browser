@@ -614,6 +614,50 @@ kbd {
   right: 0;
   border-left: 1px solid var(--border);
 }
+.sidebar-resizer {
+  position: fixed;
+  top: var(--chrome-height);
+  bottom: 0;
+  z-index: 3;
+  width: 6px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+}
+.left .sidebar-resizer {
+  left: calc(var(--sidebar-width) - 6px);
+}
+.right .sidebar-resizer {
+  right: calc(var(--sidebar-width) - 6px);
+}
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 120ms ease;
+}
+.left .sidebar-resizer::after {
+  right: 0;
+}
+.right .sidebar-resizer::after {
+  left: 0;
+}
+.sidebar-resizer:hover::after,
+.sidebar-resizing .sidebar-resizer::after,
+.sidebar-resizer:focus-visible::after {
+  background: var(--divider-hover);
+}
+.sidebar-resizer:focus-visible {
+  outline: none;
+}
+.sidebar-resizing,
+.sidebar-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
 .vertical .tabs {
   position: fixed;
   top: calc(var(--chrome-height) + 58px);

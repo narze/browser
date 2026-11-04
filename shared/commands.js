@@ -22,6 +22,7 @@ export const browserCommands = {
   setSplitTab: { channel: "browser:set-split-tab", palette: false },
   resizeSplit: { channel: "browser:resize-split", palette: false },
   setSplitResizing: { channel: "browser:set-split-resizing", palette: false },
+  setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
   openSettings: { channel: "browser:open-settings", palette: false },
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },

@@ -15,7 +15,9 @@ type SettingsSchema = typeof import("./settings.js").settingsSchema;
 export type BrowserSettings = {
   [K in keyof SettingsSchema]: SettingsSchema[K] extends { options: readonly { value: infer V }[] }
     ? V
-    : boolean;
+    : SettingsSchema[K] extends { min: number }
+      ? number
+      : boolean;
 };
 export type TabLayout = BrowserSettings["tabLayout"];
 export type PaletteMode = "navigate" | "commands";
@@ -28,6 +30,7 @@ export interface BrowserState {
   resolvedTheme: "light" | "dark";
   split: { tabIds: [number, number]; ratio: number } | null;
   splitResizing: boolean;
+  sidebarResizing: boolean;
   settings: BrowserSettings;
   settingsOpen: boolean;
   tabLayout: TabLayout;
@@ -45,6 +48,7 @@ export interface BrowserApi {
   setSplitTab(side: number, id: number): Promise<void>;
   resizeSplit(ratio: number): Promise<void>;
   setSplitResizing(resizing: boolean): Promise<void>;
+  setSidebarResizing(resizing: boolean): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
   openSettings(): Promise<void>;

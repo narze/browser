@@ -4,7 +4,7 @@
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
   import { observePageLayout } from './page-layout';
-  import { defaultSettings, settingsSchema } from '../shared/settings.js';
+  import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
@@ -14,9 +14,13 @@
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.tabLayout].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, settingsOpen: false, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
+  // Local width while dragging; persisted to settings once on release.
+  let dragWidth = $state<number | null>(null);
+  let sidebarDragging = false;
+  let sidebarWidth = $derived(dragWidth ?? browserState.settings.sidebarWidth);
   let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
 
   let address = $state('');
@@ -71,6 +75,37 @@
     if (id !== undefined) document.getElementById(`tab-${id}`)?.focus();
   }
 
+  function startSidebarResize(event: PointerEvent) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    sidebarDragging = true;
+    dragWidth = sidebarWidth;
+    void api?.setSidebarResizing(true);
+  }
+  function moveSidebarResize(event: PointerEvent) {
+    if (!sidebarDragging) return;
+    const width = browserState.tabLayout === 'right' ? window.innerWidth - event.clientX : event.clientX;
+    dragWidth = clampSidebarWidth(Math.min(width, window.innerWidth / 2));
+  }
+  async function stopSidebarResize() {
+    if (!sidebarDragging || dragWidth === null) return;
+    sidebarDragging = false;
+    const width = dragWidth;
+    if (width !== browserState.settings.sidebarWidth) await api?.updateSettings({ sidebarWidth: width });
+    await api?.setSidebarResizing(false);
+    dragWidth = null;
+  }
+  function sidebarResizeKey(event: KeyboardEvent) {
+    const grow = browserState.tabLayout === 'right' ? 'ArrowLeft' : 'ArrowRight';
+    const shrink = browserState.tabLayout === 'right' ? 'ArrowRight' : 'ArrowLeft';
+    const { min, max, default: initial } = settingsSchema.sidebarWidth;
+    const values: Record<string, number> = { [grow]: sidebarWidth + 20, [shrink]: sidebarWidth - 20, Home: min, End: max, Enter: initial };
+    if (!(event.key in values)) return;
+    event.preventDefault();
+    void api?.updateSettings({ sidebarWidth: clampSidebarWidth(values[event.key]) });
+  }
+
   function keydown(event: KeyboardEvent) {
     if (event.ctrlKey && event.key === 'Tab') {
       event.preventDefault();
@@ -100,8 +135,15 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'}>
-  {#if vertical}<div class="tab-rail" aria-hidden="true"></div>{/if}
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} style:--sidebar-width={vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
+  {#if vertical}
+    <div class="tab-rail" aria-hidden="true"></div>
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
+    <div class="sidebar-resizer" role="separator" aria-label="Resize tab sidebar" aria-orientation="vertical" title="Drag to resize · double-click to reset"
+      aria-valuemin={settingsSchema.sidebarWidth.min} aria-valuemax={settingsSchema.sidebarWidth.max} aria-valuenow={sidebarWidth} tabindex="0"
+      onpointerdown={startSidebarResize} onpointermove={moveSidebarResize} onpointerup={stopSidebarResize} onpointercancel={stopSidebarResize} onlostpointercapture={stopSidebarResize}
+      ondblclick={() => api?.updateSettings({ sidebarWidth: settingsSchema.sidebarWidth.default })} onkeydown={sidebarResizeKey}></div>
+  {/if}
   <header class="chrome">
     <div class="tab-row">
       <div class="tabs" role="tablist" aria-label="Browser tabs" aria-orientation={vertical ? 'vertical' : 'horizontal'}>
@@ -187,6 +229,8 @@
         {#if !api}<p class="desktop-notice">Run <code>pnpm dev</code> to open the Electron browser.</p>{/if}
       </section>
       <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore <span class="footer-shortcut">New tab <kbd>{modifier}T</kbd></span></footer>
+    {:else if browserState.sidebarResizing}
+      <section class="pane-placeholder"><Icon name="globe" size={28} /><h2>{current?.title}</h2><p>Resizing sidebar…</p></section>
     {/if}
   </main>
 </div>

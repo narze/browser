@@ -70,8 +70,8 @@
             </form>
             {#if errors[side]}<p class="settings-error" role="alert">{errors[side]}</p>{/if}
           </div>
-        {:else if browserState.splitResizing}
-          <div class="pane-placeholder"><Icon name="globe" size={28} /><h2>{tab.title}</h2><p>Resizing pane…</p></div>
+        {:else if browserState.splitResizing || browserState.sidebarResizing}
+          <div class="pane-placeholder"><Icon name="globe" size={28} /><h2>{tab.title}</h2><p>{browserState.sidebarResizing ? 'Resizing sidebar…' : 'Resizing pane…'}</p></div>
         {/if}
       </div>
     </section>

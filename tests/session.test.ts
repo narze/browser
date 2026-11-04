@@ -129,6 +129,30 @@ describe("browser session", () => {
     expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(2);
   });
 
+  it("hides native pages while the sidebar resizes and clears on settings, palette, or selection", () => {
+    const session = threeTabs();
+    session.dispatch({ type: "set-sidebar-resizing", resizing: true });
+    expect(session.getState().sidebarResizing).toBe(true);
+    expect(session.getState().pages.every((page) => !page.visible)).toBe(true);
+    session.dispatch({ type: "set-sidebar-resizing", resizing: false });
+    expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(1);
+    expect(() =>
+      session.dispatch({ type: "set-sidebar-resizing", resizing: "yes" as never }),
+    ).toThrow();
+    for (const command of [
+      { type: "show-settings", open: false },
+      { type: "open-palette", mode: "commands" },
+      { type: "select-tab", id: 1 },
+    ] as const) {
+      session.dispatch({ type: "set-sidebar-resizing", resizing: true });
+      session.dispatch(command);
+      expect(session.getState().sidebarResizing).toBe(false);
+    }
+    session.dispatch({ type: "open-palette", mode: "commands" });
+    session.dispatch({ type: "set-sidebar-resizing", resizing: true });
+    expect(session.getState().sidebarResizing).toBe(false);
+  });
+
   it("tracks page focus only for visible split panes", () => {
     const session = threeTabs();
     session.dispatch({ type: "focus-tab", id: 1 });

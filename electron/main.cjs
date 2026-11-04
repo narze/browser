@@ -251,6 +251,7 @@ function createPageView(id) {
       state.split?.tabIds.includes(id) &&
       !state.settingsOpen &&
       !state.splitResizing &&
+      !state.sidebarResizing &&
       !state.palette &&
       state.activeId !== id
     )
@@ -374,6 +375,7 @@ function installIpc() {
     setSplitTab: (side, id) => dispatch({ type: "set-split-tab", side, id }),
     resizeSplit: (ratio) => dispatch({ type: "resize-split", ratio }),
     setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
+    setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
     openSettings: () => showSettings(true),
     closeSettings: () => showSettings(false),
     updateSettings: updateSettings,
