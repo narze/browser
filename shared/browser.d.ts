@@ -11,13 +11,13 @@ export interface PageRegion {
   id: number;
   bounds: { x: number; y: number; width: number; height: number };
 }
-export type TabLayout = "top" | "left" | "right";
-export interface BrowserSettings {
-  theme: "system" | "light" | "dark";
-  tabLayout: TabLayout;
-  searchEngine: "duckduckgo" | "google" | "bing";
-  showShortcuts: boolean;
-}
+type SettingsSchema = typeof import("./settings.js").settingsSchema;
+export type BrowserSettings = {
+  [K in keyof SettingsSchema]: SettingsSchema[K] extends { options: readonly { value: infer V }[] }
+    ? V
+    : boolean;
+};
+export type TabLayout = BrowserSettings["tabLayout"];
 export type PaletteMode = "navigate" | "commands";
 export type PaletteAction =
   | { type: "navigate"; input: string; newTab: boolean }

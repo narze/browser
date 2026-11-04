@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSettingsStore } from "../electron/settings.cjs";
 import { resolveAddress } from "../electron/navigation.cjs";
+import { defaultSettings, settingsSchema, isSettingValue } from "../shared/settings.js";
 
 const directories: string[] = [];
 function profile() {
@@ -16,6 +17,21 @@ afterEach(() =>
 );
 
 describe("browser preferences", () => {
+  it("uses schema defaults and accepts every declared settings choice", () => {
+    expect(createSettingsStore(profile()).get()).toEqual(defaultSettings);
+    const store = createSettingsStore(profile());
+    for (const [key, setting] of Object.entries(settingsSchema)) {
+      const choices =
+        "options" in setting ? setting.options.map((option) => option.value) : [true, false];
+      for (const value of choices) {
+        expect(isSettingValue(key, value)).toBe(true);
+        store.update({ [key]: value });
+        expect(store.get()).toHaveProperty(key, value);
+      }
+    }
+    expect(isSettingValue("__proto__", {})).toBe(false);
+    expect(isSettingValue("theme", "sepia")).toBe(false);
+  });
   it("persists changes and merges later changes without losing other preferences", () => {
     const file = profile();
     const store = createSettingsStore(file);

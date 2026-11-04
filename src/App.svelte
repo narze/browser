@@ -4,6 +4,7 @@
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
   import { observePageLayout } from './page-layout';
+  import { defaultSettings, settingsSchema } from '../shared/settings.js';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
@@ -13,7 +14,7 @@
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.tabLayout].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, settingsOpen: false, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
@@ -131,9 +132,7 @@
       <label class="layout-control">
         <span>Tabs</span>
         <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={async (event) => { const result = await api?.setTabLayout(event.currentTarget.value as TabLayout); inputError = result?.error || ''; }}>
-          <option value="top">Top</option>
-          <option value="left">Left</option>
-          <option value="right">Right</option>
+          {#each settingsSchema.tabLayout.options as option}<option value={option.value}>{option.label}</option>{/each}
         </select>
       </label>
       <span class="window-name">Browser</span>

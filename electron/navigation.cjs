@@ -1,4 +1,6 @@
-function resolveAddress(input, searchEngine = "duckduckgo") {
+const { defaultSettings, settingsSchema } = require("../shared/settings.js");
+
+function resolveAddress(input, searchEngine = defaultSettings.searchEngine) {
   const value = input.trim();
   if (!value) return "";
   const local = /^(localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?(?:[/?#]|$)/i.test(value);
@@ -9,12 +11,11 @@ function resolveAddress(input, searchEngine = "duckduckgo") {
   if (/^[a-z][a-z\d+.-]*:/i.test(value)) {
     throw new Error("Only HTTP and HTTPS addresses are supported.");
   }
-  const searchUrls = {
-    duckduckgo: "https://duckduckgo.com/?q=",
-    google: "https://www.google.com/search?q=",
-    bing: "https://www.bing.com/search?q=",
-  };
-  return `${searchUrls[searchEngine] || searchUrls.duckduckgo}${encodeURIComponent(value)}`;
+  const engines = settingsSchema.searchEngine.options;
+  const engine =
+    engines.find((option) => option.value === searchEngine) ||
+    engines.find((option) => option.value === defaultSettings.searchEngine);
+  return `${engine.searchUrl}${encodeURIComponent(value)}`;
 }
 
 module.exports = { resolveAddress };

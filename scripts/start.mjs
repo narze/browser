@@ -1,9 +1,10 @@
-import { createServer } from "vite-plus";
+import { build, createServer } from "vite-plus";
 import { spawn } from "node:child_process";
 import electron from "electron";
 import { existsSync } from "node:fs";
 
 const dev = process.argv.includes("--dev");
+if (dev) await build({ configFile: "vite.preload.config.ts" });
 if (!dev && !existsSync(new URL("../dist/index.html", import.meta.url))) {
   console.error("Run pnpm build before pnpm start.");
   process.exit(1);

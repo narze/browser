@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
+  import { settingsSchema } from '../shared/settings.js';
   import type { BrowserSettings } from '../shared/browser';
 
   let { settings, onclose, onsave }: {
@@ -39,24 +40,22 @@
   <section class="settings-section" aria-labelledby="appearance-title">
     <h2 id="appearance-title">Appearance</h2>
     <div class="preference-row theme-preference">
-      <label for="theme"><strong id="theme-label">Theme</strong><span id="theme-description">Choose your look, or follow your system appearance.</span></label>
+      <label for="theme"><strong id="theme-label">{settingsSchema.theme.label}</strong><span id="theme-description">Choose your look, or follow your system appearance.</span></label>
       <select id="theme" aria-labelledby="theme-label" aria-describedby="theme-description" value={settings.theme} disabled={busy}
         onchange={(event) => save({ theme: event.currentTarget.value as BrowserSettings['theme'] })}>
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
+        {#each settingsSchema.theme.options as option}<option value={option.value}>{option.label}</option>{/each}
       </select>
     </div>
     <fieldset class="layout-options" disabled={busy}>
-      <legend>Tab placement</legend>
+      <legend>{settingsSchema.tabLayout.label}</legend>
       <p>Keep tabs across the top or give them a side of their own.</p>
       <div class="layout-choices">
-        {#each ['left', 'top', 'right'] as placement}
+        {#each settingsSchema.tabLayout.options as { value: placement, label }}
           <label class="layout-choice" class:selected={settings.tabLayout === placement}>
             <input type="radio" name="settings-layout" value={placement} checked={settings.tabLayout === placement}
               onchange={() => save({ tabLayout: placement as BrowserSettings['tabLayout'] })} />
             <span class="layout-preview" class:preview-left={placement === 'left'} class:preview-right={placement === 'right'}><span></span></span>
-            <span>{placement === 'top' ? 'Top' : placement === 'left' ? 'Left' : 'Right'}</span>
+            <span>{label}</span>
           </label>
         {/each}
       </div>
@@ -66,16 +65,14 @@
   <section class="settings-section" aria-labelledby="browsing-title">
     <h2 id="browsing-title">Browsing</h2>
     <div class="preference-row">
-      <label for="search-engine"><strong>Search engine</strong><span>Used when you type a search in either address field.</span></label>
+      <label for="search-engine"><strong>{settingsSchema.searchEngine.label}</strong><span>Used when you type a search in either address field.</span></label>
       <select id="search-engine" value={settings.searchEngine} disabled={busy}
         onchange={(event) => save({ searchEngine: event.currentTarget.value as BrowserSettings['searchEngine'] })}>
-        <option value="duckduckgo">DuckDuckGo</option>
-        <option value="google">Google</option>
-        <option value="bing">Bing</option>
+        {#each settingsSchema.searchEngine.options as option}<option value={option.value}>{option.label}</option>{/each}
       </select>
     </div>
     <div class="preference-row">
-      <label for="show-shortcuts"><strong>New-tab shortcuts</strong><span>Show quick links on the new-tab page.</span></label>
+      <label for="show-shortcuts"><strong>{settingsSchema.showShortcuts.label}</strong><span>Show quick links on the new-tab page.</span></label>
       <input id="show-shortcuts" class="settings-toggle" type="checkbox" checked={settings.showShortcuts} disabled={busy}
         onchange={(event) => save({ showShortcuts: event.currentTarget.checked })} />
     </div>

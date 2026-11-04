@@ -78,11 +78,15 @@ test("real tabs, history, popups, isolation, and close-last-tab behavior", async
       });
       await expect.poll(() => chrome.evaluate(() => innerWidth)).toBe(900);
       const main = await chrome.locator("main").boundingBox();
-      const nativeBounds = await app.evaluate(({ BrowserWindow }) => {
-        const win = BrowserWindow.getAllWindows()[0];
-        return win.contentView.children.at(-1)!.getBounds();
-      });
-      expect(nativeBounds).toEqual(main);
+      // The renderer reports the new content rectangle after ResizeObserver runs.
+      await expect
+        .poll(() =>
+          app.evaluate(({ BrowserWindow }) => {
+            const win = BrowserWindow.getAllWindows()[0];
+            return win.contentView.children.at(-1)!.getBounds();
+          }),
+        )
+        .toEqual(main);
       const marker = await app.evaluate(({ webContents }) => {
         const page = webContents.getAllWebContents().find((c) => c.getURL().endsWith("/second"))!;
         return page.executeJavaScript("window.layoutMarker");

@@ -13,6 +13,13 @@ const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createBrowserSession } = require("./browser-session.cjs");
 const { normalizePageLayout } = require("./page-layout.cjs");
+const {
+  browserCommands,
+  browserEvents,
+  canInvokeCommand,
+  validateCommandHandlers,
+  paletteCommands,
+} = require("../shared/commands.js");
 
 // Prototype: tabs are in memory. Remote pages never receive the chrome preload.
 let settingsStore;
@@ -22,6 +29,7 @@ let browserSession;
 const views = new Map();
 let paletteView;
 let pageRegions = [];
+let commandHandlers;
 
 const sessionState = () => browserSession.getState();
 const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
@@ -82,14 +90,14 @@ function focusActive() {
   if (!state.settingsOpen && tab?.url && !tab.error) activeView().webContents.focus();
   else {
     window.webContents.focus();
-    if (!state.settingsOpen) window.webContents.send("browser:focus-address");
+    if (!state.settingsOpen) window.webContents.send(browserEvents.onFocusAddress);
   }
 }
 
 function publish() {
-  if (window && !window.isDestroyed()) window.webContents.send("browser:state-changed", getState());
+  if (window && !window.isDestroyed()) window.webContents.send(browserEvents.onState, getState());
   if (paletteView && !paletteView.webContents.isDestroyed())
-    paletteView.webContents.send("browser:state-changed", getState());
+    paletteView.webContents.send(browserEvents.onState, getState());
 }
 
 function layout() {
@@ -117,7 +125,7 @@ function openPalette(mode = "commands") {
   if (!paletteView) {
     paletteView = new WebContentsView({
       webPreferences: {
-        preload: path.join(__dirname, "preload.cjs"),
+        preload: path.join(__dirname, "../dist/preload.cjs"),
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,
@@ -196,31 +204,16 @@ function executePalette(action) {
         throw new Error("That tab is no longer open.");
       selectTab(action.id);
     } else if (action.type === "command") {
-      const preferences = {
-        "theme-system": { theme: "system" },
-        "theme-light": { theme: "light" },
-        "theme-dark": { theme: "dark" },
-        "tabs-top": { tabLayout: "top" },
-        "tabs-left": { tabLayout: "left" },
-        "tabs-right": { tabLayout: "right" },
-      };
-      const commands = {
-        "new-tab": () => newTab(),
-        "close-tab": () => closeTab(sessionState().activeId),
-        settings: () => showSettings(true),
-        split: toggleSplit,
-        reload,
-        back: () => history("back"),
-        forward: () => history("forward"),
-      };
-      if (Object.hasOwn(preferences, action.id)) {
-        const result = updateSettings(preferences[action.id]);
+      const command = paletteCommands(getState()).find((entry) => entry.id === action.id);
+      if (!command) throw new Error("Unknown command.");
+      if (command.command === "updateSettings") {
+        const result = commandHandlers[command.command](...command.args);
         if (result.error) return result;
         closePalette();
-      } else if (Object.hasOwn(commands, action.id)) {
+      } else {
         closePalette();
-        commands[action.id]();
-      } else throw new Error("Unknown command.");
+        commandHandlers[command.command](...command.args);
+      }
     } else throw new Error("Unknown palette action.");
     return {};
   } catch (error) {
@@ -367,40 +360,40 @@ function updateSettings(patch) {
 
 function installIpc() {
   const handlers = {
-    "page-layout": (regions) => {
+    reportPageLayout: (regions) => {
       pageRegions = normalizePageLayout(regions, ...window.getContentSize());
       layout();
     },
-    "palette-open": (mode) => {
+    openPalette: (mode = "commands") => {
       if (!["navigate", "commands"].includes(mode)) throw new Error("Invalid palette mode.");
       openPalette(mode);
     },
-    "palette-close": () => closePalette(),
-    "palette-execute": executePalette,
-    "toggle-split": toggleSplit,
-    "set-split-tab": (side, id) => dispatch({ type: "set-split-tab", side, id }),
-    "resize-split": (ratio) => dispatch({ type: "resize-split", ratio }),
-    "set-split-resizing": (resizing) => dispatch({ type: "set-split-resizing", resizing }),
-    "open-settings": () => showSettings(true),
-    "close-settings": () => showSettings(false),
-    "update-settings": updateSettings,
-    "set-tab-layout": (value) => updateSettings({ tabLayout: value }),
-    state: getState,
-    "new-tab": () => newTab(),
-    "cycle-tab": (direction) => {
+    closePalette: () => closePalette(),
+    executePalette: executePalette,
+    toggleSplit: toggleSplit,
+    setSplitTab: (side, id) => dispatch({ type: "set-split-tab", side, id }),
+    resizeSplit: (ratio) => dispatch({ type: "resize-split", ratio }),
+    setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
+    openSettings: () => showSettings(true),
+    closeSettings: () => showSettings(false),
+    updateSettings: updateSettings,
+    setTabLayout: (value) => updateSettings({ tabLayout: value }),
+    getState,
+    newTab: () => newTab(),
+    cycleTab: (direction) => {
       if (![1, -1].includes(direction)) throw new Error("Invalid tab direction.");
       cycleTab(direction);
     },
-    "select-tab-position": (position) => {
+    selectTabPosition: (position) => {
       if (!Number.isInteger(position) || position < 1 || position > 9)
         throw new Error("Invalid tab position.");
       dispatch({ type: "select-position", position });
     },
-    "select-tab": (id) => {
+    selectTab: (id) => {
       if (!isTabId(id)) throw new Error("Invalid tab ID.");
       selectTab(id);
     },
-    "close-tab": (id) => {
+    closeTab: (id) => {
       if (!isTabId(id)) throw new Error("Invalid tab ID.");
       closeTab(id);
     },
@@ -422,16 +415,19 @@ function installIpc() {
     reload,
     stop: () => activeView()?.webContents.stop(),
   };
-  for (const [channel, handler] of Object.entries(handlers)) {
-    ipcMain.handle(`browser:${channel}`, (event, ...args) => {
-      const fromChrome = event.sender === window?.webContents;
-      const fromPalette =
-        event.sender === paletteView?.webContents &&
-        ["state", "palette-close", "palette-execute"].includes(channel);
-      if ((!fromChrome && !fromPalette) || event.senderFrame !== event.sender.mainFrame) {
+  validateCommandHandlers(handlers);
+  commandHandlers = handlers;
+  for (const [name, { channel }] of Object.entries(browserCommands)) {
+    ipcMain.handle(channel, (event, ...args) => {
+      const source =
+        event.sender === window?.webContents
+          ? "chrome"
+          : event.sender === paletteView?.webContents
+            ? "palette"
+            : "remote";
+      if (!canInvokeCommand(name, source, event.senderFrame === event.sender.mainFrame))
         throw new Error("Browser controls are only available to the app interface.");
-      }
-      return handler(...args);
+      return handlers[name](...args);
     });
   }
 }
@@ -450,7 +446,7 @@ function createWindow() {
     trafficLightPosition: { x: 16, y: 16 },
     autoHideMenuBar: true,
     webPreferences: {
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: path.join(__dirname, "../dist/preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,

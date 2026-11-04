@@ -1,25 +1,14 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-const defaults = {
-  tabLayout: "top",
-  searchEngine: "duckduckgo",
-  showShortcuts: true,
-  theme: "system",
-};
-const validators = {
-  theme: (value) => ["system", "light", "dark"].includes(value),
-  tabLayout: (value) => ["top", "left", "right"].includes(value),
-  searchEngine: (value) => ["duckduckgo", "google", "bing"].includes(value),
-  showShortcuts: (value) => typeof value === "boolean",
-};
+const { defaultSettings, isSettingValue, validateSettingsPatch } = require("../shared/settings.js");
 
 function createSettingsStore(file) {
-  let settings = { ...defaults };
+  let settings = { ...defaultSettings };
   try {
     const stored = JSON.parse(fs.readFileSync(file, "utf8"));
-    for (const key of Object.keys(defaults)) {
-      if (stored && validators[key](stored[key])) settings[key] = stored[key];
+    for (const key of Object.keys(defaultSettings)) {
+      if (stored && isSettingValue(key, stored[key])) settings[key] = stored[key];
     }
   } catch {
     // Missing or damaged preferences must not prevent the browser from opening.
@@ -27,12 +16,7 @@ function createSettingsStore(file) {
   return {
     get: () => ({ ...settings }),
     update(patch) {
-      if (!patch || typeof patch !== "object" || Array.isArray(patch))
-        throw new Error("Invalid settings.");
-      for (const [key, value] of Object.entries(patch)) {
-        if (!Object.hasOwn(validators, key) || !validators[key](value))
-          throw new Error("Invalid setting: " + key);
-      }
+      patch = validateSettingsPatch(patch);
       const next = { ...settings, ...patch };
       fs.mkdirSync(path.dirname(file), { recursive: true });
       const temporary = file + ".tmp";
