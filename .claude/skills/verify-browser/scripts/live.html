@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Browser · live</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, interactive-widget=resizes-content"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0d12;
+        color: #9aa4b2;
+        font:
+          12px system-ui,
+          sans-serif;
+        overflow: hidden;
+      }
+      #bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 30px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 0 8px;
+        border-bottom: 1px solid #1a2030;
+        white-space: nowrap;
+      }
+      #bar b {
+        color: #dfe6f0;
+        font-weight: 600;
+      }
+      #dot {
+        color: #3ecf6e;
+      }
+      #dot.stale {
+        color: #e0a33a;
+      }
+      #dot.dead {
+        color: #e05252;
+      }
+      #hint {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #spacer {
+        flex: 1;
+      }
+      #bar button,
+      #keys button {
+        font: inherit;
+        color: #dfe6f0;
+        background: #1a2030;
+        border: 1px solid #2a3346;
+        border-radius: 6px;
+        padding: 3px 9px;
+        touch-action: manipulation;
+      }
+      #bar button[aria-pressed="true"] {
+        background: #4f7cff;
+        border-color: #4f7cff;
+      }
+      #wrap {
+        position: absolute;
+        top: 31px;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: grid;
+        place-items: center;
+      }
+      body.keys-open #wrap {
+        bottom: 44px;
+      }
+      canvas {
+        max-width: 100%;
+        max-height: 100%;
+        outline: none;
+        box-shadow: 0 0 0 1px #222a36;
+        touch-action: none;
+      }
+      canvas:focus,
+      body.typing canvas {
+        box-shadow: 0 0 0 2px #4f7cff;
+      }
+      #keys {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 44px;
+        display: none;
+        gap: 6px;
+        align-items: center;
+        padding: 0 6px;
+        overflow-x: auto;
+        border-top: 1px solid #1a2030;
+        background: #0b0d12;
+      }
+      body.keys-open #keys {
+        display: flex;
+      }
+      #keys button {
+        padding: 6px 11px;
+        font-size: 14px;
+        flex: none;
+      }
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 76px;
+        transform: translateX(-50%);
+        background: #1f2635;
+        color: #dfe6f0;
+        border: 1px solid #2a3346;
+        border-radius: 10px;
+        padding: 8px 14px;
+        font-size: 14px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+        z-index: 20;
+      }
+      #toast.show {
+        opacity: 1;
+      }
+      #clipSheet {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-items: center;
+        background: #0008;
+        z-index: 15;
+      }
+      #clipSheet.open {
+        display: grid;
+      }
+      #clipSheet .sheet {
+        width: min(420px, 92vw);
+        background: #151a24;
+        border: 1px solid #2a3346;
+        border-radius: 12px;
+        padding: 12px;
+      }
+      #clipSheet h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        color: #dfe6f0;
+      }
+      #clipSheet textarea {
+        width: 100%;
+        box-sizing: border-box;
+        font:
+          16px ui-monospace,
+          monospace;
+        background: #0b0d12;
+        color: #dfe6f0;
+        border: 1px solid #2a3346;
+        border-radius: 8px;
+        padding: 8px;
+      }
+      #clipSheet .row {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 10px;
+      }
+      #clipSheet button {
+        font: inherit;
+        font-size: 15px;
+        color: #dfe6f0;
+        background: #1a2030;
+        border: 1px solid #2a3346;
+        border-radius: 8px;
+        padding: 8px 14px;
+      }
+      #clipSheet #clipGo {
+        background: #4f7cff;
+        border-color: #4f7cff;
+      }
+      #picker {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+      #pickerList {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-items: center;
+        background: #0008;
+        z-index: 10;
+      }
+      #pickerList.open {
+        display: grid;
+      }
+      #pickerList .sheet {
+        min-width: min(320px, 90vw);
+        max-height: 70vh;
+        overflow: auto;
+        background: #151a24;
+        border: 1px solid #2a3346;
+        border-radius: 12px;
+        padding: 6px;
+      }
+      #pickerList .sheet h2 {
+        margin: 6px 10px 8px;
+        font-size: 13px;
+        color: #9aa4b2;
+        font-weight: 600;
+      }
+      #pickerList button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        font: inherit;
+        font-size: 16px;
+        color: #dfe6f0;
+        background: none;
+        border: 0;
+        border-radius: 8px;
+        padding: 12px 14px;
+      }
+      #pickerList button[aria-selected="true"] {
+        background: #4f7cff;
+      }
+      #pickerList button:disabled {
+        opacity: 0.4;
+      }
+      #kbd {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 1px;
+        height: 1px;
+        opacity: 0;
+        border: 0;
+        padding: 0;
+        resize: none;
+        font-size: 16px; /* below 16px, mobile browsers zoom on focus */
+      }
+      /* Phones and narrow panes: touch-sized controls (at least 44px targets). */
+      html,
+      body {
+        width: 100%;
+        overscroll-behavior: none;
+      }
+      #bar > * {
+        flex: none;
+      }
+      #title {
+        flex: 0 1 auto !important;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      #spacer {
+        flex: 1 1 0 !important;
+      }
+      #hint {
+        flex: 0 1 auto !important;
+        min-width: 0;
+      }
+      @media (max-width: 520px) {
+        #kbdToggle .label {
+          display: none;
+        }
+        #bar {
+          gap: 8px !important;
+          padding: 0 8px !important;
+        }
+        #bar button {
+          min-width: 44px;
+          padding: 0 12px !important;
+        }
+      }
+      @media (max-width: 900px), (pointer: coarse) {
+        #hint {
+          display: none;
+        }
+        #bar {
+          height: 52px;
+          gap: 12px;
+          padding: 0 12px;
+          font-size: 16px;
+        }
+        #dot {
+          font-size: 14px;
+        }
+        #bar button {
+          min-height: 40px;
+          padding: 0 16px;
+          font-size: 16px;
+          border-radius: 10px;
+        }
+        #bar label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          min-height: 44px;
+        }
+        #bar input[type="checkbox"] {
+          width: 22px;
+          height: 22px;
+          margin: 0;
+        }
+        #wrap {
+          top: 53px;
+          place-items: start center;
+        }
+        #keys {
+          height: 60px;
+          gap: 8px;
+          padding: 0 8px;
+        }
+        body.keys-open #wrap {
+          bottom: 60px;
+        }
+        #keys button {
+          min-width: 48px;
+          min-height: 44px;
+          padding: 0 14px;
+          font-size: 17px;
+          border-radius: 10px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="bar">
+      <span id="dot">●</span><b id="title">Browser</b><span id="fps">–</span>
+      <span id="hint"
+        >Click the window to type. Your own browser may keep Cmd+L/T/W; use the app's buttons or
+        palette.</span
+      >
+      <span id="spacer"></span>
+      <button
+        id="kbdToggle"
+        type="button"
+        aria-pressed="false"
+        aria-label="Keyboard"
+        title="Show the on-screen keyboard"
+      >
+        ⌨<span class="label"> Keyboard</span>
+      </button>
+      <button
+        id="fitToggle"
+        type="button"
+        aria-pressed="false"
+        title="Resize the app window to this screen's shape"
+      >
+        Fit
+      </button>
+      <label><input type="checkbox" id="hd" /> HD</label>
+    </div>
+    <div id="wrap"><canvas id="screen" tabindex="0" width="1280" height="850"></canvas></div>
+    <div id="keys">
+      <button data-key="Escape">Esc</button>
+      <button data-key="Tab">Tab</button>
+      <button data-key="Left">←</button>
+      <button data-key="Up">↑</button>
+      <button data-key="Down">↓</button>
+      <button data-key="Right">→</button>
+      <button data-key="Enter">⏎</button>
+      <button data-key="Backspace">⌫</button>
+      <button data-action="selectAll" title="Select all">Select all</button>
+      <button data-action="copy" title="Copy to this device">Copy</button>
+      <button data-action="cut" title="Cut to this device">Cut</button>
+      <button data-action="paste" title="Paste from this device">Paste</button>
+      <button data-key="K" data-mod="meta" title="Command palette">⌘K</button>
+      <button data-key="L" data-mod="meta" title="Address palette">⌘L</button>
+      <button data-key="Tab" data-mod="control" title="Next tab">Ctrl+Tab</button>
+    </div>
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="clipSheet" role="dialog" aria-modal="true">
+      <div class="sheet">
+        <h2 id="clipTitle"></h2>
+        <textarea id="clipText" rows="5" spellcheck="false"></textarea>
+        <div class="row">
+          <button type="button" id="clipCancel">Close</button
+          ><button type="button" id="clipGo">Paste</button>
+        </div>
+      </div>
+    </div>
+    <select id="picker" aria-label="Choose an option" tabindex="-1"></select>
+    <div id="pickerList" role="dialog" aria-modal="true">
+      <div class="sheet" role="listbox"></div>
+    </div>
+    <textarea
+      id="kbd"
+      autocapitalize="off"
+      autocomplete="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-label="Keyboard input"
+    ></textarea>
+    <script>
+      const canvas = document.getElementById("screen"),
+        ctx = canvas.getContext("2d");
+      const dot = document.getElementById("dot"),
+        fpsEl = document.getElementById("fps"),
+        titleEl = document.getElementById("title");
+      const hdBox = document.getElementById("hd"),
+        kbd = document.getElementById("kbd"),
+        kbdToggle = document.getElementById("kbdToggle");
+      let seq = 0,
+        frameW = 1280,
+        frameH = 850,
+        frames = 0,
+        wake = null,
+        lastOk = Date.now();
+      hdBox.checked = new URLSearchParams(location.search).get("hd") === "1";
+      hdBox.onchange = () => {
+        seq = 0;
+        kick();
+      };
+      const sleep = (ms) =>
+        new Promise((r) => {
+          const t = setTimeout(r, ms);
+          wake = () => {
+            clearTimeout(t);
+            r();
+          };
+        });
+      const kick = () => wake && wake();
+
+      // ---- frames: poll; the server answers 204 when nothing changed
+      async function loop() {
+        for (;;) {
+          const started = performance.now();
+          try {
+            const res = await fetch("frame?since=" + seq + (hdBox.checked ? "&hd=1" : ""), {
+              cache: "no-store",
+            });
+            if (res.status === 200) {
+              const f = await res.json();
+              const bitmaps = await Promise.all(
+                f.layers.map((l) =>
+                  fetch("data:image/" + l.type + ";base64," + l.data)
+                    .then((r) => r.blob())
+                    .then(createImageBitmap),
+                ),
+              );
+              const scale = bitmaps[0].width / f.width;
+              if (
+                canvas.width !== Math.round(f.width * scale) ||
+                canvas.height !== Math.round(f.height * scale)
+              ) {
+                canvas.width = Math.round(f.width * scale);
+                canvas.height = Math.round(f.height * scale);
+              }
+              frameW = f.width;
+              frameH = f.height;
+              f.layers.forEach((l, i) =>
+                ctx.drawImage(
+                  bitmaps[i],
+                  l.x * scale,
+                  l.y * scale,
+                  l.width * scale,
+                  l.height * scale,
+                ),
+              );
+              seq = f.seq;
+              frames++;
+              titleEl.textContent = f.title || "Browser";
+            } else if (res.status !== 204) throw new Error(res.status);
+            lastOk = Date.now();
+            dot.className = "";
+          } catch {
+            dot.className = Date.now() - lastOk > 5000 ? "dead" : "stale";
+            await sleep(1000);
+          }
+          await sleep(Math.max(0, 80 - (performance.now() - started)));
+        }
+      }
+      const narrow = matchMedia("(max-width: 520px)");
+      setInterval(() => {
+        fpsEl.textContent = frames + (narrow.matches ? "/s" : " updates/s");
+        frames = 0;
+      }, 1000);
+
+      // ---- input transport
+      let queue = [],
+        sending = false,
+        buttons = 0;
+      function send(...events) {
+        queue.push(...events);
+        flush();
+      }
+      async function flush() {
+        if (sending || !queue.length) return;
+        sending = true;
+        const batch = queue;
+        queue = [];
+        try {
+          const res = await fetch("input", { method: "POST", body: JSON.stringify(batch) });
+          if (res.status === 200) {
+            const { select } = await res.json();
+            if (select) openPicker(select);
+          }
+        } catch {}
+        sending = false;
+        kick();
+        if (queue.length) flush();
+      }
+      const key = (keyCode, modifiers = [], char) => [
+        { kind: "key", type: "keyDown", keyCode, modifiers, char },
+        { kind: "key", type: "keyUp", keyCode, modifiers },
+      ];
+      const enter = () => key("Enter", [], "\r");
+
+      // ---- pointer: mouse/pen act directly; touch taps click, swipes scroll, long-press drags
+      function point(e) {
+        const r = canvas.getBoundingClientRect();
+        return {
+          x: ((e.clientX - r.left) * frameW) / r.width,
+          y: ((e.clientY - r.top) * frameH) / r.height,
+        };
+      }
+      function mods(e) {
+        const m = [];
+        if (e.shiftKey) m.push("shift");
+        if (e.ctrlKey) m.push("control");
+        if (e.altKey) m.push("alt");
+        if (e.metaKey) m.push("meta");
+        if (buttons & 1) m.push("leftButtonDown");
+        if (buttons & 2) m.push("rightButtonDown");
+        return m;
+      }
+      const BUTTON = ["left", "middle", "right"];
+      const mouse = (type, p, extra = {}) => ({
+        kind: "mouse",
+        type,
+        ...p,
+        button: "left",
+        clickCount: 1,
+        modifiers: [],
+        ...extra,
+      });
+      let lastTap = null;
+      let touch = null,
+        pendingMove = null;
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+      // Keep the on-screen keyboard open when tapping the page while typing.
+      canvas.addEventListener("touchstart", (e) => typing() && e.preventDefault(), {
+        passive: false,
+      });
+      canvas.addEventListener("pointerdown", (e) => {
+        canvas.setPointerCapture(e.pointerId);
+        e.preventDefault();
+        if (e.pointerType === "touch") {
+          const p = point(e);
+          touch = { start: p, last: p, mode: "pending", at: Date.now() };
+          touch.timer = setTimeout(() => {
+            if (touch?.mode !== "pending") return;
+            touch.mode = "drag";
+            send(mouse("mouseMove", touch.start), mouse("mouseDown", touch.start));
+          }, 450);
+          return;
+        }
+        if (!typing()) canvas.focus();
+        buttons = e.buttons;
+        send(
+          mouse("mouseDown", point(e), {
+            button: BUTTON[e.button] || "left",
+            clickCount: e.detail || 1,
+            modifiers: mods(e),
+          }),
+        );
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (e.pointerType === "touch") {
+          if (!touch) return;
+          const p = point(e);
+          if (
+            touch.mode === "pending" &&
+            Math.hypot(p.x - touch.start.x, p.y - touch.start.y) > 8
+          ) {
+            touch.mode = "scroll";
+            clearTimeout(touch.timer);
+          }
+          if (touch.mode === "scroll") {
+            // Finger moves content; wheel delta is the opposite direction, in window pixels.
+            send(
+              mouse("mouseWheel", p, { deltaX: touch.last.x - p.x, deltaY: touch.last.y - p.y }),
+            );
+          } else if (touch.mode === "drag")
+            send(mouse("mouseMove", p, { modifiers: ["leftButtonDown"] }));
+          touch.last = p;
+          return;
+        }
+        buttons = e.buttons;
+        const p = point(e);
+        if (pendingMove) {
+          Object.assign(pendingMove, p, { modifiers: mods(e) });
+          return;
+        }
+        pendingMove = mouse("mouseMove", p, { modifiers: mods(e) });
+        requestAnimationFrame(() => {
+          send(pendingMove);
+          pendingMove = null;
+        });
+      });
+      function endPointer(e) {
+        if (e.pointerType === "touch") {
+          if (!touch) return;
+          clearTimeout(touch.timer);
+          const p = point(e);
+          if (touch.mode === "pending") {
+            // A quick second tap near the first is a double-click (selects a word).
+            const now = Date.now();
+            const double =
+              lastTap &&
+              now - lastTap.at < 350 &&
+              Math.hypot(touch.start.x - lastTap.x, touch.start.y - lastTap.y) < 20;
+            lastTap = double ? null : { ...touch.start, at: now };
+            const clickCount = double ? 2 : 1;
+            send(
+              mouse("mouseMove", touch.start),
+              mouse("mouseDown", touch.start, { clickCount }),
+              mouse("mouseUp", touch.start, { clickCount }),
+            );
+          } else if (touch.mode === "drag") send(mouse("mouseUp", p));
+          touch = null;
+          if (typing()) kbd.focus({ preventScroll: true });
+          return;
+        }
+        buttons = e.buttons;
+        send(
+          mouse("mouseUp", point(e), {
+            button: BUTTON[e.button] || "left",
+            clickCount: e.detail || 1,
+            modifiers: mods(e),
+          }),
+        );
+      }
+      canvas.addEventListener("pointerup", endPointer);
+      canvas.addEventListener("pointercancel", endPointer);
+      canvas.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          const k = e.deltaMode === 1 ? 40 : e.deltaMode === 2 ? 800 : 1;
+          send(
+            mouse("mouseWheel", point(e), {
+              deltaX: e.deltaX * k,
+              deltaY: e.deltaY * k,
+              modifiers: mods(e),
+            }),
+          );
+        },
+        { passive: false },
+      );
+
+      // ---- physical keyboard on the canvas (desktop)
+      const KEYS = {
+        ArrowUp: "Up",
+        ArrowDown: "Down",
+        ArrowLeft: "Left",
+        ArrowRight: "Right",
+        " ": "Space",
+        Enter: "Enter",
+        Backspace: "Backspace",
+        Tab: "Tab",
+        Escape: "Escape",
+        Delete: "Delete",
+        Home: "Home",
+        End: "End",
+        PageUp: "PageUp",
+        PageDown: "PageDown",
+      };
+      const MODIFIER_KEYS = ["Shift", "Control", "Alt", "Meta", "CapsLock"];
+      const keyCode = (e) =>
+        KEYS[e.key] || (e.key.length === 1 ? e.key : /^F\d+$/.test(e.key) ? e.key : null);
+      canvas.addEventListener("keydown", (e) => {
+        if (MODIFIER_KEYS.includes(e.key)) return;
+        const code = keyCode(e);
+        if (!code) return;
+        if (clipboardShortcut(e)) return;
+        e.preventDefault();
+        const printable = e.key.length === 1 && !e.metaKey && !e.ctrlKey;
+        send({
+          kind: "key",
+          type: "keyDown",
+          keyCode: code,
+          char: printable ? e.key : e.key === "Enter" ? "\r" : undefined,
+          modifiers: mods(e),
+        });
+      });
+      canvas.addEventListener("keyup", (e) => {
+        if (MODIFIER_KEYS.includes(e.key)) return;
+        const code = keyCode(e);
+        if (!code) return;
+        e.preventDefault();
+        send({ kind: "key", type: "keyUp", keyCode: code, modifiers: mods(e) });
+      });
+      canvas.addEventListener("paste", onPaste);
+
+      // ---- on-screen keyboard (mobile): a hidden textarea, diffed on every input
+      // so IME composition, autocorrect, and swipe typing all arrive as text edits.
+      const SENTINEL = "​​"; // gives Backspace something to delete when the field looks empty
+      let prev = SENTINEL,
+        composing = false;
+      const typing = () => document.body.classList.contains("typing");
+      function resetField() {
+        kbd.value = SENTINEL;
+        kbd.setSelectionRange(SENTINEL.length, SENTINEL.length);
+        prev = SENTINEL;
+      }
+      function setTyping(on) {
+        document.body.classList.toggle("typing", on);
+        document.body.classList.toggle("keys-open", on);
+        kbdToggle.setAttribute("aria-pressed", String(on));
+        if (on) {
+          resetField();
+          kbd.focus({ preventScroll: true });
+        } else kbd.blur();
+      }
+      kbdToggle.addEventListener("pointerdown", (e) => e.preventDefault()); // don't steal focus first
+      kbdToggle.addEventListener("click", () => setTyping(!typing()));
+      kbd.addEventListener("blur", () => {
+        // The system back button or "hide keyboard" ends typing mode.
+        setTimeout(() => {
+          if (document.activeElement !== kbd && typing()) setTyping(false);
+        }, 150);
+      });
+      kbd.addEventListener("compositionstart", () => (composing = true));
+      kbd.addEventListener("compositionend", () => {
+        composing = false;
+        sync();
+      });
+      kbd.addEventListener("input", sync);
+      function sync() {
+        const value = kbd.value;
+        let p = 0;
+        while (p < prev.length && p < value.length && prev[p] === value[p]) p++;
+        const events = [];
+        for (let i = 0; i < prev.length - p; i++) events.push(...key("Backspace"));
+        value
+          .slice(p)
+          .split("\n")
+          .forEach((part, i) => {
+            if (i > 0) events.push(...enter());
+            const text = part.replaceAll("​", "");
+            if (text) events.push({ kind: "text", text });
+          });
+        if (events.length) send(...events);
+        prev = value;
+        if (!composing && (value !== SENTINEL || value.includes("\n"))) resetField();
+      }
+      kbd.addEventListener("keydown", (e) => {
+        if (e.isComposing || e.keyCode === 229) return;
+        if (clipboardShortcut(e)) return;
+        const code = KEYS[e.key];
+        const special = code && !["Backspace", "Space"].includes(code); // those flow through the text diff
+        if (special || e.metaKey || e.ctrlKey) {
+          e.preventDefault();
+          send(...key(code || e.key, mods(e), code === "Enter" ? "\r" : undefined));
+        }
+      });
+      // Extra keys a phone keyboard lacks. Act on pointerdown so focus stays in the field.
+      for (const button of document.querySelectorAll("#keys button")) {
+        button.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          if (button.dataset.action) return void clip(button.dataset.action);
+          const k = button.dataset.key;
+          send(
+            ...key(
+              k,
+              button.dataset.mod ? [button.dataset.mod] : [],
+              k === "Enter" ? "\r" : undefined,
+            ),
+          );
+        });
+      }
+
+      // ---- clipboard: the app's own copy/cut/paste, bridged to this device's clipboard
+      const toastEl = document.getElementById("toast"),
+        clipSheet = document.getElementById("clipSheet"),
+        clipTitle = document.getElementById("clipTitle"),
+        clipText = document.getElementById("clipText"),
+        clipGo = document.getElementById("clipGo");
+      let toastTimer = null;
+      function toast(message) {
+        toastEl.textContent = message;
+        toastEl.classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toastEl.classList.remove("show"), 1800);
+      }
+      // A pending permission prompt can leave clipboard promises unsettled; never wait forever.
+      const within = (promise, ms) =>
+        Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timed out")), ms)),
+        ]);
+      async function remote(action, text) {
+        const res = await fetch("clipboard", {
+          method: "POST",
+          body: JSON.stringify({ action, text }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        seq = 0;
+        kick();
+        return res.json();
+      }
+      async function pasteText(text) {
+        if (!text) return;
+        await remote("paste", text);
+        toast(`Pasted ${text.length} character${text.length === 1 ? "" : "s"}`);
+      }
+      function openSheet(title, text, goLabel, onGo) {
+        clipTitle.textContent = title;
+        clipText.value = text;
+        clipGo.textContent = goLabel;
+        clipGo.hidden = !onGo;
+        clipGo.onclick = async () => {
+          clipSheet.classList.remove("open");
+          await onGo?.(clipText.value);
+        };
+        clipSheet.classList.add("open");
+        clipText.focus();
+        if (text) clipText.select();
+      }
+      document.getElementById("clipCancel").onclick = () => clipSheet.classList.remove("open");
+      async function clip(action) {
+        try {
+          if (action === "paste") {
+            let text = null;
+            try {
+              text = await within(navigator.clipboard.readText(), 8000);
+            } catch {}
+            // Clipboard read refused (permissions, insecure origin): paste into a box instead.
+            if (text === null)
+              return openSheet("Paste text to send to the app", "", "Paste", pasteText);
+            return pasteText(text);
+          }
+          if (action === "selectAll") return void (await remote("selectAll"));
+          const { text } = await remote(action);
+          if (!text) return toast("Nothing selected");
+          try {
+            await within(navigator.clipboard.writeText(text), 2000);
+            toast(
+              `${action === "cut" ? "Cut" : "Copied"} ${text.length} character${text.length === 1 ? "" : "s"}`,
+            );
+          } catch {
+            openSheet("Copied from the app — select and copy it here", text, "", null);
+          }
+        } catch (error) {
+          toast("Clipboard failed: " + error.message);
+        }
+      }
+      // Cmd/Ctrl+C, X, A run the app's edit commands; Cmd/Ctrl+V waits for the paste event.
+      function clipboardShortcut(e) {
+        if (!(e.metaKey || e.ctrlKey) || e.altKey) return false;
+        const k = e.key.toLowerCase();
+        if (k === "v") return true;
+        const action = { c: "copy", x: "cut", a: "selectAll" }[k];
+        if (!action) return false;
+        e.preventDefault();
+        clip(action);
+        return true;
+      }
+      function onPaste(e) {
+        e.preventDefault();
+        pasteText(e.clipboardData.getData("text"));
+      }
+      kbd.addEventListener("paste", onPaste);
+
+      // ---- <select> dropdowns: the server reports the options instead of opening a native
+      // menu on the Mac. Show the device's own picker, or an in-page list if that is refused.
+      const picker = document.getElementById("picker"),
+        pickerList = document.getElementById("pickerList"),
+        sheet = pickerList.querySelector(".sheet");
+      let activeSelect = null;
+      function choose(value) {
+        const target = activeSelect;
+        activeSelect = null;
+        pickerList.classList.remove("open");
+        if (!target) return;
+        fetch("select", {
+          method: "POST",
+          body: JSON.stringify({ contentsId: target.contentsId, token: target.token, value }),
+        })
+          .catch(() => {})
+          .finally(() => {
+            seq = 0;
+            kick();
+          });
+      }
+      function openPicker(select) {
+        activeSelect = select;
+        picker.replaceChildren(
+          ...select.options.map((o) =>
+            Object.assign(new Option(o.label, o.value, false, o.value === select.value), {
+              disabled: o.disabled,
+            }),
+          ),
+        );
+        // Place the native control over the app's select so desktop pickers open in the right spot.
+        const r = canvas.getBoundingClientRect(),
+          sx = r.width / frameW,
+          sy = r.height / frameH;
+        Object.assign(picker.style, {
+          left: r.left + select.rect.x * sx + "px",
+          top: r.top + select.rect.y * sy + "px",
+          width: select.rect.width * sx + "px",
+          height: select.rect.height * sy + "px",
+        });
+        try {
+          picker.showPicker();
+        } catch {
+          showList(select);
+        }
+      }
+      picker.addEventListener("change", () => choose(picker.value));
+      picker.addEventListener("blur", () =>
+        setTimeout(
+          () => activeSelect && !pickerList.classList.contains("open") && choose(null),
+          200,
+        ),
+      );
+      function showList(select) {
+        const title = document.createElement("h2");
+        title.textContent = select.label || "Choose";
+        sheet.replaceChildren(
+          title,
+          ...select.options.map((o) => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.textContent = o.label;
+            b.disabled = o.disabled;
+            b.setAttribute("aria-selected", String(o.value === select.value));
+            b.addEventListener("click", () => choose(o.value));
+            return b;
+          }),
+        );
+        pickerList.classList.add("open");
+      }
+      pickerList.addEventListener("click", (e) => e.target === pickerList && choose(null));
+      addEventListener(
+        "keydown",
+        (e) => pickerList.classList.contains("open") && e.key === "Escape" && choose(null),
+      );
+
+      // ---- Fit: resize the real window to the free area's shape so the app renders larger.
+      const fitToggle = document.getElementById("fitToggle");
+      const wrap = document.getElementById("wrap");
+      const MIN_WIDTH = 640; // the app window's minimum width
+      let fitting = localStorage.getItem("live-fit") === "1",
+        fitTimer = null;
+      async function fit() {
+        const area = wrap.getBoundingClientRect();
+        if (area.width < 50 || area.height < 50) return;
+        const scale = Math.min(1, area.width / MIN_WIDTH);
+        await fetch("resize", {
+          method: "POST",
+          body: JSON.stringify({ width: area.width / scale, height: area.height / scale }),
+        }).catch(() => {});
+        seq = 0;
+        kick();
+      }
+      function setFit(on) {
+        fitting = on;
+        localStorage.setItem("live-fit", on ? "1" : "0");
+        fitToggle.setAttribute("aria-pressed", String(on));
+        if (on) fit();
+        else {
+          fetch("resize", { method: "POST", body: JSON.stringify({ reset: true }) }).catch(
+            () => {},
+          );
+          seq = 0;
+          kick();
+        }
+      }
+      fitToggle.addEventListener("pointerdown", (e) => e.preventDefault());
+      fitToggle.addEventListener("click", () => setFit(!fitting));
+      // Refit on rotation or pane resize, but not while the on-screen keyboard shrinks the view.
+      addEventListener("resize", () => {
+        if (!fitting || typing()) return;
+        clearTimeout(fitTimer);
+        fitTimer = setTimeout(fit, 300);
+      });
+      if (fitting) setFit(true);
+
+      loop();
+    </script>
+  </body>
+</html>
