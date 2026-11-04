@@ -7,13 +7,17 @@ export interface BrowserTab {
   canGoBack: boolean;
   canGoForward: boolean;
 }
-export type TabLayout = "top" | "left" | "right";
-export interface BrowserSettings {
-  theme: "system" | "light" | "dark";
-  tabLayout: TabLayout;
-  searchEngine: "duckduckgo" | "google" | "bing";
-  showShortcuts: boolean;
+export interface PageRegion {
+  id: number;
+  bounds: { x: number; y: number; width: number; height: number };
 }
+type SettingsSchema = typeof import("./settings.js").settingsSchema;
+export type BrowserSettings = {
+  [K in keyof SettingsSchema]: SettingsSchema[K] extends { options: readonly { value: infer V }[] }
+    ? V
+    : boolean;
+};
+export type TabLayout = BrowserSettings["tabLayout"];
 export type PaletteMode = "navigate" | "commands";
 export type PaletteAction =
   | { type: "navigate"; input: string; newTab: boolean }
@@ -28,10 +32,12 @@ export interface BrowserState {
   settingsOpen: boolean;
   tabLayout: TabLayout;
   tabs: BrowserTab[];
+  tabSlots: number[][];
   activeId: number;
   platform: string;
 }
 export interface BrowserApi {
+  reportPageLayout(regions: PageRegion[]): Promise<void>;
   openPalette(mode?: PaletteMode): Promise<void>;
   closePalette(): Promise<void>;
   executePalette(action: PaletteAction): Promise<{ error?: string }>;
@@ -46,6 +52,8 @@ export interface BrowserApi {
   getState(): Promise<BrowserState>;
   newTab(): Promise<number>;
   selectTab(id: number): Promise<void>;
+  cycleTab(direction: number): Promise<number>;
+  selectTabPosition(position: number): Promise<void>;
   closeTab(id: number): Promise<void>;
   navigate(input: string): Promise<{ error?: string }>;
   back(): Promise<void>;

@@ -14,9 +14,10 @@
   },
   "include": [
     "src/**/*",
-    "shared/**/*.d.ts",
-    "electron/preload.cjs",
+    "shared/**/*",
+    "electron/preload.ts",
     "vite.config.ts",
+    "vite.preload.config.ts",
     "tests/**/*.ts",
     "playwright.config.ts"
   ]

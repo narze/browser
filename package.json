@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "node scripts/start.mjs --dev",
     "dev:ui": "vp dev",
-    "build": "vp build",
+    "build": "vp build && vp build --config vite.preload.config.ts",
     "start": "node scripts/start.mjs",
     "check": "vp check && svelte-check --tsconfig ./tsconfig.json",
     "fmt": "vp fmt",

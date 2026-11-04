@@ -9,7 +9,7 @@ pnpm install
 pnpm dev
 ```
 
-`pnpm dev` starts Vite+ and opens Electron. Changes to Svelte update live. Restart the command after changing Electron main or preload code.
+`pnpm dev` builds the sandboxed preload, starts Vite+, and opens Electron. Changes to Svelte update live. Restart the command after changing Electron main, preload, or shared browser definitions.
 
 Features:
 
@@ -42,9 +42,9 @@ Development commands:
 
 ```sh
 pnpm check       # Vite+ format/lint checks and Svelte/TypeScript diagnostics
-pnpm test        # Address resolution tests through Vite+ / Vitest
+pnpm test        # Session, layout, settings, command, navigation, and policy tests
 pnpm test:e2e    # Build, then test the real Electron app through Playwright
-pnpm build      # Build the Svelte interface into dist/
+pnpm build      # Build the Svelte interface and sandboxed preload into dist/
 pnpm start      # Open Electron using the built interface
 pnpm dev:ui     # Interface only in Vite+; browsing requires Electron
 pnpm fmt        # Format supported files through Vite+
@@ -52,7 +52,17 @@ pnpm fmt        # Format supported files through Vite+
 
 The local Vite+ CLI is available with `pnpm exec vp`. Global Vite+ installation is optional. Vite+ supplies Vite and Vitest through the pinned overrides in `pnpm-workspace.yaml`.
 
-The Electron main process owns the tab state and page views. The command palette uses a separate transparent local `WebContentsView`, with IPC limited to reading state and running palette actions. The preload exposes a small command/event API to the local Svelte interface. Remote pages have no preload, no Node access, and run with sandboxing and context isolation enabled. The main process checks IPC senders. Browsing uses a separate session from the interface.
+The browser session module in `electron/browser-session.cjs` owns tab lifetime, selection, split rules, temporary screens, and page visibility. It returns state and effects without importing Electron. Its visual tab slots supply the tab strip, arrow navigation, numbered shortcuts, and tab cycling. `electron/main.cjs` applies the effects to native page views and handles page events, history, and focus.
+
+Tab cycling captures the current visual order until another browser action changes it. Replacing a split pane can move a tab slot during a cycle; keeping the captured order makes every tab reachable in both directions.
+
+The chrome owns page geometry. `src/page-layout.ts` observes the actual DOM content regions and reports rectangles to Electron; native page views follow those measurements. Chrome height, rail width, pane toolbar height, and divider width are defined in CSS. Geometry reports are validated and clipped to the window, and pages stay hidden until their current content regions have been reported.
+
+`shared/settings.js` defines settings defaults, choices, labels, validation, and search URLs. Settings types, controls, storage, and palette preferences use that schema. `shared/commands.js` defines IPC channels, caller access, and palette commands. Main-process registration and the preload use the same table, with a startup check for missing or extra handlers. Vite+ bundles the preload into one CommonJS file because sandboxed preloads cannot load local modules.
+
+The command palette uses a separate transparent local `WebContentsView`, with IPC limited to reading state and running validated palette actions. Remote pages have no preload, no Node access, and run with sandboxing and context isolation enabled. The main process checks IPC senders and rejects calls from subframes. Browsing uses a separate session from the interface.
+
+For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
 This is a prototype. Tab lists are kept in memory, while website cookies and storage use Electron's persistent browsing session. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
 

@@ -5,6 +5,7 @@
 
   let { state: browserState, api }: { state: BrowserState; api: BrowserApi } = $props();
   let workspace: HTMLDivElement;
+  let divider = $state<HTMLDivElement>();
   let dragging = $state(false);
   let queries = $state(['', '']);
   let errors = $state(['', '']);
@@ -26,7 +27,8 @@
   function moveResize(event: PointerEvent) {
     if (!dragging) return;
     const bounds = workspace.getBoundingClientRect();
-    void api.resizeSplit((event.clientX - bounds.x - 4) / (bounds.width - 8));
+    const gap = divider!.getBoundingClientRect().width;
+    void api.resizeSplit((event.clientX - bounds.x - gap / 2) / (bounds.width - gap));
   }
   function stopResize() {
     if (!dragging) return;
@@ -41,11 +43,11 @@
   onDestroy(stopResize);
 </script>
 
-<div class="split-workspace" bind:this={workspace} style:grid-template-columns={`minmax(0, ${browserState.split?.ratio ?? 0.5}fr) 8px minmax(0, ${1 - (browserState.split?.ratio ?? 0.5)}fr)`}>
+<div class="split-workspace" bind:this={workspace} style:grid-template-columns={`minmax(0, ${browserState.split?.ratio ?? 0.5}fr) var(--split-divider-width) minmax(0, ${1 - (browserState.split?.ratio ?? 0.5)}fr)`}>
   {#each panes as tab, side}
     {#if side === 1}
       <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
-      <div class="split-divider" class:dragging role="separator" aria-label="Resize split panes" aria-orientation="vertical"
+      <div class="split-divider" bind:this={divider} class:dragging role="separator" aria-label="Resize split panes" aria-orientation="vertical"
         aria-valuemin="25" aria-valuemax="75" aria-valuenow={Math.round((browserState.split?.ratio ?? 0.5) * 100)} tabindex="0"
         onpointerdown={startResize} onpointermove={moveResize} onpointerup={stopResize} onpointercancel={stopResize} onlostpointercapture={stopResize} onkeydown={resizeKey}></div>
     {/if}
@@ -56,7 +58,7 @@
           {#each browserState.tabs as option}<option value={option.id}>{option.title}</option>{/each}
         </select>
       </header>
-      <div class="pane-content">
+      <div class="pane-content" data-page-id={tab.id}>
         {#if tab.error}
           <div class="pane-placeholder"><Icon name="globe" size={28} /><h2>This page couldn’t load.</h2><p>{tab.error}</p><button class="retry" onclick={async () => { await api.selectTab(tab.id); await api.reload(); }}>Try again</button></div>
         {:else if !tab.url}

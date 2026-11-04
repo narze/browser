@@ -3,27 +3,21 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
-  import type { BrowserState, BrowserTab, TabLayout } from '../shared/browser';
+  import { observePageLayout } from './page-layout';
+  import { defaultSettings, settingsSchema } from '../shared/settings.js';
+  import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], activeId: 0, platform: '', tabLayout: 'top', split: null, splitResizing: false, settingsOpen: false, settings: { tabLayout: 'top', searchEngine: 'duckduckgo', showShortcuts: true, theme: 'system' } });
+  let pageRegion: HTMLElement;
+  $effect(() => {
+    // Rebind observers after Svelte changes which tabs occupy the page regions.
+    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.tabLayout].join(':');
+    if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
+  });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, settingsOpen: false, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
-  let tabRows = $derived.by(() => {
-    const rows: BrowserTab[][] = [];
-    const splitIds: number[] = browserState.split?.tabIds ?? [];
-    const pair = splitIds.map((id) => browserState.tabs.find((tab) => tab.id === id)).filter((tab) => tab !== undefined);
-    let grouped = false;
-    for (const tab of browserState.tabs) {
-      if (!splitIds.includes(tab.id)) rows.push([tab]);
-      else if (!grouped) {
-        rows.push(pair);
-        grouped = true;
-      }
-    }
-    return rows;
-  });
-  let visibleTabs = $derived(tabRows.flat());
+  let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
 
   let address = $state('');
   let query = $state('');
@@ -65,32 +59,26 @@
   async function tabKey(event: KeyboardEvent, tabId: number) {
     const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
     const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
+    const paneSelection = vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId);
+    if (!paneSelection && event.key !== previousKey && event.key !== nextKey) return;
+    event.preventDefault();
     let id: number | undefined;
-    if (vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId)) {
-      id = browserState.split.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
-    } else if (event.key === previousKey || event.key === nextKey) {
-      const index = visibleTabs.findIndex((tab) => tab.id === tabId);
-      const direction = event.key === nextKey ? 1 : -1;
-      id = visibleTabs[(index + direction + visibleTabs.length) % visibleTabs.length].id;
-    }
-    if (id !== undefined) {
-      event.preventDefault();
+    if (paneSelection) {
+      id = browserState.split!.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
       await api?.selectTab(id);
-      await tick();
-      document.getElementById(`tab-${id}`)?.focus();
-    }
+    } else id = await api?.cycleTab(event.key === nextKey ? 1 : -1);
+    await tick();
+    if (id !== undefined) document.getElementById(`tab-${id}`)?.focus();
   }
 
   function keydown(event: KeyboardEvent) {
     if (event.ctrlKey && event.key === 'Tab') {
       event.preventDefault();
-      const index = browserState.tabs.findIndex((tab) => tab.id === browserState.activeId);
-      void api?.selectTab(browserState.tabs[(index + (event.shiftKey ? -1 : 1) + browserState.tabs.length) % browserState.tabs.length].id);
+      void api?.cycleTab(event.shiftKey ? -1 : 1);
     }
     if ((event.metaKey || event.ctrlKey) && /^[1-9]$/.test(event.key)) {
       event.preventDefault();
-      const index = event.key === '9' ? browserState.tabs.length - 1 : Number(event.key) - 1;
-      if (browserState.tabs[index]) void api?.selectTab(browserState.tabs[index].id);
+      void api?.selectTabPosition(Number(event.key));
     }
     if (event.key === 'Escape') {
       if (browserState.settingsOpen) { void api?.closeSettings(); return; }
@@ -139,9 +127,7 @@
       <label class="layout-control">
         <span>Tabs</span>
         <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={async (event) => { const result = await api?.setTabLayout(event.currentTarget.value as TabLayout); inputError = result?.error || ''; }}>
-          <option value="top">Top</option>
-          <option value="left">Left</option>
-          <option value="right">Right</option>
+          {#each settingsSchema.tabLayout.options as option}<option value={option.value}>{option.label}</option>{/each}
         </select>
       </label>
       <span class="window-name">Browser</span>
@@ -166,7 +152,7 @@
     {#if current?.loading}<div class="loading-bar"></div>{/if}
   </header>
 
-  <main>
+  <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen ? browserState.activeId : undefined}>
     {#if browserState.settingsOpen && api}
       <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
     {:else if browserState.split && api}
