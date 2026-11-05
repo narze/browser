@@ -77,6 +77,23 @@
         onchange={(event) => save({ showShortcuts: event.currentTarget.checked })} />
     </div>
   </section>
+  <section class="settings-section" aria-labelledby="tabs-title">
+    <h2 id="tabs-title">Tabs</h2>
+    <div class="preference-row">
+      <label for="archive-after"><strong>{settingsSchema.archiveAfter.label}</strong><span>Unused tabs move to the archive. Favorites and pinned tabs stay.</span></label>
+      <select id="archive-after" value={settings.archiveAfter} disabled={busy}
+        onchange={(event) => save({ archiveAfter: event.currentTarget.value as BrowserSettings['archiveAfter'] })}>
+        {#each settingsSchema.archiveAfter.options as option}<option value={option.value}>{option.label}</option>{/each}
+      </select>
+    </div>
+    <div class="preference-row">
+      <label for="sleep-after"><strong>{settingsSchema.sleepAfter.label}</strong><span>Sleeping tabs free memory and reload when you open them.</span></label>
+      <select id="sleep-after" value={settings.sleepAfter} disabled={busy}
+        onchange={(event) => save({ sleepAfter: event.currentTarget.value as BrowserSettings['sleepAfter'] })}>
+        {#each settingsSchema.sleepAfter.options as option}<option value={option.value}>{option.label}</option>{/each}
+      </select>
+    </div>
+  </section>
   <p class="settings-status" role="status">{message}</p>
   {#if error}<p class="settings-error" role="alert">{error}</p>{/if}
   <p class="settings-footnote">Your preferences stay on this device.</p>

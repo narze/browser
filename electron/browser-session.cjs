@@ -116,7 +116,8 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
           homeTitle,
           title: homeTitle || cleanName(saved.title) || hostname(saved.homeUrl),
           customTitle: cleanName(saved.customTitle) || null,
-          favicon: typeof saved.favicon === "string" && FAVICON.test(saved.favicon) ? saved.favicon : null,
+          favicon:
+            typeof saved.favicon === "string" && FAVICON.test(saved.favicon) ? saved.favicon : null,
           asleep: true,
         });
       }
@@ -148,7 +149,12 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
           customTitle,
           favicon,
         })),
-      archive: archive.map(({ url, title, reason, archivedAt }) => ({ url, title, reason, archivedAt })),
+      archive: archive.map(({ url, title, reason, archivedAt }) => ({
+        url,
+        title,
+        reason,
+        archivedAt,
+      })),
     });
   }
 
@@ -433,7 +439,10 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
         const folderId = command.folderId ?? null;
         if (!ZONES.includes(command.zone) || !isIndex(command.index))
           throw new Error("Invalid tab position.");
-        if (folderId !== null && (command.zone !== "pinned" || !folders.some((f) => f.id === folderId)))
+        if (
+          folderId !== null &&
+          (command.zone !== "pinned" || !folders.some((f) => f.id === folderId))
+        )
           throw new Error("That folder no longer exists.");
         if (command.zone !== "today" && !tab.url)
           throw new Error("Open a page before pinning this tab.");
@@ -487,7 +496,13 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
         if (command.tabId !== undefined) requireTab(command.tabId);
         folders.push(folder);
         if (command.tabId !== undefined)
-          run({ type: "move-tab", id: command.tabId, zone: "pinned", folderId: folder.id, index: 0 });
+          run({
+            type: "move-tab",
+            id: command.tabId,
+            zone: "pinned",
+            folderId: folder.id,
+            index: 0,
+          });
         effects.push({ type: "edit", kind: "folder", id: folder.id });
         break;
       }
@@ -535,13 +550,14 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
           throw new Error("Invalid tick.");
         const time = now();
         const shown = shownIds();
-        for (const tab of [...tabs]) {
-          if (shown.includes(tab.id) || keepAwake.includes(tab.id)) continue;
-          const idle = time - tab.lastActiveAt;
-          if (tab.zone === "today" && archiveAfter !== null && idle >= archiveAfter) {
+        // Archiving removes entries from tabs, so iterate over a separate list.
+        const idle = tabs.filter((tab) => !shown.includes(tab.id) && !keepAwake.includes(tab.id));
+        for (const tab of idle) {
+          const idleFor = time - tab.lastActiveAt;
+          if (tab.zone === "today" && archiveAfter !== null && idleFor >= archiveAfter) {
             archiveTab(tab, "auto");
             tabs.splice(tabs.indexOf(tab), 1);
-          } else if (tab.url && !tab.asleep && sleepAfter !== null && idle >= sleepAfter)
+          } else if (tab.url && !tab.asleep && sleepAfter !== null && idleFor >= sleepAfter)
             tab.asleep = true;
         }
         break;

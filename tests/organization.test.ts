@@ -52,7 +52,13 @@ describe("tab zones and drag reorder (A6)", () => {
       session.dispatch({ type: "move-tab", id: 4, zone: "pinned", folderId: null, index: 0 }),
     ).toThrow();
     expect(() =>
-      session.dispatch({ type: "move-tab", id: 1, zone: "nowhere" as never, folderId: null, index: 0 }),
+      session.dispatch({
+        type: "move-tab",
+        id: 1,
+        zone: "nowhere" as never,
+        folderId: null,
+        index: 0,
+      }),
     ).toThrow();
     expect(() =>
       session.dispatch({ type: "move-tab", id: 1, zone: "pinned", folderId: 77, index: 0 }),
@@ -77,7 +83,11 @@ describe("pinned tabs and favorites (A1, A2)", () => {
     session.dispatch({ type: "update-tab", id: 1, patch: { title: "A home" } });
     expect(tab(session, 1)).toMatchObject({ zone: "pinned", homeUrl: "https://a.test/" });
     session.dispatch({ type: "select-tab", id: 1 });
-    session.dispatch({ type: "update-tab", id: 1, patch: { url: "https://a.test/deep", title: "Deep" } });
+    session.dispatch({
+      type: "update-tab",
+      id: 1,
+      patch: { url: "https://a.test/deep", title: "Deep" },
+    });
     const reset = session.dispatch({ type: "reset-tab", id: 1 });
     expect(reset.effects).toContainEqual({ type: "load", id: 1, url: "https://a.test/" });
     expect(tab(session, 1)).toMatchObject({ url: "https://a.test/", title: "A home" });
@@ -120,7 +130,11 @@ describe("folders (A3)", () => {
     session.dispatch({ type: "rename-folder", id: 1, name: "   " });
     expect(session.getState().folders[0].name).toBe("Research");
     session.dispatch({ type: "move-tab", id: 2, zone: "pinned", folderId: 1, index: 0 });
-    expect(tab(session, 2)).toMatchObject({ zone: "pinned", folderId: 1, homeUrl: "https://b.test/" });
+    expect(tab(session, 2)).toMatchObject({
+      zone: "pinned",
+      folderId: 1,
+      homeUrl: "https://b.test/",
+    });
     session.dispatch({ type: "toggle-folder", id: 1 });
     expect(session.getState().folders[0].collapsed).toBe(true);
     session.dispatch({ type: "create-folder", name: "Second" });
@@ -264,12 +278,18 @@ describe("saved organization", () => {
     session.dispatch({ type: "toggle-folder", id: 1 });
     session.dispatch({ type: "move-tab", id: 3, zone: "pinned", folderId: null, index: 0 });
     session.dispatch({ type: "rename-tab", id: 3, title: "Mail" });
-    session.dispatch({ type: "update-tab", id: 3, patch: { favicon: "0123456789abcdef0123456789abcdef.png" } });
+    session.dispatch({
+      type: "update-tab",
+      id: 3,
+      patch: { favicon: "0123456789abcdef0123456789abcdef.png" },
+    });
     session.dispatch({ type: "close-tab", id: 4 });
     const saved = JSON.parse(JSON.stringify(session.exportOrganization()));
     const restored = createBrowserSession({ now: () => 5, saved });
     const state = restored.getState();
-    expect(state.tabs.map((entry) => [entry.zone, entry.url, entry.asleep, entry.customTitle])).toEqual([
+    expect(
+      state.tabs.map((entry) => [entry.zone, entry.url, entry.asleep, entry.customTitle]),
+    ).toEqual([
       ["favorites", "https://a.test/", true, null],
       ["pinned", "https://b.test/", true, null],
       ["pinned", "https://c.test/", true, "Mail"],
@@ -282,7 +302,12 @@ describe("saved organization", () => {
   });
 
   it("ignores damaged saved data", () => {
-    for (const saved of [null, 5, { tabs: "x" }, { tabs: [{ zone: "pinned", homeUrl: "file:///etc" }] }]) {
+    for (const saved of [
+      null,
+      5,
+      { tabs: "x" },
+      { tabs: [{ zone: "pinned", homeUrl: "file:///etc" }] },
+    ]) {
       const session = createBrowserSession({ saved });
       expect(session.getState().tabs).toEqual([]);
     }
@@ -293,7 +318,9 @@ describe("saved organization", () => {
         archive: [{ url: "javascript:alert(1)", title: "bad" }],
       },
     });
-    expect(partial.getState().tabs).toMatchObject([{ zone: "pinned", folderId: null, title: "OK" }]);
+    expect(partial.getState().tabs).toMatchObject([
+      { zone: "pinned", folderId: null, title: "OK" },
+    ]);
     expect(partial.getState().archive).toEqual([]);
   });
 });

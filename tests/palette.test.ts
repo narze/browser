@@ -92,6 +92,8 @@ describe("command palette results", () => {
     };
     const result = paletteResults("reading", renamed).find((entry) => entry.id === "tab-1");
     expect(result?.title).toBe("Reading list");
-    expect(paletteResults("svelte documentation", renamed).some((entry) => entry.id === "tab-1")).toBe(true);
+    expect(
+      paletteResults("svelte documentation", renamed).some((entry) => entry.id === "tab-1"),
+    ).toBe(true);
   });
 });

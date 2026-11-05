@@ -202,7 +202,9 @@ function layout() {
   const [width, height] = window.getContentSize();
   if (paletteView && state.palette) paletteView.setBounds({ x: 0, y: 0, width, height });
   const ids =
-    state.split && !state.settingsOpen && !state.archiveOpen ? state.split.tabIds : [state.activeId];
+    state.split && !state.settingsOpen && !state.archiveOpen
+      ? state.split.tabIds
+      : [state.activeId];
   const currentLayout = pageRegions.map((region) => region.id).join() === ids.join();
   const regions = normalizePageLayout(pageRegions, width, height);
   for (const page of state.pages) {
@@ -370,7 +372,7 @@ function createPageView(id) {
   };
   contents.on("did-navigate", navigated);
   contents.on("page-favicon-updated", async (_event, favicons) => {
-    const source = favicons.find((url) => isWebUrl(url) || /^data:image\//.test(url));
+    const source = favicons.find((url) => isWebUrl(url) || url.startsWith("data:image/"));
     const name = source ? await cacheFavicon(source) : null;
     if (name && tab()?.favicon !== name) update({ favicon: name });
   });
@@ -499,7 +501,10 @@ function showTabMenu(id) {
     );
   }
   if (tab.homeUrl && tab.url !== tab.homeUrl)
-    template.push({ label: "Back to pinned page", click: () => dispatch({ type: "reset-tab", id }) });
+    template.push({
+      label: "Back to pinned page",
+      click: () => dispatch({ type: "reset-tab", id }),
+    });
   template.push(
     { type: "separator" },
     {
@@ -772,7 +777,8 @@ app.whenReady().then(() => {
               if (window) {
                 if (sessionState().palette) closePalette();
                 else if (sessionState().settingsOpen) showSettings(false);
-                else if (sessionState().archiveOpen) dispatch({ type: "show-archive", open: false });
+                else if (sessionState().archiveOpen)
+                  dispatch({ type: "show-archive", open: false });
                 else closeTab(sessionState().activeId);
               }
             },

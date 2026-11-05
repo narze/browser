@@ -167,7 +167,9 @@ export function paletteCommands(state) {
       {
         id: "favorite-tab",
         title: favorite ? "Remove from favorites" : "Add to favorites",
-        detail: favorite ? "Move this tab back to today" : "Keep this tab at the top of the tab bar",
+        detail: favorite
+          ? "Move this tab back to today"
+          : "Keep this tab at the top of the tab bar",
         icon: "star",
         hint: "",
         command: "moveTab",
