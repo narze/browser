@@ -285,7 +285,7 @@ Lifecycle
   cleanup [--all]                                       stop what this run started, delete scratch, keep evidence
   runs                                                  list live runs
 
-Targets (--target): chrome (default) | palette | page:<url substring> | active
+Targets (--target): chrome (default) | palette | peek | quick | page:<url substring> | active
   state                                                 window.browser.getState() as JSON
   snapshot [--target T] [--out name.aria.txt]           ARIA snapshot (printed; saved when --out)
   click   <locator> [--target T]                        click
@@ -296,7 +296,7 @@ Targets (--target): chrome (default) | palette | page:<url substring> | active
   wait    <locator> [--state visible|hidden] [--timeout ms]
   wait    --until "<JS expr over state>" [--timeout ms] e.g. "state.tabs.length === 2"
   value   <locator>                                     input value
-  screenshot --out name.png                             whole window, page views composited in
+  screenshot --out name.png [--window quick]            whole window, page views composited in
   shortcut --key K [--modifiers meta,control,alt,shift] keyboard shortcut through Electron input (before-input-event)
   menu    --path "File>New tab"                         click an application-menu item (accelerator-only shortcuts)
   eval    --js "<async body>"                           escape hatch; gets {app, chrome, pages, target, fixture}
@@ -305,7 +305,8 @@ Targets (--target): chrome (default) | palette | page:<url substring> | active
 
 Locator: --role R --name N [--loose] | --label L | --text T | --css S   (+ --nth N)
 Fixture server: <fixtureOrigin>/<anything> serves "<title>Fixture /<anything></title>";
-  /links has a same-tab link "Next" and a popup link "Popup".
+  /links has a same-tab link "Next", a popup link "Popup", and "Elsewhere", a link to
+  another site (localhost instead of 127.0.0.1) for peek checks.
 `;
 
 // ---------------------------------------------------------------- host side
@@ -330,7 +331,7 @@ async function host(id) {
     res.setHeader("content-type", "text/html; charset=utf-8");
     if (path === "/links") {
       res.end(
-        `<title>Fixture /links</title><h1>Fixture /links</h1><p><a href="/next">Next</a> <a href="/popup-target" target="_blank">Popup</a></p>`,
+        `<title>Fixture /links</title><h1>Fixture /links</h1><p><a href="/next">Next</a> <a href="/popup-target" target="_blank">Popup</a> <a href="http://localhost:${fixture.address().port}/elsewhere">Elsewhere</a></p>`,
       );
       return;
     }
@@ -390,14 +391,16 @@ async function host(id) {
   const pages = () => app.context().pages();
   async function target(name = "chrome") {
     if (name === "chrome") return chrome;
-    if (name === "palette") {
+    // The palette and peek frame are views above the pages; quick is the quick window.
+    const views = { palette: "#palette", peek: "#peek", quick: "#mini" };
+    if (name in views) {
       const deadline = Date.now() + 10_000;
       while (Date.now() < deadline) {
-        const page = pages().find((p) => p.url().endsWith("#palette"));
+        const page = pages().find((p) => p.url().endsWith(views[name]));
         if (page) return page;
         await sleep(100);
       }
-      throw new Error("palette view not found; open the palette first");
+      throw new Error(`${name} view not found; open it first`);
     }
     if (name === "active") {
       const state = await chrome.evaluate(() => window.browser.getState());
@@ -408,7 +411,7 @@ async function host(id) {
     if (name.startsWith("page:")) {
       const part = name.slice(5);
       const page = pages().find(
-        (p) => p !== chrome && !p.url().endsWith("#palette") && p.url().includes(part),
+        (p) => p !== chrome && !/#(palette|peek|mini)$/.test(p.url()) && p.url().includes(part),
       );
       if (!page)
         throw new Error(
@@ -447,9 +450,12 @@ async function host(id) {
     return full;
   };
 
-  async function screenshot(out) {
-    const capture = await app.evaluate(async ({ BrowserWindow }) => {
-      const win = BrowserWindow.getAllWindows()[0];
+  async function screenshot(out, which) {
+    const capture = await app.evaluate(async ({ BrowserWindow }, quick) => {
+      const win = BrowserWindow.getAllWindows().find((entry) =>
+        quick ? entry.webContents.getURL().endsWith("#mini") : !entry.webContents.getURL().includes("#"),
+      );
+      if (!win) throw new Error(quick ? "the quick window is not open" : "no main window");
       const [width, height] = win.getContentSize();
       const shot = async (contents) => (await contents.capturePage()).toPNG().toString("base64");
       const layers = [{ png: await shot(win.webContents), x: 0, y: 0, width, height }];
@@ -460,7 +466,7 @@ async function host(id) {
         layers.push({ png: await shot(view.webContents), ...b });
       }
       return { width, height, layers };
-    });
+    }, which === "quick");
     const dataUrl = await chrome.evaluate(async ({ width, height, layers }) => {
       const bitmaps = await Promise.all(
         layers.map((l) =>
@@ -593,7 +599,7 @@ async function host(id) {
     async value(a) {
       return need(await target(a.target), a).inputValue({ timeout: Number(a.timeout || 10_000) });
     },
-    screenshot: (a) => screenshot(a.out),
+    screenshot: (a) => screenshot(a.out, a.window),
     async eval(a) {
       const fn = new Function(
         "ctx",
