@@ -206,4 +206,21 @@ describe("browser command contract", () => {
       "Show tab sidebar",
     );
   });
+
+  it("turns compact mode on and off in every tab layout", () => {
+    expect(paletteCommands(state).find((command) => command.id === "compact-mode")).toMatchObject({
+      title: "Turn on compact mode",
+      hint: "⇧⌘S",
+      command: "toggleCompactMode",
+      args: [],
+    });
+    const compact: BrowserState = {
+      ...state,
+      tabLayout: "left",
+      settings: { ...state.settings, compactMode: true },
+    };
+    expect(paletteCommands(compact).find((command) => command.id === "compact-mode")?.title).toBe(
+      "Turn off compact mode",
+    );
+  });
 });

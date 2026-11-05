@@ -15,7 +15,7 @@
   let pageRegion: HTMLElement;
   $effect(() => {
     // Rebind observers after Svelte changes which tabs occupy the page regions.
-    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout].join(':');
+    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
   let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
@@ -26,6 +26,15 @@
   let dragWidth = $state<number | null>(null);
   let sidebarDragging = false;
   let sidebarWidth = $derived(dragWidth ?? browserState.settings.sidebarWidth);
+  // Compact mode hides the toolbar and tabs. They show while the pointer came from
+  // their window edge and has not moved onto the page yet, or while they have focus.
+  const EDGE = 4;
+  let edgeReveal = $state(false);
+  let chromeFocused = $state(false);
+  let compact = $derived(browserState.settings.compactMode);
+  let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null));
+  let chromeHidden = $derived(compact && !revealed);
+  $effect(() => { void api?.setChromeRevealed(revealed); });
 
   let address = $state('');
   let query = $state('');
@@ -60,7 +69,24 @@
     if (!inputError) addressInput.blur();
   }
 
+  function pageEdge(atEdge: boolean) {
+    edgeReveal = atEdge;
+  }
+  // The pointer over the chrome's own page area (new-tab page, split toolbars) works like a page.
+  function pointerMove(event: PointerEvent) {
+    if (!compact) return;
+    const { tabLayout } = browserState;
+    const atEdge = event.clientY < EDGE || (tabLayout === 'left' && event.clientX < EDGE) || (tabLayout === 'right' && event.clientX >= window.innerWidth - EDGE);
+    if (atEdge) edgeReveal = true;
+    else if ((event.target as Element).closest?.('main')) edgeReveal = false;
+  }
+  function trackFocus() {
+    // Focus moves after focusout, and to a page view without a focusin here.
+    setTimeout(() => { chromeFocused = document.hasFocus() && !!document.activeElement?.closest('.chrome'); });
+  }
+
   async function focusAddress() {
+    if (compact) edgeReveal = true;
     await tick();
     addressInput?.focus();
     addressInput?.select();
@@ -112,15 +138,16 @@
     if (!api) return;
     const offState = api.onState(update);
     const offFocus = api.onFocusAddress(() => void focusAddress());
+    const offEdge = api.onPageEdge(pageEdge);
     void api.getState().then((initial) => { update(initial); if (!current?.url) void focusAddress(); });
-    return () => { offState(); offFocus(); };
+    return () => { offState(); offFocus(); offEdge(); };
   });
 </script>
 
-<svelte:window onkeydown={keydown} />
+<svelte:window onkeydown={keydown} onpointermove={pointerMove} onfocusin={trackFocus} onfocusout={trackFocus} onblur={trackFocus} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} style:--sidebar-width={sidebarHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
-  {#if vertical && !sidebarHidden}
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} class:chrome-hidden={chromeHidden} style:--sidebar-width={sidebarHidden || chromeHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
+  {#if vertical && !sidebarHidden && !chromeHidden}
     <div class="tab-rail" aria-hidden="true"></div>
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
     <div class="sidebar-resizer" role="separator" aria-label="Resize tab sidebar" aria-orientation="vertical" title="Drag to resize · double-click to reset"

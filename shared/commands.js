@@ -2,7 +2,7 @@
 import { settingsSchema } from "./settings.js";
 import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
 
-/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit'>, { channel: string, palette: boolean }>} */
+/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge'>, { channel: string, palette: boolean }>} */
 export const browserCommands = {
   getState: { channel: "browser:state", palette: true },
   openPalette: { channel: "browser:palette-open", palette: false },
@@ -25,6 +25,8 @@ export const browserCommands = {
   setSplitResizing: { channel: "browser:set-split-resizing", palette: false },
   setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
   toggleSidebar: { channel: "browser:toggle-sidebar", palette: false },
+  toggleCompactMode: { channel: "browser:toggle-compact-mode", palette: false },
+  setChromeRevealed: { channel: "browser:chrome-revealed", palette: false },
   openSettings: { channel: "browser:open-settings", palette: false },
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },
@@ -60,6 +62,7 @@ export const browserCommands = {
 
 export const browserEvents = {
   onState: "browser:state-changed",
+  onPageEdge: "browser:page-edge",
   onFocusAddress: "browser:focus-address",
   onEdit: "browser:edit",
 };
@@ -272,6 +275,17 @@ export function paletteCommands(state) {
         args: [active.id, space.id],
       });
   }
+  commands.push({
+    id: "compact-mode",
+    title: state.settings.compactMode ? "Turn off compact mode" : "Turn on compact mode",
+    detail: state.settings.compactMode
+      ? "Always show the toolbar and tabs"
+      : "Hide the toolbar and tabs until you point at the window edge",
+    icon: "compact",
+    hint: shortcut("toggleCompactMode"),
+    command: "toggleCompactMode",
+    args: [],
+  });
   for (const { value, label } of settingsSchema.theme.options)
     commands.push({
       id: `theme-${value}`,

@@ -68,6 +68,7 @@ const state: BrowserState = {
     sleepAfter: "1h",
     shortcuts: {},
     sidebarVisible: true,
+    compactMode: false,
   },
 };
 describe("command palette results", () => {

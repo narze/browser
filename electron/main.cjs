@@ -59,6 +59,10 @@ let commandHandlers;
 let shortcuts = new Map();
 // While the chrome records a new shortcut, keys reach it instead of running actions.
 let shortcutRecording = false;
+// Compact mode: whether the chrome shows its toolbar and tabs, and the last edge
+// state sent to it (null makes the next page pointer move report again).
+let chromeRevealed = false;
+let pointerAtEdge = false;
 
 const sessionState = () => browserSession.getState();
 const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
@@ -410,6 +414,8 @@ function runShortcut(id) {
       return dispatch({ type: "cycle-space", direction: id === "nextSpace" ? 1 : -1 });
     case "newSpace":
       return dispatch({ type: "create-space" });
+    case "toggleCompactMode":
+      return toggleCompactMode();
     case "settings":
       return showSettings(true);
     case "archive":
@@ -466,6 +472,7 @@ function installMenu() {
           item("copyUrl"),
           item("toggleSplit"),
           item("toggleSidebar"),
+          item("toggleCompactMode"),
           { type: "separator" },
           { role: "togglefullscreen" },
           item("devTools"),
@@ -619,6 +626,7 @@ function createPageView(id, profile) {
     return { action: "deny" };
   });
   contents.on("before-input-event", shortcutKey);
+  contents.on("input-event", (_event, input) => pagePointer(view, input));
   contents.on("before-input-event", (_event, input) => {
     if (input.type === "keyDown" && input.key === "Escape" && tab()?.loading) contents.stop();
   });
@@ -672,6 +680,7 @@ function updateSettings(patch) {
       patch = { ...patch, sidebarVisible: true };
     settings = settingsStore.update(patch);
     nativeTheme.themeSource = settings.theme;
+    updateWindowButtons();
     if ("shortcuts" in patch) installMenu();
     updateTheme();
     layout();
@@ -825,6 +834,44 @@ function toggleSidebar() {
   updateSettings({ sidebarVisible: !settings.sidebarVisible });
 }
 
+function toggleCompactMode() {
+  updateSettings({ compactMode: !settings.compactMode });
+}
+
+// Compact mode hides the toolbar and tabs. The pointer at the edge where they
+// live (the top, or the side of the tab sidebar) brings them back; the chrome
+// decides when to show them, because it also knows about focus and drags.
+const EDGE = 4;
+function pagePointer(view, input) {
+  if (input.type !== "mouseMove" || !settings.compactMode || !window || window.isDestroyed())
+    return;
+  const bounds = view.getBounds();
+  const x = bounds.x + input.x;
+  const y = bounds.y + input.y;
+  const width = window.getContentSize()[0];
+  const atEdge =
+    y < EDGE ||
+    (settings.tabLayout === "left" && x < EDGE) ||
+    (settings.tabLayout === "right" && x >= width - EDGE);
+  if (atEdge === pointerAtEdge) return;
+  pointerAtEdge = atEdge;
+  window.webContents.send(browserEvents.onPageEdge, atEdge);
+}
+
+function setChromeRevealed(revealed) {
+  if (typeof revealed !== "boolean") throw new Error("Invalid reveal state.");
+  chromeRevealed = revealed;
+  // While the chrome shows, the next pointer move over a page reports, so it can hide.
+  pointerAtEdge = revealed ? null : false;
+  updateWindowButtons();
+}
+
+// The macOS window buttons would cover the page while the chrome hides.
+function updateWindowButtons() {
+  if (process.platform === "darwin" && window && !window.isDestroyed())
+    window.setWindowButtonVisibility(!settings.compactMode || chromeRevealed);
+}
+
 function installIpc() {
   const handlers = {
     reportPageLayout: (regions) => {
@@ -843,6 +890,8 @@ function installIpc() {
     setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
     toggleSidebar,
+    toggleCompactMode,
+    setChromeRevealed,
     openSettings: () => showSettings(true),
     closeSettings: () => showSettings(false),
     setShortcutRecording: (recording) => {
@@ -1043,6 +1092,8 @@ function createWindow() {
   });
   window.webContents.on("did-finish-load", () => {
     setShortcutRecording(false);
+    chromeRevealed = false;
+    updateWindowButtons();
     publish();
   });
   const devUrl = process.env.ELECTRON_RENDERER_URL;

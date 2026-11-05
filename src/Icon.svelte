@@ -23,6 +23,7 @@
     archive: 'M3 5h18v4H3z M5 9v10h14V9 M10 13h4',
     chevron: 'm9 6 6 6-6 6',
     space: 'm12 3 9 5-9 5-9-5z M3 13l9 5 9-5',
+    compact: 'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',
   };
 </script>
 

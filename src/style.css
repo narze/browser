@@ -1977,3 +1977,8 @@ span.folder-toggle {
 .route-add:disabled {
   opacity: 0.45;
 }
+
+/* Compact mode: pages use the whole window until the pointer reaches the chrome's edge. */
+.chrome-hidden .chrome {
+  display: none;
+}

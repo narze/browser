@@ -121,6 +121,9 @@ export interface BrowserApi {
   setSplitResizing(resizing: boolean): Promise<void>;
   setSidebarResizing(resizing: boolean): Promise<void>;
   toggleSidebar(): Promise<void>;
+  toggleCompactMode(): Promise<void>;
+  /** Compact mode: tells the window whether the hidden toolbar and tabs are showing. */
+  setChromeRevealed(revealed: boolean): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
   /** Pauses browser shortcuts while the settings page records a new one. */
@@ -167,4 +170,6 @@ export interface BrowserApi {
   onEdit(callback: (target: EditTarget) => void): () => void;
   onState(callback: (state: BrowserState) => void): () => void;
   onFocusAddress(callback: () => void): () => void;
+  /** Compact mode: the pointer moved onto, or away from, the window edge over a page. */
+  onPageEdge(callback: (atEdge: boolean) => void): () => void;
 }
