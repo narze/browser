@@ -99,9 +99,13 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
       await app.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0].setContentSize(900, 680),
       );
-      await expect.poll(async () => (await visibleViews()).length).toBe(2);
-      const views = await visibleViews();
-      expect(views[0].x + views[0].width + 8).toBe(views[1].x);
+      // Native view bounds settle after the layout report, so wait for both panes to line up.
+      await expect
+        .poll(async () => {
+          const views = await visibleViews();
+          return views.length === 2 && views[0].x + views[0].width + 8 - views[1].x;
+        })
+        .toBe(0);
       const firstTab = (await group.getByRole("tab").nth(0).boundingBox())!;
       const secondTab = (await group.getByRole("tab").nth(1).boundingBox())!;
       expect(firstTab.y).toBe(secondTab.y);
