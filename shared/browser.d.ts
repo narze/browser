@@ -103,6 +103,7 @@ export interface BrowserApi {
   stop(): Promise<void>;
   moveTab(id: number, zone: TabZone, folderId: number | null, index: number): Promise<void>;
   renameTab(id: number, title: string): Promise<void>;
+  editTab(id: number): Promise<void>;
   resetTab(id: number): Promise<void>;
   sleepTab(id: number): Promise<{ error?: string }>;
   showTabMenu(id: number): Promise<void>;

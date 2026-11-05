@@ -43,6 +43,7 @@ export const browserCommands = {
   restoreArchived: { channel: "browser:restore-archived", palette: false },
   removeArchived: { channel: "browser:remove-archived", palette: false },
   clearArchive: { channel: "browser:clear-archive", palette: false },
+  editTab: { channel: "browser:edit-tab", palette: false },
 };
 
 export const browserEvents = {
@@ -149,6 +150,71 @@ export function paletteCommands(state) {
       command: "forward",
       args: [],
     });
+  const end = Number.MAX_SAFE_INTEGER;
+  if (active?.url) {
+    const pinned = active.zone === "pinned";
+    const favorite = active.zone === "favorites";
+    commands.push(
+      {
+        id: "pin-tab",
+        title: pinned ? "Unpin tab" : "Pin tab",
+        detail: pinned ? "Move this tab back to today" : "Keep this tab in the pinned section",
+        icon: "pin",
+        hint: "",
+        command: "moveTab",
+        args: pinned ? [active.id, "today", null, 0] : [active.id, "pinned", null, end],
+      },
+      {
+        id: "favorite-tab",
+        title: favorite ? "Remove from favorites" : "Add to favorites",
+        detail: favorite ? "Move this tab back to today" : "Keep this tab at the top of the tab bar",
+        icon: "star",
+        hint: "",
+        command: "moveTab",
+        args: favorite ? [active.id, "today", null, 0] : [active.id, "favorites", null, end],
+      },
+    );
+    if (active.homeUrl && active.url !== active.homeUrl)
+      commands.push({
+        id: "reset-tab",
+        title: "Back to pinned page",
+        detail: active.homeUrl,
+        icon: "home",
+        hint: "",
+        command: "resetTab",
+        args: [active.id],
+      });
+  }
+  if (active)
+    commands.push({
+      id: "rename-tab",
+      title: "Rename tab",
+      detail: active.customTitle || active.title,
+      icon: "edit",
+      hint: "",
+      command: "editTab",
+      args: [active.id],
+    });
+  commands.push(
+    {
+      id: "new-folder",
+      title: "New folder",
+      detail: "Group pinned tabs",
+      icon: "folder",
+      hint: "",
+      command: "createFolder",
+      args: [],
+    },
+    {
+      id: "archive",
+      title: "Open archive",
+      detail: "Closed and auto-archived tabs",
+      icon: "archive",
+      hint: "",
+      command: "openArchive",
+      args: [],
+    },
+  );
   for (const { value, label } of settingsSchema.theme.options)
     commands.push({
       id: `theme-${value}`,

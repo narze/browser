@@ -14,6 +14,10 @@ const state: BrowserState = {
   splitResizing: false,
   sidebarResizing: false,
   settingsOpen: false,
+  archiveOpen: false,
+  archive: [],
+  folders: [],
+  sections: { favorites: [], folders: [], pinned: [], today: [[1]] },
   activeId: 1,
   platform: "darwin",
   tabSlots: [[1]],
@@ -29,6 +33,14 @@ const state: BrowserState = {
       error: null,
       canGoBack: false,
       canGoForward: false,
+      zone: "today",
+      folderId: null,
+      homeUrl: null,
+      homeTitle: null,
+      customTitle: null,
+      favicon: null,
+      asleep: false,
+      lastActiveAt: 0,
     },
   ],
 };
@@ -84,5 +96,42 @@ describe("browser command contract", () => {
       "Exit split view",
     );
     expect(paletteCommands(navigable).some((command) => command.id === "back")).toBe(true);
+  });
+
+  it("offers tab organization commands for the current tab", () => {
+    const blank = paletteCommands(state);
+    expect(blank.some((command) => command.id === "pin-tab")).toBe(false);
+    expect(blank.find((command) => command.id === "archive")).toMatchObject({
+      command: "openArchive",
+      args: [],
+    });
+    expect(blank.find((command) => command.id === "new-folder")?.command).toBe("createFolder");
+    expect(blank.find((command) => command.id === "rename-tab")).toMatchObject({
+      command: "editTab",
+      args: [1],
+    });
+    const page = { ...state.tabs[0], url: "https://example.com/a" };
+    const today = paletteCommands({ ...state, tabs: [page] });
+    expect(today.find((command) => command.id === "pin-tab")).toMatchObject({
+      title: "Pin tab",
+      command: "moveTab",
+      args: [1, "pinned", null, Number.MAX_SAFE_INTEGER],
+    });
+    expect(today.find((command) => command.id === "favorite-tab")).toMatchObject({
+      title: "Add to favorites",
+      args: [1, "favorites", null, Number.MAX_SAFE_INTEGER],
+    });
+    expect(today.some((command) => command.id === "reset-tab")).toBe(false);
+    const pinned = { ...page, zone: "favorites" as const, homeUrl: "https://example.com/" };
+    const choices = paletteCommands({ ...state, tabs: [pinned] });
+    expect(choices.find((command) => command.id === "favorite-tab")).toMatchObject({
+      title: "Remove from favorites",
+      args: [1, "today", null, 0],
+    });
+    expect(choices.find((command) => command.id === "pin-tab")?.title).toBe("Pin tab");
+    expect(choices.find((command) => command.id === "reset-tab")).toMatchObject({
+      command: "resetTab",
+      args: [1],
+    });
   });
 });

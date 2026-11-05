@@ -488,7 +488,7 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
         folders.push(folder);
         if (command.tabId !== undefined)
           run({ type: "move-tab", id: command.tabId, zone: "pinned", folderId: folder.id, index: 0 });
-        else effects.push({ type: "edit", kind: "folder", id: folder.id });
+        effects.push({ type: "edit", kind: "folder", id: folder.id });
         break;
       }
       case "rename-folder": {

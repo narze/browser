@@ -17,6 +17,14 @@ const state: BrowserState = {
       error: null,
       canGoBack: false,
       canGoForward: false,
+      zone: "today",
+      folderId: null,
+      homeUrl: null,
+      homeTitle: null,
+      customTitle: null,
+      favicon: null,
+      asleep: false,
+      lastActiveAt: 0,
     },
     {
       id: 2,
@@ -26,6 +34,14 @@ const state: BrowserState = {
       error: null,
       canGoBack: true,
       canGoForward: false,
+      zone: "today",
+      folderId: null,
+      homeUrl: null,
+      homeTitle: null,
+      customTitle: null,
+      favicon: null,
+      asleep: false,
+      lastActiveAt: 0,
     },
   ],
   split: null,
@@ -33,12 +49,18 @@ const state: BrowserState = {
   sidebarResizing: false,
   tabLayout: "top",
   settingsOpen: false,
+  archiveOpen: false,
+  archive: [],
+  folders: [],
+  sections: { favorites: [], folders: [], pinned: [], today: [[1], [2]] },
   settings: {
     theme: "system",
     tabLayout: "top",
     searchEngine: "duckduckgo",
     showShortcuts: true,
     sidebarWidth: 220,
+    archiveAfter: "12h",
+    sleepAfter: "1h",
   },
 };
 describe("command palette results", () => {
@@ -62,5 +84,14 @@ describe("command palette results", () => {
     expect(
       paletteResults("> split", { ...state, split: { tabIds: [1, 2], ratio: 0.5 } })[0].title,
     ).toBe("Exit split view");
+  });
+  it("shows and searches custom tab names", () => {
+    const renamed = {
+      ...state,
+      tabs: state.tabs.map((tab) => (tab.id === 1 ? { ...tab, customTitle: "Reading list" } : tab)),
+    };
+    const result = paletteResults("reading", renamed).find((entry) => entry.id === "tab-1");
+    expect(result?.title).toBe("Reading list");
+    expect(paletteResults("svelte documentation", renamed).some((entry) => entry.id === "tab-1")).toBe(true);
   });
 });
