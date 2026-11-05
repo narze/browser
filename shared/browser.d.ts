@@ -1,3 +1,4 @@
+export type TabZone = "favorites" | "pinned" | "today";
 export interface BrowserTab {
   id: number;
   title: string;
@@ -6,7 +7,39 @@ export interface BrowserTab {
   error: string | null;
   canGoBack: boolean;
   canGoForward: boolean;
+  /** Favorites and pinned tabs stay until removed; today tabs archive when idle. */
+  zone: TabZone;
+  folderId: number | null;
+  /** The page a favorite or pinned tab returns to when reset or closed. */
+  homeUrl: string | null;
+  homeTitle: string | null;
+  /** A name the user chose. It replaces the page title in the browser controls. */
+  customTitle: string | null;
+  /** A cached icon file name, served to the chrome as favicon://icon/<name>. */
+  favicon: string | null;
+  /** A sleeping tab has no loaded page until it is shown again. */
+  asleep: boolean;
+  lastActiveAt: number;
 }
+export interface TabFolder {
+  id: number;
+  name: string;
+  collapsed: boolean;
+}
+export interface ArchiveEntry {
+  id: number;
+  url: string;
+  title: string;
+  reason: "closed" | "auto";
+  archivedAt: number;
+}
+export interface TabSections {
+  favorites: number[][];
+  folders: { id: number; slots: number[][] }[];
+  pinned: number[][];
+  today: number[][];
+}
+export type EditTarget = { kind: "tab" | "folder"; id: number };
 export interface PageRegion {
   id: number;
   bounds: { x: number; y: number; width: number; height: number };
@@ -33,6 +66,10 @@ export interface BrowserState {
   sidebarResizing: boolean;
   settings: BrowserSettings;
   settingsOpen: boolean;
+  archiveOpen: boolean;
+  archive: ArchiveEntry[];
+  folders: TabFolder[];
+  sections: TabSections;
   tabLayout: TabLayout;
   tabs: BrowserTab[];
   tabSlots: number[][];
@@ -64,6 +101,23 @@ export interface BrowserApi {
   forward(): Promise<void>;
   reload(): Promise<void>;
   stop(): Promise<void>;
+  moveTab(id: number, zone: TabZone, folderId: number | null, index: number): Promise<void>;
+  renameTab(id: number, title: string): Promise<void>;
+  resetTab(id: number): Promise<void>;
+  sleepTab(id: number): Promise<{ error?: string }>;
+  showTabMenu(id: number): Promise<void>;
+  createFolder(name?: string, tabId?: number): Promise<void>;
+  renameFolder(id: number, name: string): Promise<void>;
+  toggleFolder(id: number): Promise<void>;
+  deleteFolder(id: number): Promise<void>;
+  moveFolder(id: number, index: number): Promise<void>;
+  showFolderMenu(id: number): Promise<void>;
+  openArchive(): Promise<void>;
+  closeArchive(): Promise<void>;
+  restoreArchived(id: number): Promise<void>;
+  removeArchived(id: number): Promise<void>;
+  clearArchive(): Promise<void>;
+  onEdit(callback: (target: EditTarget) => void): () => void;
   onState(callback: (state: BrowserState) => void): () => void;
   onFocusAddress(callback: () => void): () => void;
 }

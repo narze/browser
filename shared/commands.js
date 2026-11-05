@@ -1,7 +1,7 @@
 // @ts-check
 import { settingsSchema } from "./settings.js";
 
-/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress'>, { channel: string, palette: boolean }>} */
+/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit'>, { channel: string, palette: boolean }>} */
 export const browserCommands = {
   getState: { channel: "browser:state", palette: true },
   openPalette: { channel: "browser:palette-open", palette: false },
@@ -27,11 +27,28 @@ export const browserCommands = {
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },
   setTabLayout: { channel: "browser:set-tab-layout", palette: false },
+  moveTab: { channel: "browser:move-tab", palette: false },
+  renameTab: { channel: "browser:rename-tab", palette: false },
+  resetTab: { channel: "browser:reset-tab", palette: false },
+  sleepTab: { channel: "browser:sleep-tab", palette: false },
+  showTabMenu: { channel: "browser:tab-menu", palette: false },
+  createFolder: { channel: "browser:create-folder", palette: false },
+  renameFolder: { channel: "browser:rename-folder", palette: false },
+  toggleFolder: { channel: "browser:toggle-folder", palette: false },
+  deleteFolder: { channel: "browser:delete-folder", palette: false },
+  moveFolder: { channel: "browser:move-folder", palette: false },
+  showFolderMenu: { channel: "browser:folder-menu", palette: false },
+  openArchive: { channel: "browser:open-archive", palette: false },
+  closeArchive: { channel: "browser:close-archive", palette: false },
+  restoreArchived: { channel: "browser:restore-archived", palette: false },
+  removeArchived: { channel: "browser:remove-archived", palette: false },
+  clearArchive: { channel: "browser:clear-archive", palette: false },
 };
 
 export const browserEvents = {
   onState: "browser:state-changed",
   onFocusAddress: "browser:focus-address",
+  onEdit: "browser:edit",
 };
 
 /** @param {string} name @param {string} source @param {boolean} mainFrame */

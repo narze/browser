@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSettingsStore } from "../electron/settings.cjs";
 import { resolveAddress } from "../electron/navigation.cjs";
-import { defaultSettings, settingsSchema, isSettingValue } from "../shared/settings.js";
+import { defaultSettings, settingsSchema, isSettingValue, durationMs } from "../shared/settings.js";
 
 const directories: string[] = [];
 function profile() {
@@ -17,6 +17,13 @@ afterEach(() =>
 );
 
 describe("browser preferences", () => {
+  it("maps tab timers to milliseconds, with never as null", () => {
+    expect(durationMs("archiveAfter", "12h")).toBe(12 * 3_600_000);
+    expect(durationMs("archiveAfter", "7d")).toBe(7 * 86_400_000);
+    expect(durationMs("sleepAfter", "15m")).toBe(15 * 60_000);
+    expect(durationMs("sleepAfter", "never")).toBeNull();
+    expect(defaultSettings).toMatchObject({ archiveAfter: "12h", sleepAfter: "1h" });
+  });
   it("uses schema defaults and accepts every declared settings choice", () => {
     expect(createSettingsStore(profile()).get()).toEqual(defaultSettings);
     const store = createSettingsStore(profile());
@@ -49,6 +56,8 @@ describe("browser preferences", () => {
       searchEngine: "google",
       theme: "dark",
       sidebarWidth: 220,
+      archiveAfter: "12h",
+      sleepAfter: "1h",
     });
   });
   it("rejects invalid settings without changing memory or disk", () => {
@@ -81,6 +90,8 @@ describe("browser preferences", () => {
       showShortcuts: true,
       theme: "system",
       sidebarWidth: 220,
+      archiveAfter: "12h",
+      sleepAfter: "1h",
     });
     writeFileSync(
       file,
@@ -92,6 +103,8 @@ describe("browser preferences", () => {
       showShortcuts: true,
       theme: "system",
       sidebarWidth: 220,
+      archiveAfter: "12h",
+      sleepAfter: "1h",
     });
   });
   it("uses the selected search engine while preserving direct addresses", () => {

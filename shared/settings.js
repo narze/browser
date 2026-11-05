@@ -28,6 +28,27 @@ export const settingsSchema = /** @type {const} */ ({
     ],
   },
   sidebarWidth: { label: "Sidebar width", default: 220, min: 160, max: 480 },
+  archiveAfter: {
+    label: "Archive tabs after",
+    default: "12h",
+    options: [
+      { value: "12h", label: "12 hours", ms: 12 * 3_600_000 },
+      { value: "24h", label: "24 hours", ms: 24 * 3_600_000 },
+      { value: "7d", label: "7 days", ms: 7 * 86_400_000 },
+      { value: "30d", label: "30 days", ms: 30 * 86_400_000 },
+      { value: "never", label: "Never", ms: null },
+    ],
+  },
+  sleepAfter: {
+    label: "Put tabs to sleep after",
+    default: "1h",
+    options: [
+      { value: "15m", label: "15 minutes", ms: 15 * 60_000 },
+      { value: "1h", label: "1 hour", ms: 3_600_000 },
+      { value: "6h", label: "6 hours", ms: 6 * 3_600_000 },
+      { value: "never", label: "Never", ms: null },
+    ],
+  },
   showShortcuts: { label: "New-tab shortcuts", default: true },
 });
 
@@ -48,6 +69,16 @@ export function isSettingValue(key, value) {
       value <= setting.max
     );
   return typeof value === typeof setting.default;
+}
+
+/**
+ * @param {"archiveAfter" | "sleepAfter"} key
+ * @param {string} value
+ * @returns {number | null}
+ */
+export function durationMs(key, value) {
+  const option = settingsSchema[key].options.find((entry) => entry.value === value);
+  return option ? option.ms : null;
 }
 
 /** @param {number} width */
