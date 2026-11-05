@@ -29,11 +29,13 @@ describe("browser preferences", () => {
     const store = createSettingsStore(profile());
     for (const [key, setting] of Object.entries(settingsSchema)) {
       const choices =
-        "options" in setting
-          ? setting.options.map((option) => option.value)
-          : "min" in setting
-            ? [setting.min, setting.default, setting.max]
-            : [true, false];
+        key === "shortcuts"
+          ? [{ newTab: "Alt+Cmd+N", closeTab: "" }, {}]
+          : "options" in setting
+            ? setting.options.map((option) => option.value)
+            : "min" in setting
+              ? [setting.min, setting.default, setting.max]
+              : [true, false];
       for (const value of choices) {
         expect(isSettingValue(key, value)).toBe(true);
         store.update({ [key]: value });
@@ -58,6 +60,7 @@ describe("browser preferences", () => {
       sidebarWidth: 220,
       archiveAfter: "12h",
       sleepAfter: "1h",
+      shortcuts: {},
     });
   });
   it("rejects invalid settings without changing memory or disk", () => {
@@ -75,6 +78,10 @@ describe("browser preferences", () => {
       { theme: "sepia" },
       { theme: null },
       { sidebarWidth: 1000 },
+      { shortcuts: { newTab: "Ctrl+" } },
+      { shortcuts: { unknownAction: "Cmd+J" } },
+      { shortcuts: [] },
+      { shortcuts: { reload: "CmdOrCtrl+T" } },
     ]) {
       expect(() => store.update(patch)).toThrow();
       expect(readFileSync(file, "utf8")).toBe(saved);
@@ -92,6 +99,7 @@ describe("browser preferences", () => {
       sidebarWidth: 220,
       archiveAfter: "12h",
       sleepAfter: "1h",
+      shortcuts: {},
     });
     writeFileSync(
       file,
@@ -105,7 +113,18 @@ describe("browser preferences", () => {
       sidebarWidth: 220,
       archiveAfter: "12h",
       sleepAfter: "1h",
+      shortcuts: {},
     });
+  });
+  it("keeps valid stored shortcuts and drops unknown or damaged ones", () => {
+    const file = profile();
+    writeFileSync(
+      file,
+      JSON.stringify({ shortcuts: { newTab: "Alt+Cmd+N", gone: "Cmd+J", reload: "nope" } }),
+    );
+    expect(createSettingsStore(file).get().shortcuts).toEqual({ newTab: "Alt+Cmd+N" });
+    writeFileSync(file, JSON.stringify({ shortcuts: "broken" }));
+    expect(createSettingsStore(file).get().shortcuts).toEqual({});
   });
   it("uses the selected search engine while preserving direct addresses", () => {
     expect(resolveAddress("hello world", "google")).toBe(

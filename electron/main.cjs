@@ -4,6 +4,7 @@ const {
   WebContentsView,
   ipcMain,
   Menu,
+  clipboard,
   session,
   nativeTheme,
   protocol,
@@ -17,6 +18,13 @@ const { createSettingsStore } = require("./settings.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
 const { durationMs } = require("../shared/settings.js");
+const {
+  shortcutActions,
+  acceleratorFromKey,
+  normalizeAccelerator,
+  resolveShortcuts,
+  shortcutLookup,
+} = require("../shared/shortcuts.js");
 const { createBrowserSession } = require("./browser-session.cjs");
 const { normalizePageLayout } = require("./page-layout.cjs");
 const {
@@ -44,6 +52,9 @@ const views = new Map();
 let paletteView;
 let pageRegions = [];
 let commandHandlers;
+let shortcuts = new Map();
+// While the chrome records a new shortcut, keys reach it instead of running actions.
+let shortcutRecording = false;
 
 const sessionState = () => browserSession.getState();
 const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
@@ -240,7 +251,7 @@ function openPalette(mode = "commands") {
     paletteView.setBackgroundColor("#00000000");
     paletteView.webContents.on("will-navigate", (event) => event.preventDefault());
     paletteView.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    paletteView.webContents.on("before-input-event", paletteShortcut);
+    paletteView.webContents.on("before-input-event", shortcutKey);
     paletteView.webContents.on("did-finish-load", () => {
       publish();
       if (sessionState().palette) paletteView.webContents.focus();
@@ -270,19 +281,161 @@ function closePalette(restoreFocus = true) {
   if (restoreFocus) focusActive();
 }
 
-function paletteShortcut(event, input) {
-  if (
-    input.type !== "keyDown" ||
-    !(process.platform === "darwin" ? input.meta : input.control) ||
-    input.alt ||
-    input.shift
-  )
+// Browser shortcuts run before the page sees the key, so websites cannot take them.
+// Page-priority shortcuts are left to the menu, which runs only for unhandled keys.
+function shortcutKey(event, input) {
+  if (input.type !== "keyDown" || shortcutRecording) return;
+  const accelerator = acceleratorFromKey(
+    {
+      key: input.key,
+      code: input.code,
+      ctrl: input.control,
+      meta: input.meta,
+      alt: input.alt,
+      shift: input.shift,
+    },
+    process.platform,
+  );
+  const id = accelerator && shortcuts.get(accelerator);
+  if (!id || shortcutActions.find((action) => action.id === id).pagePriority) return;
+  event.preventDefault();
+  runShortcut(id);
+}
+
+function runPaletteCommand(id) {
+  const command = paletteCommands(getState()).find((entry) => entry.id === id);
+  if (command) commandHandlers[command.command](...command.args);
+}
+
+function runShortcut(id) {
+  if (id === "newTab") {
+    if (!window) createWindow();
+    else newTab();
     return;
-  const key = input.key.toLowerCase();
-  if (key === "l" || key === "k") {
-    event.preventDefault();
-    openPalette(key === "l" ? "navigate" : "commands");
   }
+  if (!window || window.isDestroyed()) return;
+  const state = sessionState();
+  const position = /^selectTab([1-8])$/.exec(id);
+  if (position) return dispatch({ type: "select-position", position: Number(position[1]) });
+  switch (id) {
+    case "closeTab":
+      if (state.palette) closePalette();
+      else if (state.settingsOpen) showSettings(false);
+      else if (state.archiveOpen) dispatch({ type: "show-archive", open: false });
+      else closeTab(state.activeId);
+      break;
+    case "reopenClosedTab": {
+      const entry = state.archive.find((item) => item.reason === "closed");
+      if (entry) dispatch({ type: "restore-archived", id: entry.id });
+      break;
+    }
+    case "openAddress":
+      return openPalette("navigate");
+    case "commandPalette":
+      return openPalette("commands");
+    case "reload":
+      return reload();
+    case "back":
+    case "forward":
+      return history(id);
+    case "copyUrl":
+      if (activeTab()?.url) clipboard.writeText(activeTab().url);
+      break;
+    case "nextTab":
+    case "nextTabAlternate":
+      return cycleTab(1);
+    case "previousTab":
+    case "previousTabAlternate":
+      return cycleTab(-1);
+    case "selectLastTab":
+      return dispatch({ type: "select-position", position: 9 });
+    case "togglePin":
+      return runPaletteCommand("pin-tab");
+    case "toggleFavorite":
+      return runPaletteCommand("favorite-tab");
+    case "newFolder":
+      return runPaletteCommand("new-folder");
+    case "toggleSplit":
+      return toggleSplit();
+    case "settings":
+      return showSettings(true);
+    case "archive":
+      return dispatch({ type: "show-archive", open: true });
+    case "devTools":
+      return (activeTab()?.url ? activeView().webContents : window.webContents).toggleDevTools();
+  }
+}
+
+function setShortcutRecording(recording) {
+  if (shortcutRecording === recording) return;
+  shortcutRecording = recording;
+  installMenu();
+}
+
+// Menus show the current shortcuts. Their accelerators also cover keys that reach
+// no web contents, and page-priority shortcuts that the page did not handle.
+function installMenu() {
+  shortcuts = shortcutLookup(settings.shortcuts, process.platform);
+  const keys = resolveShortcuts(settings.shortcuts);
+  const item = (id) => {
+    const action = shortcutActions.find((entry) => entry.id === id);
+    const accelerator = shortcutRecording ? null : normalizeAccelerator(keys[id], process.platform);
+    return {
+      label: id === "settings" ? "Settings…" : action.label,
+      click: () => runShortcut(id),
+      ...(accelerator ? { accelerator } : {}),
+    };
+  };
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
+      {
+        label: "File",
+        submenu: [
+          item("newTab"),
+          item("closeTab"),
+          item("reopenClosedTab"),
+          { type: "separator" },
+          { role: "quit" },
+        ],
+      },
+      { role: "editMenu" },
+      {
+        label: "View",
+        submenu: [
+          item("settings"),
+          item("archive"),
+          item("openAddress"),
+          item("commandPalette"),
+          item("reload"),
+          item("back"),
+          item("forward"),
+          item("copyUrl"),
+          item("toggleSplit"),
+          { type: "separator" },
+          { role: "togglefullscreen" },
+          item("devTools"),
+        ],
+      },
+      {
+        label: "Tab",
+        submenu: [
+          item("nextTab"),
+          item("previousTab"),
+          item("nextTabAlternate"),
+          item("previousTabAlternate"),
+          { type: "separator" },
+          ...[1, 2, 3, 4, 5, 6, 7, 8].map((position) => item(`selectTab${position}`)),
+          item("selectLastTab"),
+          { type: "separator" },
+          item("togglePin"),
+          item("toggleFavorite"),
+          item("newFolder"),
+        ],
+      },
+      { role: "windowMenu" },
+    ]),
+  );
 }
 
 function executePalette(action) {
@@ -406,23 +559,11 @@ function createPageView(id) {
     }
     return { action: "deny" };
   });
-  contents.on("before-input-event", paletteShortcut);
-  contents.on("before-input-event", tabShortcut);
+  contents.on("before-input-event", shortcutKey);
   contents.on("before-input-event", (_event, input) => {
     if (input.type === "keyDown" && input.key === "Escape" && tab()?.loading) contents.stop();
   });
   return view;
-}
-
-function tabShortcut(event, input) {
-  if (input.type !== "keyDown") return;
-  if (input.control && input.key === "Tab") {
-    event.preventDefault();
-    cycleTab(input.shift ? -1 : 1);
-  } else if ((input.meta || input.control) && /^[1-9]$/.test(input.key)) {
-    event.preventDefault();
-    dispatch({ type: "select-position", position: Number(input.key) });
-  }
 }
 
 function closeTab(id) {
@@ -451,6 +592,7 @@ function history(direction) {
 }
 
 function showSettings(open) {
+  if (!open) setShortcutRecording(false);
   dispatch({ type: "show-settings", open });
 }
 
@@ -464,6 +606,7 @@ function updateSettings(patch) {
   try {
     settings = settingsStore.update(patch);
     nativeTheme.themeSource = settings.theme;
+    if ("shortcuts" in patch) installMenu();
     updateTheme();
     layout();
     publish();
@@ -568,6 +711,10 @@ function installIpc() {
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
     openSettings: () => showSettings(true),
     closeSettings: () => showSettings(false),
+    setShortcutRecording: (recording) => {
+      if (typeof recording !== "boolean") throw new Error("Invalid recording state.");
+      setShortcutRecording(recording);
+    },
     updateSettings: updateSettings,
     setTabLayout: (value) => updateSettings({ tabLayout: value }),
     getState,
@@ -710,8 +857,7 @@ function createWindow() {
       sandbox: true,
     },
   });
-  window.webContents.on("before-input-event", paletteShortcut);
-  window.webContents.on("before-input-event", tabShortcut);
+  window.webContents.on("before-input-event", shortcutKey);
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.on("resize", layout);
@@ -727,7 +873,10 @@ function createWindow() {
       if (!view.webContents.isDestroyed()) view.webContents.close({ waitForBeforeUnload: false });
     }
   });
-  window.webContents.on("did-finish-load", publish);
+  window.webContents.on("did-finish-load", () => {
+    setShortcutRecording(false);
+    publish();
+  });
   const devUrl = process.env.ELECTRON_RENDERER_URL;
   if (devUrl) void window.loadURL(devUrl);
   else void window.loadFile(path.join(__dirname, "../dist/index.html"));
@@ -763,107 +912,7 @@ app.whenReady().then(() => {
     .setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
   session.fromPartition("persist:browsing").setPermissionCheckHandler(() => false);
   installIpc();
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      ...(process.platform === "darwin" ? [{ role: "appMenu" }] : []),
-      {
-        label: "File",
-        submenu: [
-          {
-            label: "New tab",
-            accelerator: "CmdOrCtrl+T",
-            click: () => {
-              if (!window) createWindow();
-              else newTab();
-            },
-          },
-          {
-            label: "Close tab",
-            accelerator: "CmdOrCtrl+W",
-            click: () => {
-              if (window) {
-                if (sessionState().palette) closePalette();
-                else if (sessionState().settingsOpen) showSettings(false);
-                else if (sessionState().archiveOpen)
-                  dispatch({ type: "show-archive", open: false });
-                else closeTab(sessionState().activeId);
-              }
-            },
-          },
-          { type: "separator" },
-          { role: "quit" },
-        ],
-      },
-      { role: "editMenu" },
-      {
-        label: "View",
-        submenu: [
-          {
-            label: "Settings…",
-            accelerator: "CmdOrCtrl+,",
-            click: () => {
-              if (window) showSettings(true);
-            },
-          },
-          {
-            label: "Archive",
-            accelerator: "CmdOrCtrl+Shift+A",
-            click: () => {
-              if (window) dispatch({ type: "show-archive", open: true });
-            },
-          },
-          {
-            label: "Open address palette",
-            accelerator: "CmdOrCtrl+L",
-            click: () => {
-              if (window) openPalette("navigate");
-            },
-          },
-          {
-            label: "Command palette",
-            accelerator: "CmdOrCtrl+K",
-            click: () => {
-              if (window) openPalette("commands");
-            },
-          },
-          {
-            label: "Reload page",
-            accelerator: "CmdOrCtrl+R",
-            click: () => {
-              if (window) reload();
-            },
-          },
-          { label: "Back", accelerator: "Alt+Left", click: () => history("back") },
-          { label: "Forward", accelerator: "Alt+Right", click: () => history("forward") },
-          {
-            label: "Next tab",
-            accelerator: "CmdOrCtrl+Shift+]",
-            click: () => {
-              if (window) cycleTab(1);
-            },
-          },
-          {
-            label: "Previous tab",
-            accelerator: "CmdOrCtrl+Shift+[",
-            click: () => {
-              if (window) cycleTab(-1);
-            },
-          },
-          { type: "separator" },
-          { role: "togglefullscreen" },
-          {
-            label: "Developer tools",
-            accelerator: "CmdOrCtrl+Alt+I",
-            click: () => {
-              if (window)
-                (activeTab()?.url ? activeView().webContents : window.webContents).toggleDevTools();
-            },
-          },
-        ],
-      },
-      { role: "windowMenu" },
-    ]),
-  );
+  installMenu();
   createWindow();
   app.on("activate", () => {
     if (!BrowserWindow.getAllWindows().length) createWindow();

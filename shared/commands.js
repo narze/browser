@@ -1,5 +1,6 @@
 // @ts-check
 import { settingsSchema } from "./settings.js";
+import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
 
 /** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit'>, { channel: string, palette: boolean }>} */
 export const browserCommands = {
@@ -26,6 +27,7 @@ export const browserCommands = {
   openSettings: { channel: "browser:open-settings", palette: false },
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },
+  setShortcutRecording: { channel: "browser:shortcut-recording", palette: false },
   setTabLayout: { channel: "browser:set-tab-layout", palette: false },
   moveTab: { channel: "browser:move-tab", palette: false },
   renameTab: { channel: "browser:rename-tab", palette: false },
@@ -80,7 +82,9 @@ export function validateCommandHandlers(handlers) {
  */
 export function paletteCommands(state) {
   const active = state.tabs.find((tab) => tab.id === state.activeId);
-  const modifier = state.platform === "darwin" ? "⌘" : "Ctrl+";
+  const keys = resolveShortcuts(state.settings.shortcuts ?? {});
+  /** @param {string} id */
+  const shortcut = (id) => formatAccelerator(keys[id] ?? "", state.platform);
   /** @type {PaletteCommand[]} */
   const commands = [
     {
@@ -88,7 +92,7 @@ export function paletteCommands(state) {
       title: "New tab",
       detail: "Start with a blank page",
       icon: "plus",
-      hint: `${modifier}T`,
+      hint: shortcut("newTab"),
       command: "newTab",
       args: [],
     },
@@ -97,7 +101,7 @@ export function paletteCommands(state) {
       title: "Open settings",
       detail: "Appearance and browsing preferences",
       icon: "settings",
-      hint: `${modifier},`,
+      hint: shortcut("settings"),
       command: "openSettings",
       args: [],
     },
@@ -106,7 +110,7 @@ export function paletteCommands(state) {
       title: state.split ? "Exit split view" : "Split tabs",
       detail: state.split ? "Return to one page" : "Browse two pages side by side",
       icon: "split",
-      hint: "",
+      hint: shortcut("toggleSplit"),
       command: "toggleSplit",
       args: [],
     },
@@ -115,7 +119,7 @@ export function paletteCommands(state) {
       title: "Close current tab",
       detail: active?.title || "New tab",
       icon: "close",
-      hint: `${modifier}W`,
+      hint: shortcut("closeTab"),
       command: "closeTab",
       args: [state.activeId],
     },
@@ -126,7 +130,7 @@ export function paletteCommands(state) {
       title: "Reload page",
       detail: active.title,
       icon: "reload",
-      hint: `${modifier}R`,
+      hint: shortcut("reload"),
       command: "reload",
       args: [],
     });
@@ -136,7 +140,7 @@ export function paletteCommands(state) {
       title: "Go back",
       detail: "Previous page in this tab",
       icon: "back",
-      hint: "Alt+←",
+      hint: shortcut("back"),
       command: "back",
       args: [],
     });
@@ -146,7 +150,7 @@ export function paletteCommands(state) {
       title: "Go forward",
       detail: "Next page in this tab",
       icon: "forward",
-      hint: "Alt+→",
+      hint: shortcut("forward"),
       command: "forward",
       args: [],
     });
@@ -160,7 +164,7 @@ export function paletteCommands(state) {
         title: pinned ? "Unpin tab" : "Pin tab",
         detail: pinned ? "Move this tab back to today" : "Keep this tab in the pinned section",
         icon: "pin",
-        hint: "",
+        hint: shortcut("togglePin"),
         command: "moveTab",
         args: pinned ? [active.id, "today", null, 0] : [active.id, "pinned", null, end],
       },
@@ -171,7 +175,7 @@ export function paletteCommands(state) {
           ? "Move this tab back to today"
           : "Keep this tab at the top of the tab bar",
         icon: "star",
-        hint: "",
+        hint: shortcut("toggleFavorite"),
         command: "moveTab",
         args: favorite ? [active.id, "today", null, 0] : [active.id, "favorites", null, end],
       },
@@ -203,7 +207,7 @@ export function paletteCommands(state) {
       title: "New folder",
       detail: "Group pinned tabs",
       icon: "folder",
-      hint: "",
+      hint: shortcut("newFolder"),
       command: "createFolder",
       args: [],
     },
@@ -212,7 +216,7 @@ export function paletteCommands(state) {
       title: "Open archive",
       detail: "Closed and auto-archived tabs",
       icon: "archive",
-      hint: "",
+      hint: shortcut("archive"),
       command: "openArchive",
       args: [],
     },

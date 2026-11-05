@@ -29,24 +29,32 @@ Features:
 - Rename a tab or folder with a double-click, F2, or the context menu. An empty name restores the page title.
 - Today tabs that stay unused move to the **Archive** (after 12 hours by default). Closed Today tabs go there too. Open it from the toolbar or Cmd/Ctrl+Shift+A to filter, restore, or remove entries.
 - Unused background tabs **sleep** (after 1 hour by default) to free memory and keep their back/forward history when they wake. Tabs that play audio stay awake. Set both timers in Settings under **Tabs**.
+- Change any browser **keyboard shortcut** in Settings under **Keyboard shortcuts**. Search by name or keys, click a shortcut and press new keys, press Delete to remove it, and reset one or all. A shortcut that another action uses is rejected. Browser shortcuts take priority over websites, except Back and Forward, which leave Alt+Left/Right to text fields. The menus, toolbar tips, and palette show the current keys. The definitions live in `shared/shortcuts.js`.
 - Favorites, pinned tabs, folders, and the archive save to `tabs.json` in the app profile and return asleep after a restart. Site icons are cached in the profile.
+
+Default shortcuts (all customizable):
 
 | Shortcut                  | Action                              |
 | ------------------------- | ----------------------------------- |
 | Cmd/Ctrl+T                | New tab                             |
 | Cmd/Ctrl+W                | Close tab                           |
+| Cmd/Ctrl+Shift+T          | Reopen closed tab                   |
 | Cmd/Ctrl+L                | Open address palette                |
 | Cmd/Ctrl+K                | Open command palette                |
 | Cmd/Ctrl+R                | Reload                              |
+| Cmd/Ctrl+Shift+C          | Copy page address                   |
+| Cmd/Ctrl+D                | Pin or unpin tab                    |
+| Cmd/Ctrl+Shift+D          | Add to or remove from favorites     |
+| Ctrl+Shift+=              | Split view                          |
 | Cmd/Ctrl+,                | Settings                            |
 | Cmd/Ctrl+Shift+A          | Archive                             |
-| Alt+Shift+Up / Down       | Move the focused tab                |
-| F2                        | Rename the focused tab              |
 | Alt+Left / Alt+Right      | Back / forward                      |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab                 |
-| Cmd/Ctrl+1 to 8 / 9       | Select tab by position / last tab   |
 | Cmd/Ctrl+Shift+] / [      | Next / previous tab                 |
+| Cmd/Ctrl+1 to 8 / 9       | Select tab by position / last tab   |
 | Cmd/Ctrl+Alt+I            | Developer tools for the active page |
+
+Fixed keys: Alt+Shift+Up / Down moves the focused tab, and F2 renames it.
 
 Development commands:
 

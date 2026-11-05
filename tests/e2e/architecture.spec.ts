@@ -28,8 +28,18 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
     await chrome.getByRole("button", { name: "Split tabs", exact: true }).click();
     await expect(chrome.getByRole("tab")).toHaveText(["Page /c", "Page /a", "Page /b"]);
     await address.click();
-    const modifier = process.platform === "darwin" ? "Meta" : "Control";
-    await chrome.keyboard.press(`${modifier}+1`);
+    const modifier = process.platform === "darwin" ? "meta" : "control";
+    // Native key events reach before-input-event like a real keypress; Playwright's do not.
+    const press = (keyCode: string, modifiers: string[]) =>
+      app.evaluate(
+        ({ BrowserWindow }, { keyCode, modifiers }) => {
+          const contents = BrowserWindow.getAllWindows()[0].webContents;
+          for (const type of ["keyDown", "keyUp"] as const)
+            contents.sendInputEvent({ type, keyCode, modifiers: modifiers as never });
+        },
+        { keyCode, modifiers },
+      );
+    await press("1", [modifier]);
     await expect(address).toHaveValue(`${origin}/c`);
     await app.evaluate(({ webContents }) => {
       const page = webContents.getAllWebContents().find((c) => c.getURL().endsWith("/a"))!;
@@ -43,14 +53,14 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
     });
     await expect(address).toHaveValue(`${origin}/c`);
     await address.click();
-    await chrome.keyboard.press("Control+Tab");
+    await press("Tab", ["control"]);
     await expect(address).toHaveValue(`${origin}/a`);
     await address.click();
-    await chrome.keyboard.press("Control+Shift+Tab");
+    await press("Tab", ["control", "shift"]);
     await expect(address).toHaveValue(`${origin}/c`);
     for (const page of ["a", "b", "c", "a", "b", "c"]) {
       await address.click();
-      await chrome.keyboard.press("Control+Tab");
+      await press("Tab", ["control"]);
       await expect(address).toHaveValue(`${origin}/${page}`);
     }
     let from = "c";
@@ -68,7 +78,7 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
     }
     for (const page of ["a", "b", "c"]) {
       await app.evaluate(({ Menu }) => {
-        const view = Menu.getApplicationMenu()!.items.find((item) => item.label === "View")!;
+        const view = Menu.getApplicationMenu()!.items.find((item) => item.label === "Tab")!;
         view.submenu!.items.find((item) => item.label === "Next tab")!.click();
       });
       await expect(address).toHaveValue(`${origin}/${page}`);
@@ -81,7 +91,7 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
       await expect(address).toHaveValue(`${origin}/${page}`);
     }
     await address.click();
-    await chrome.keyboard.press(`${modifier}+9`);
+    await press("9", [modifier]);
     await expect(address).toHaveValue(`${origin}/b`);
     // CSS is the owner of chrome dimensions. Native views must follow DOM rectangles.
     await chrome.addStyleTag({

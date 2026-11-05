@@ -1667,3 +1667,134 @@ span.folder-toggle {
   font-size: 13px;
   text-align: center;
 }
+
+.shortcut-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.shortcut-heading h2 {
+  margin: 0;
+}
+.shortcut-intro {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.shortcut-reset-all {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.shortcut-reset-all:hover:not(:disabled) {
+  background: var(--hover);
+}
+.shortcut-reset-all:disabled {
+  opacity: 0.5;
+}
+.shortcut-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--muted);
+}
+.shortcut-search:focus-within {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.shortcut-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.shortcut-group-title {
+  margin: 22px 0 4px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.shortcut-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.shortcut-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.shortcut-row + .shortcut-row {
+  border-top: 1px solid var(--chrome);
+}
+.shortcut-label {
+  flex: 1;
+  font-size: 13px;
+}
+.shortcut-key {
+  min-width: 96px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  box-shadow: 0 1px 0 var(--border);
+}
+.shortcut-key:hover:not(:disabled) {
+  border-color: var(--accent-border);
+}
+.shortcut-key.empty {
+  color: var(--muted);
+}
+.shortcut-key.recording {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.shortcut-key:focus-visible,
+.shortcut-reset:focus-visible,
+.shortcut-reset-all:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.shortcut-reset {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--muted);
+}
+.shortcut-reset:hover:not(:disabled) {
+  background: var(--hover);
+  color: var(--accent);
+}
+.shortcut-empty {
+  margin: 20px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}

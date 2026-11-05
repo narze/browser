@@ -134,4 +134,29 @@ describe("browser command contract", () => {
       args: [1],
     });
   });
+  it("shows the current keyboard shortcut for each palette command", () => {
+    const hints = (choices: ReturnType<typeof paletteCommands>) =>
+      Object.fromEntries(choices.map((command) => [command.id, command.hint]));
+    const page = { ...state.tabs[0], url: "https://example.com/", title: "Example" };
+    expect(hints(paletteCommands({ ...state, tabs: [page] }))).toMatchObject({
+      "new-tab": "⌘T",
+      settings: "⌘,",
+      split: "⌃⇧=",
+      "close-tab": "⌘W",
+      reload: "⌘R",
+      "pin-tab": "⌘D",
+      archive: "⇧⌘A",
+    });
+    const custom = {
+      ...state,
+      platform: "linux",
+      tabs: [page],
+      settings: { ...state.settings, shortcuts: { newTab: "Ctrl+Alt+N", reload: "" } },
+    };
+    expect(hints(paletteCommands(custom))).toMatchObject({
+      "new-tab": "Ctrl+Alt+N",
+      reload: "",
+      "close-tab": "Ctrl+W",
+    });
+  });
 });

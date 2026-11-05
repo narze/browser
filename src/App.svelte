@@ -7,6 +7,7 @@
   import Archive from './Archive.svelte';
   import { observePageLayout } from './page-layout';
   import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
+  import { formatAccelerator, resolveShortcuts } from '../shared/shortcuts.js';
   import type { BrowserState, TabLayout } from '../shared/browser';
 
   const api = window.browser;
@@ -29,7 +30,9 @@
   let inputError = $state('');
   let addressInput: HTMLInputElement;
   let current = $derived(browserState.tabs.find((tab) => tab.id === browserState.activeId));
-  let modifier = $derived(browserState.platform === 'darwin' ? '⌘' : 'Ctrl+');
+  let keys = $derived(resolveShortcuts(browserState.settings.shortcuts ?? {}));
+  const key = (id: string) => formatAccelerator(keys[id] ?? '', browserState.platform);
+  const withKey = (label: string, id: string) => (key(id) ? `${label} (${key(id)})` : label);
   const shortcuts = [
     { name: 'GitHub', url: 'https://github.com', icon: 'code', color: 'var(--text)', detail: 'Build something' },
     { name: 'Wikipedia', url: 'https://wikipedia.org', icon: 'globe', color: '#52728a', detail: 'Follow your curiosity' },
@@ -93,14 +96,6 @@
   }
 
   function keydown(event: KeyboardEvent) {
-    if (event.ctrlKey && event.key === 'Tab') {
-      event.preventDefault();
-      void api?.cycleTab(event.shiftKey ? -1 : 1);
-    }
-    if ((event.metaKey || event.ctrlKey) && /^[1-9]$/.test(event.key)) {
-      event.preventDefault();
-      void api?.selectTabPosition(Number(event.key));
-    }
     if (event.key === 'Escape') {
       if (browserState.settingsOpen) { void api?.closeSettings(); return; }
       if (browserState.archiveOpen) { void api?.closeArchive(); return; }
@@ -133,8 +128,8 @@
   {/if}
   <header class="chrome">
     <div class="tab-row">
-      <TabList state={browserState} {api} {vertical} {modifier} />
-      <button class="icon-button new-tab" aria-label="New tab" title="New tab ({modifier}T)" disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span><kbd>{modifier}T</kbd>{/if}</button>
+      <TabList state={browserState} {api} {vertical} closeShortcut={key('closeTab')} />
+      <button class="icon-button new-tab" aria-label="New tab" title={withKey('New tab', 'newTab')} disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span>{#if key('newTab')}<kbd>{key('newTab')}</kbd>{/if}{/if}</button>
       <div class="drag-space"></div>
       <label class="layout-control">
         <span>Tabs</span>
@@ -146,28 +141,28 @@
     </div>
     <div class="toolbar">
       <nav aria-label="Page navigation">
-        <button class="icon-button" aria-label="Back" title="Back (Alt+Left)" disabled={!current?.canGoBack} onclick={() => api?.back()}><Icon name="back" /></button>
-        <button class="icon-button" aria-label="Forward" title="Forward (Alt+Right)" disabled={!current?.canGoForward} onclick={() => api?.forward()}><Icon name="forward" /></button>
-        <button class="icon-button" aria-label={current?.loading ? 'Stop loading' : 'Reload'} title={current?.loading ? 'Stop loading' : `Reload (${modifier}R)`} disabled={!current?.url} onclick={() => current?.loading ? api?.stop() : api?.reload()}><Icon name={current?.loading ? 'close' : 'reload'} size={17} /></button>
+        <button class="icon-button" aria-label="Back" title={withKey('Back', 'back')} disabled={!current?.canGoBack} onclick={() => api?.back()}><Icon name="back" /></button>
+        <button class="icon-button" aria-label="Forward" title={withKey('Forward', 'forward')} disabled={!current?.canGoForward} onclick={() => api?.forward()}><Icon name="forward" /></button>
+        <button class="icon-button" aria-label={current?.loading ? 'Stop loading' : 'Reload'} title={current?.loading ? 'Stop loading' : withKey('Reload', 'reload')} disabled={!current?.url} onclick={() => current?.loading ? api?.stop() : api?.reload()}><Icon name={current?.loading ? 'close' : 'reload'} size={17} /></button>
       </nav>
       <form class="address-bar" class:invalid={!!inputError} onsubmit={(event) => { event.preventDefault(); void navigate(address); }}>
         <span class="address-icon"><Icon name={current?.url.startsWith('https:') ? 'shield' : 'search'} size={15} /></span>
         <input bind:this={addressInput} bind:value={address} aria-label="Search or enter address" aria-invalid={!!inputError} placeholder="Search or enter address" autocomplete="off" spellcheck="false" disabled={!api} onfocus={() => addressInput.select()} />
         {#if inputError}<span class="input-error" role="alert" title={inputError}>{inputError}</span>{/if}
-        <span class="address-shortcut">{modifier}L</span>
+        {#if key('openAddress')}<span class="address-shortcut">{key('openAddress')}</span>{/if}
       </form>
-      <button class="icon-button" aria-label="Command palette" title="Command palette ({modifier}K)" disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
+      <button class="icon-button" aria-label="Command palette" title={withKey('Command palette', 'commandPalette')} disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
       <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
-      <button class="icon-button" class:settings-active={browserState.archiveOpen} aria-label="Archive" aria-pressed={browserState.archiveOpen} title="Archive ({modifier}⇧A)" disabled={!api} onclick={() => browserState.archiveOpen ? api?.closeArchive() : api?.openArchive()}><Icon name="archive" size={18} /></button>
-      <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title="Settings ({modifier},)" disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
+      <button class="icon-button" class:settings-active={browserState.archiveOpen} aria-label="Archive" aria-pressed={browserState.archiveOpen} title={withKey('Archive', 'archive')} disabled={!api} onclick={() => browserState.archiveOpen ? api?.closeArchive() : api?.openArchive()}><Icon name="archive" size={18} /></button>
+      <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title={withKey('Settings', 'settings')} disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
     </div>
     {#if current?.loading}<div class="loading-bar"></div>{/if}
   </header>
 
   <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen || browserState.archiveOpen ? browserState.activeId : undefined}>
     {#if browserState.settingsOpen && api}
-      <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
+      <Settings settings={browserState.settings} platform={browserState.platform} {api} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
     {:else if browserState.archiveOpen && api}
       <Archive entries={browserState.archive} archiveAfter={browserState.settings.archiveAfter} {api} />
     {:else if browserState.split && api}
@@ -201,7 +196,7 @@
         </div>{/if}
         {#if !api}<p class="desktop-notice">Run <code>pnpm dev</code> to open the Electron browser.</p>{/if}
       </section>
-      <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore <span class="footer-shortcut">New tab <kbd>{modifier}T</kbd></span></footer>
+      <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore {#if key('newTab')}<span class="footer-shortcut">New tab <kbd>{key('newTab')}</kbd></span>{/if}</footer>
     {:else if browserState.sidebarResizing}
       <section class="pane-placeholder"><Icon name="globe" size={28} /><h2>{current?.title}</h2><p>Resizing sidebar…</p></section>
     {/if}
