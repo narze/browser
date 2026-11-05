@@ -30,10 +30,10 @@ export function paletteResults(input: string, state: BrowserState): PaletteResul
   if (commandsOnly) return commandResults;
   const tabs: PaletteResult[] = [...state.tabs]
     .sort((a, b) => Number(b.id === state.activeId) - Number(a.id === state.activeId))
-    .filter((tab) => matches(`${tab.title} ${tab.url}`))
+    .filter((tab) => matches(`${tab.customTitle ?? ""} ${tab.title} ${tab.url}`))
     .map((tab) => ({
       id: `tab-${tab.id}`,
-      title: tab.title,
+      title: tab.customTitle || tab.title,
       detail: tab.url || "New tab",
       icon: tab.url ? "globe" : "plus",
       hint: "Switch tab",

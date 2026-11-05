@@ -1294,3 +1294,376 @@ input::placeholder {
     font-size: 14px;
   }
 }
+
+/* Tab organization: favorites, pinned tabs, folders, and today tabs. */
+.tab-section {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  border-radius: 9px;
+}
+.tab-section.today {
+  flex-shrink: 1;
+  min-width: 0;
+}
+.vertical .tab-section {
+  flex-direction: column;
+  align-items: stretch;
+}
+.vertical .tab-section.today {
+  flex: 1 0 auto;
+  min-height: 38px;
+}
+.favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  object-fit: contain;
+}
+.tab.asleep .tab-title,
+.tab.asleep .favicon,
+.tab.asleep .tab-icon {
+  opacity: 0.5;
+}
+.tab.asleep .tab-title {
+  font-style: italic;
+}
+.tab.dragging {
+  opacity: 0.4;
+}
+.reset-tab {
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+.reset-tab:hover {
+  background: var(--accent-soft);
+}
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--accent-border);
+  border-radius: 5px;
+  background: var(--surface);
+  font-size: 12px;
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-shadow);
+}
+.tab.editing .tab-select {
+  cursor: text;
+}
+
+/* Favorites are icon tiles; pinned tabs are icon tabs in the top bar. */
+.favorites .tab,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab {
+  flex: 0 0 auto;
+  width: 44px;
+  min-width: 44px;
+  padding-right: 0;
+}
+.favorites .tab-select,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab-select {
+  justify-content: center;
+  padding: 0;
+}
+.favorites .tab-title,
+.favorites .close-tab,
+.favorites .reset-tab,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab-title,
+.tabs:not([aria-orientation="vertical"]) .pinned .close-tab,
+.tabs:not([aria-orientation="vertical"]) .pinned .reset-tab {
+  display: none;
+}
+.favorites .tab.editing,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab.editing {
+  width: 180px;
+}
+.favorites .tab.editing .tab-select,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab.editing .tab-select {
+  padding: 0 8px;
+  gap: 6px;
+}
+.vertical .tab-section.favorites {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 6px;
+}
+.vertical .favorites .tab {
+  width: auto;
+  min-width: 0;
+  height: 42px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--hover);
+}
+.vertical .favorites .tab.active {
+  background: var(--surface);
+  box-shadow:
+    0 1px 3px var(--shadow),
+    inset 0 0 0 1px var(--accent-border);
+}
+.vertical .favorites .tab.editing {
+  grid-column: 1 / -1;
+  width: auto;
+}
+.vertical .favorites .split-tab-group {
+  grid-column: span 2;
+  height: 42px;
+  flex: none;
+}
+.favorites .favicon {
+  width: 18px;
+  height: 18px;
+}
+
+/* Folders */
+.tab-folder {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.vertical .tab-folder {
+  flex-direction: column;
+  align-items: stretch;
+}
+.folder-header {
+  position: relative;
+  display: flex;
+  border-radius: 8px;
+}
+.folder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  height: 32px;
+  min-width: 0;
+  padding: 0 9px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+.vertical .folder-toggle {
+  flex: 1;
+  margin-bottom: 0;
+}
+span.folder-toggle {
+  padding-right: 4px;
+}
+.folder-toggle:hover {
+  background: var(--hover);
+}
+.folder-chevron {
+  display: flex;
+  color: var(--muted);
+  transition: transform 120ms ease;
+}
+.folder-toggle[aria-expanded="true"] .folder-chevron {
+  transform: rotate(90deg);
+}
+.folder-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.folder-count {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 10px;
+}
+.folder-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.vertical .folder-tabs {
+  flex-direction: column;
+  align-items: stretch;
+  padding-left: 14px;
+  margin-left: 12px;
+  border-left: 1px solid var(--border);
+}
+.section-divider {
+  flex-shrink: 0;
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px 6px;
+  background: var(--border);
+}
+.vertical .section-divider {
+  width: auto;
+  height: 1px;
+  margin: 6px 4px;
+  align-self: stretch;
+}
+
+/* Drag and drop markers */
+.drop-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border: 1px dashed var(--accent-border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.vertical .favorites .drop-hint {
+  grid-column: 1 / -1;
+}
+.folder-empty {
+  border-color: var(--border);
+}
+.vertical .folder-empty {
+  margin-left: 26px;
+}
+.tabs:not(.drag-active) .folder-empty {
+  display: none;
+}
+.drop-into {
+  box-shadow: inset 0 0 0 1.5px var(--accent);
+  background: var(--accent-soft);
+}
+.drop-before::before,
+.drop-after::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  border-radius: 2px;
+  background: var(--accent);
+  pointer-events: none;
+}
+.vertical .drop-before::before,
+.vertical .drop-after::after {
+  left: 4px;
+  right: 4px;
+  height: 2px;
+}
+.vertical .drop-before::before {
+  top: -3px;
+}
+.vertical .drop-after::after {
+  bottom: -3px;
+}
+.tabs:not([aria-orientation="vertical"]) .drop-before::before,
+.tabs:not([aria-orientation="vertical"]) .drop-after::after,
+.vertical .favorites .drop-before::before,
+.vertical .favorites .drop-after::after {
+  top: 6px;
+  bottom: 6px;
+  left: auto;
+  right: auto;
+  width: 2px;
+  height: auto;
+}
+.tabs:not([aria-orientation="vertical"]) .drop-before::before,
+.vertical .favorites .drop-before::before {
+  left: -3px;
+}
+.tabs:not([aria-orientation="vertical"]) .drop-after::after,
+.vertical .favorites .drop-after::after {
+  right: -3px;
+}
+
+/* Archive */
+.archive-tools {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.archive-filter {
+  flex: 1;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 13px;
+}
+.archive-clear,
+.archive-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.archive-clear {
+  height: 34px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.archive-clear:disabled {
+  opacity: 0.45;
+}
+.archive-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--border);
+}
+.archive-entry {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--chrome);
+}
+.archive-copy {
+  flex: 1;
+  min-width: 0;
+}
+.archive-copy strong,
+.archive-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.archive-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+.archive-copy small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.archive-meta {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.archive-empty {
+  padding: 32px 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}

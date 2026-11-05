@@ -24,6 +24,13 @@ Features:
 - Show navigation errors with a retry action.
 - Click **Split tabs** in the toolbar to show two tabs side by side. The pair shares one tab slot, with a clickable segment for each page in left-to-right pane order. In a vertical tab rail, Left/Right arrow keys switch between the segments. Choose tabs from each pane's dropdown, click a page to control it with the address bar, and drag the divider to resize (or focus it and use Left/Right arrow keys). With one tab open, splitting creates a new tab for the second pane. Selecting a third tab replaces the focused pane. **Exit split view** keeps the focused page visible; closing either split tab expands the remaining page. Splits last for the current app session.
 
+- Organize tabs like Arc and Zen. Drag a tab (or use the tab's context menu or the palette) into **Favorites** (an icon grid), **Pinned tabs**, or **Today**. Drag to reorder, or focus a tab and press Alt+Shift+Up/Down. A pinned or favorite tab remembers its home page: after it navigates away, a **Back to pinned page** button returns it, and closing it only puts it to sleep.
+- Group pinned tabs in **folders**. Create one from the palette (`> New folder`) or a tab's context menu, drag tabs into it, and click its header to collapse it. Deleting a folder keeps its tabs pinned.
+- Rename a tab or folder with a double-click, F2, or the context menu. An empty name restores the page title.
+- Today tabs that stay unused move to the **Archive** (after 12 hours by default). Closed Today tabs go there too. Open it from the toolbar or Cmd/Ctrl+Shift+A to filter, restore, or remove entries.
+- Unused background tabs **sleep** (after 1 hour by default) to free memory and keep their back/forward history when they wake. Tabs that play audio stay awake. Set both timers in Settings under **Tabs**.
+- Favorites, pinned tabs, folders, and the archive save to `tabs.json` in the app profile and return asleep after a restart. Site icons are cached in the profile.
+
 | Shortcut                  | Action                              |
 | ------------------------- | ----------------------------------- |
 | Cmd/Ctrl+T                | New tab                             |
@@ -32,6 +39,9 @@ Features:
 | Cmd/Ctrl+K                | Open command palette                |
 | Cmd/Ctrl+R                | Reload                              |
 | Cmd/Ctrl+,                | Settings                            |
+| Cmd/Ctrl+Shift+A          | Archive                             |
+| Alt+Shift+Up / Down       | Move the focused tab                |
+| F2                        | Rename the focused tab              |
 | Alt+Left / Alt+Right      | Back / forward                      |
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab                 |
 | Cmd/Ctrl+1 to 8 / 9       | Select tab by position / last tab   |
@@ -64,7 +74,7 @@ The command palette uses a separate transparent local `WebContentsView`, with IP
 
 For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
-This is a prototype. Tab lists are kept in memory, while website cookies and storage use Electron's persistent browsing session. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
+This is a prototype. Today tabs are kept in memory, while website cookies and storage use Electron's persistent browsing session. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
 
 Popup links open as ordinary GET tabs, with at most one popup per source tab every 750 ms. Opener-dependent flows and POST popups are not supported. Closing a tab discards its page without an unsaved-changes prompt.
 

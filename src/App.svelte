@@ -3,6 +3,8 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
+  import TabList from './TabList.svelte';
+  import Archive from './Archive.svelte';
   import { observePageLayout } from './page-layout';
   import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
   import type { BrowserState, TabLayout } from '../shared/browser';
@@ -11,17 +13,16 @@
   let pageRegion: HTMLElement;
   $effect(() => {
     // Rebind observers after Svelte changes which tabs occupy the page regions.
-    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.tabLayout].join(':');
+    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   // Local width while dragging; persisted to settings once on release.
   let dragWidth = $state<number | null>(null);
   let sidebarDragging = false;
   let sidebarWidth = $derived(dragWidth ?? browserState.settings.sidebarWidth);
-  let tabRows = $derived(browserState.tabSlots.map((ids) => ids.map((id) => browserState.tabs.find((tab) => tab.id === id)!)));
 
   let address = $state('');
   let query = $state('');
@@ -58,21 +59,6 @@
     await tick();
     addressInput?.focus();
     addressInput?.select();
-  }
-
-  async function tabKey(event: KeyboardEvent, tabId: number) {
-    const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
-    const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
-    const paneSelection = vertical && (event.key === 'ArrowLeft' || event.key === 'ArrowRight') && browserState.split?.tabIds.includes(tabId);
-    if (!paneSelection && event.key !== previousKey && event.key !== nextKey) return;
-    event.preventDefault();
-    let id: number | undefined;
-    if (paneSelection) {
-      id = browserState.split!.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
-      await api?.selectTab(id);
-    } else id = await api?.cycleTab(event.key === nextKey ? 1 : -1);
-    await tick();
-    if (id !== undefined) document.getElementById(`tab-${id}`)?.focus();
   }
 
   function startSidebarResize(event: PointerEvent) {
@@ -117,6 +103,7 @@
     }
     if (event.key === 'Escape') {
       if (browserState.settingsOpen) { void api?.closeSettings(); return; }
+      if (browserState.archiveOpen) { void api?.closeArchive(); return; }
       address = current?.url || '';
       inputError = '';
       addressInput.blur();
@@ -146,24 +133,7 @@
   {/if}
   <header class="chrome">
     <div class="tab-row">
-      <div class="tabs" role="tablist" aria-label="Browser tabs" aria-orientation={vertical ? 'vertical' : 'horizontal'}>
-        {#each tabRows as row (row.length > 1 ? 'split' : row[0].id)}
-          <div class="tab-entry" class:split-tab-group={row.length > 1} role={row.length > 1 ? 'group' : undefined} aria-label={row.length > 1 ? 'Split tabs' : undefined}>
-            {#each row as tab (tab.id)}
-              <div class="tab" class:active={tab.id === browserState.activeId}>
-                <button id={`tab-${tab.id}`} class="tab-select" role="tab" aria-label={tab.title} title={tab.title} aria-selected={tab.id === browserState.activeId}
-                  tabindex={tab.id === browserState.activeId ? 0 : -1} onkeydown={(event) => tabKey(event, tab.id)}
-                  onclick={() => api?.selectTab(tab.id)} onauxclick={(event) => { if (event.button === 1) void api?.closeTab(tab.id); }}>
-                  {#if tab.loading}<span class="spinner" aria-label="Loading"></span>
-                  {:else}<span class="tab-icon"><Icon name={tab.url ? 'globe' : 'plus'} size={14} /></span>{/if}
-                  <span class="tab-title">{tab.title}</span>
-                </button>
-                <button class="close-tab" aria-label={`Close tab: ${tab.title}`} title="Close tab ({modifier}W)" onclick={() => api?.closeTab(tab.id)}><Icon name="close" size={13} /></button>
-              </div>
-            {/each}
-          </div>
-        {/each}
-      </div>
+      <TabList state={browserState} {api} {vertical} {modifier} />
       <button class="icon-button new-tab" aria-label="New tab" title="New tab ({modifier}T)" disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span><kbd>{modifier}T</kbd>{/if}</button>
       <div class="drag-space"></div>
       <label class="layout-control">
@@ -189,14 +159,17 @@
       <button class="icon-button" aria-label="Command palette" title="Command palette ({modifier}K)" disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
       <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
+      <button class="icon-button" class:settings-active={browserState.archiveOpen} aria-label="Archive" aria-pressed={browserState.archiveOpen} title="Archive ({modifier}⇧A)" disabled={!api} onclick={() => browserState.archiveOpen ? api?.closeArchive() : api?.openArchive()}><Icon name="archive" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title="Settings ({modifier},)" disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
     </div>
     {#if current?.loading}<div class="loading-bar"></div>{/if}
   </header>
 
-  <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen ? browserState.activeId : undefined}>
+  <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen || browserState.archiveOpen ? browserState.activeId : undefined}>
     {#if browserState.settingsOpen && api}
       <Settings settings={browserState.settings} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
+    {:else if browserState.archiveOpen && api}
+      <Archive entries={browserState.archive} archiveAfter={browserState.settings.archiveAfter} {api} />
     {:else if browserState.split && api}
       <SplitView state={browserState} {api} />
     {:else if current?.error}
