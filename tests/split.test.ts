@@ -132,4 +132,17 @@ describe("split view with more panes", () => {
     expect(session.getState()).toMatchObject({ activeId: 2, split: null });
     expect(() => session.dispatch({ type: "remove-split-pane", id: 2 })).toThrow();
   });
+
+  it("splits only with tabs of the active space", () => {
+    const session = tabs(2);
+    session.dispatch({ type: "create-space" });
+    session.dispatch({ type: "add-split-pane" });
+    const [own, added] = session.getState().split!.tabIds;
+    expect(session.getState().tabs.find((tab) => tab.id === added)?.spaceId).toBe(2);
+    expect(() =>
+      session.dispatch({ type: "split-with", id: 1, target: own, edge: "left" }),
+    ).toThrow();
+    expect(() => session.dispatch({ type: "set-split-tab", side: 0, id: 1 })).toThrow();
+    expect(session.getState().split?.tabIds).toEqual([own, added]);
+  });
 });
