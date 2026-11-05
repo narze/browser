@@ -54,6 +54,9 @@ describe("keyboard shortcuts", () => {
       copyUrl: "CmdOrCtrl+Shift+C",
       toggleSplit: "Ctrl+Shift+=",
       toggleSidebar: "CmdOrCtrl+S",
+      nextSpace: "CmdOrCtrl+Alt+Right",
+      previousSpace: "CmdOrCtrl+Alt+Left",
+      newSpace: "",
     });
   });
 

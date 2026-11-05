@@ -17,6 +17,9 @@ const state: BrowserState = {
   archiveOpen: false,
   archive: [],
   folders: [],
+  spaces: [{ id: 1, name: "Personal", color: "blue", profile: "browsing" }],
+  activeSpaceId: 1,
+  routes: [],
   sections: { favorites: [], folders: [], pinned: [], today: [[1]] },
   activeId: 1,
   platform: "darwin",
@@ -33,6 +36,7 @@ const state: BrowserState = {
       error: null,
       canGoBack: false,
       canGoForward: false,
+      spaceId: 1,
       zone: "today",
       folderId: null,
       homeUrl: null,
@@ -133,6 +137,32 @@ describe("browser command contract", () => {
       command: "resetTab",
       args: [1],
     });
+  });
+  it("offers space commands", () => {
+    const work = {
+      id: 2,
+      name: "Work",
+      color: "green" as const,
+      profile: "space-0000000000000001",
+    };
+    const page = { ...state.tabs[0], url: "https://example.com/" };
+    const choices = paletteCommands({ ...state, tabs: [page], spaces: [...state.spaces, work] });
+    expect(choices.find((command) => command.id === "new-space")).toMatchObject({
+      command: "createSpace",
+      args: [],
+    });
+    expect(choices.find((command) => command.id === "space-2")).toMatchObject({
+      title: "Switch to Work",
+      command: "switchSpace",
+      args: [2],
+    });
+    expect(choices.some((command) => command.id === "space-1")).toBe(false);
+    expect(choices.find((command) => command.id === "move-to-space-2")).toMatchObject({
+      title: "Move tab to Work",
+      command: "moveTabToSpace",
+      args: [1, 2],
+    });
+    expect(paletteCommands(state).some((command) => command.id.startsWith("space-"))).toBe(false);
   });
   it("shows the current keyboard shortcut for each palette command", () => {
     const hints = (choices: ReturnType<typeof paletteCommands>) =>
