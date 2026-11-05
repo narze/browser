@@ -49,7 +49,7 @@ test("spaces keep separate tabs and logins, and routes open links in their space
       await address().fill(origin + path);
       await address().press("Enter");
     };
-    await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption("left");
+    await chrome.evaluate(() => window.browser!.setTabLayout("left"));
 
     // B1: the first space holds the existing tabs; a new space starts empty and named by you.
     await go("/login?as=personal");
