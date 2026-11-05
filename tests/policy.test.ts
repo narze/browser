@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { isWebUrl, isTabId, canOpenPopup } from "../electron/policy.cjs";
+import { isWebUrl, isTabId, canOpenPopup, sameSite } from "../electron/policy.cjs";
 
 describe("browser process boundary", () => {
   it("accepts only parsed HTTP(S) URLs", () => {
@@ -20,6 +20,12 @@ describe("browser process boundary", () => {
     for (const id of ["1", null, {}, -1, 0, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
       expect(isTabId(id)).toBe(false);
     }
+  });
+  it("compares sites by the last two parts of the host name", () => {
+    expect(sameSite("https://mail.example.com/a", "https://accounts.example.com/b")).toBe(true);
+    expect(sameSite("https://www.example.com/", "http://example.com/x")).toBe(true);
+    expect(sameSite("https://example.com/", "https://other.org/")).toBe(false);
+    expect(sameSite("https://example.com/", "not a url")).toBe(false);
   });
   it("limits popup bursts per source tab", () => {
     expect(canOpenPopup(-Infinity, 0)).toBe(true);

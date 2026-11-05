@@ -16,4 +16,16 @@ const isTabId = (value) => typeof value === "number" && Number.isSafeInteger(val
  * @param {number} now */
 const canOpenPopup = (lastOpenedAt, now) => now - lastOpenedAt >= 750;
 
-module.exports = { isWebUrl, isTabId, canOpenPopup };
+/** The last two parts of a host name, without "www.": a cheap guess at the site. */
+function site(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "").split(".").slice(-2).join(".");
+  } catch {
+    return null;
+  }
+}
+
+/** @param {string} a @param {string} b */
+const sameSite = (a, b) => site(a) !== null && site(a) === site(b);
+
+module.exports = { isWebUrl, isTabId, canOpenPopup, sameSite };
