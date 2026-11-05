@@ -3,7 +3,7 @@
   import Icon from './Icon.svelte';
   import type { BrowserApi, BrowserState, BrowserTab, EditTarget, TabZone } from '../shared/browser';
 
-  let { state: browserState, api, vertical, modifier }: { state: BrowserState; api: BrowserApi | undefined; vertical: boolean; modifier: string } = $props();
+  let { state: browserState, api, vertical, closeShortcut }: { state: BrowserState; api: BrowserApi | undefined; vertical: boolean; closeShortcut: string } = $props();
 
   type Drop = { zone: TabZone; folderId: number | null; index: number; marker: string };
   let drag = $state<{ kind: 'tab' | 'folder'; id: number } | null>(null);
@@ -151,7 +151,7 @@
       {#if changed}
         <button class="reset-tab" aria-label={`Back to pinned page: ${label(tab)}`} title={`Back to ${tab.homeTitle || tab.homeUrl}`} onclick={() => api?.resetTab(tab.id)}><Icon name="home" size={12} /></button>
       {/if}
-      <button class="close-tab" aria-label={`Close tab: ${label(tab)}`} title={tab.zone === 'today' ? `Close tab (${modifier}W)` : `Close and unload (${modifier}W)`} onclick={() => api?.closeTab(tab.id)}><Icon name="close" size={13} /></button>
+      <button class="close-tab" aria-label={`Close tab: ${label(tab)}`} title={(tab.zone === 'today' ? 'Close tab' : 'Close and unload') + (closeShortcut ? ` (${closeShortcut})` : '')} onclick={() => api?.closeTab(tab.id)}><Icon name="close" size={13} /></button>
     {/if}
   </div>
 {/snippet}

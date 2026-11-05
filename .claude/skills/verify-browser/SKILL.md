@@ -43,23 +43,23 @@ Commands act on a **target**: `chrome` (default, the browser controls), `palette
 
 Locators use stable handles from the app's ARIA markup: `--role R --name N` (exact name by default, `--loose` for substring), `--label L`, `--text T`, `--css S`, plus `--nth N` if needed.
 
-| Need                                                    | Command                                                                                                    |
-| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| See what is on screen                                   | `node $V snapshot [--target T] [--out f.aria.txt]`                                                         |
-| Click / fill / choose                                   | `click`, `fill --value V`, `select --value V` with a locator                                               |
-| Key on a focused field                                  | `press --key Enter --role textbox --name "Search or enter address"`                                        |
-| App keyboard shortcut (Cmd+K/L, Ctrl+Tab, Cmd+1–9, Esc) | `node $V shortcut --key K --modifiers meta [--target T]`                                                   |
-| Menu-only shortcut (Cmd+T, Cmd+W, Cmd+,)                | `node $V menu --path "File>New tab"` / `"File>Close tab"` / `"View>Settings…"`                             |
-| Wait for UI                                             | `node $V wait --role tab --name "Fixture /a" [--state hidden]`                                             |
-| Wait for browser state                                  | `node $V wait --until "state.tabs.length === 2 && !state.tabs[1].loading"`                                 |
-| Full session state                                      | `node $V state` (tabs, activeId, split, palette, settingsOpen, settings, tabSlots)                         |
-| Restart with the same profile                           | `node $V relaunch` (for persistence checks)                                                                |
-| Escape hatch                                            | `node $V eval --js "return (await target('active')).title()"` (gets `app, chrome, pages, target, fixture`) |
+| Need                                                   | Command                                                                                                    |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| See what is on screen                                  | `node $V snapshot [--target T] [--out f.aria.txt]`                                                         |
+| Click / fill / choose                                  | `click`, `fill --value V`, `select --value V` with a locator                                               |
+| Key on a focused field                                 | `press --key Enter --role textbox --name "Search or enter address"`                                        |
+| App keyboard shortcut (Cmd+T/W/K/L, Ctrl+Tab, Cmd+1–9) | `node $V shortcut --key K --modifiers meta [--target T]`                                                   |
+| Menu item (File, View, Tab menus)                      | `node $V menu --path "File>New tab"` / `"File>Close tab"` / `"View>Settings…"`                             |
+| Wait for UI                                            | `node $V wait --role tab --name "Fixture /a" [--state hidden]`                                             |
+| Wait for browser state                                 | `node $V wait --until "state.tabs.length === 2 && !state.tabs[1].loading"`                                 |
+| Full session state                                     | `node $V state` (tabs, activeId, split, palette, settingsOpen, settings, tabSlots)                         |
+| Restart with the same profile                          | `node $V relaunch` (for persistence checks)                                                                |
+| Escape hatch                                           | `node $V eval --js "return (await target('active')).title()"` (gets `app, chrome, pages, target, fixture`) |
 
 Rules that save time:
 
 - **Shortcuts:** use `shortcut`, not `press`. The app handles shortcuts in Electron's `before-input-event`, which Playwright's `press` does not reach. By default the key goes to the focused webContents, like a real keypress. Pass `--target chrome` when focus is ambiguous, for example right after `menu`.
-- **Menu shortcuts:** Cmd+T, Cmd+W, Cmd+, and Cmd+R are native menu accelerators. Synthetic keys cannot fire them, so `menu` clicks the same menu item instead. Report that you verified the menu handler, not the OS key binding.
+- **Customizable shortcuts:** every browser shortcut (see `shared/shortcuts.js`) runs from `before-input-event`, so `shortcut` exercises it. Users can change them in Settings > Keyboard shortcuts; check `state.settings.shortcuts` for overrides. Back and Forward (Alt+Left/Right) have page priority and run only through the native menu accelerator, so use `menu --path "View>Back"` for them.
 - **Wait on state, not sleep:** page loads are asynchronous. After a navigation, wait with `--until "...!loading"` before asserting or screenshotting.
 - **Palette:** the `palette` target only exists after the palette has opened once. Wait for `combobox "Search or enter a command"` on `--target palette` before driving it.
 

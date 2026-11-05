@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
+  import ShortcutSettings from './ShortcutSettings.svelte';
   import { settingsSchema } from '../shared/settings.js';
-  import type { BrowserSettings } from '../shared/browser';
+  import type { BrowserApi, BrowserSettings } from '../shared/browser';
 
-  let { settings, onclose, onsave }: {
+  let { settings, platform, api, onclose, onsave }: {
     settings: BrowserSettings;
+    platform: string;
+    api: BrowserApi;
     onclose: () => void;
     onsave: (patch: Partial<BrowserSettings>) => Promise<{ error?: string }>;
   } = $props();
@@ -94,6 +97,7 @@
       </select>
     </div>
   </section>
+  <ShortcutSettings overrides={settings.shortcuts} {platform} {api} {busy} onsave={save} />
   <p class="settings-status" role="status">{message}</p>
   {#if error}<p class="settings-error" role="alert">{error}</p>{/if}
   <p class="settings-footnote">Your preferences stay on this device.</p>
