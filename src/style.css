@@ -969,17 +969,41 @@ kbd {
   content: "";
   position: absolute;
   left: 3px;
-  top: calc(50% - 18px);
+  top: calc(var(--grip-at, 50%) - 18px);
   height: 36px;
   width: 2px;
   border-radius: 2px;
   background: var(--divider-grip);
+}
+.split-divider.horizontal {
+  cursor: row-resize;
+}
+.split-divider.horizontal::after {
+  left: calc(var(--grip-at, 50%) - 18px);
+  top: 3px;
+  width: 36px;
+  height: 2px;
 }
 .split-divider:hover,
 .split-divider.dragging,
 .split-divider:focus-visible {
   background: var(--divider-hover);
   outline: none;
+}
+.pane-remove {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+}
+.pane-remove:hover {
+  background: var(--hover);
+  color: var(--text);
 }
 .pane-placeholder {
   max-width: 420px;
@@ -1981,4 +2005,18 @@ span.folder-toggle {
 /* Compact mode: pages use the whole window until the pointer reaches the chrome's edge. */
 .chrome-hidden .chrome {
   display: none;
+}
+
+/* Split layout controls appear in the toolbar while a split is open. */
+.split-controls {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--field);
+}
+.split-controls .icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
 }

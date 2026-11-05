@@ -223,4 +223,32 @@ describe("browser command contract", () => {
       "Turn off compact mode",
     );
   });
+
+  it("adds split panes and changes the split layout from the palette", () => {
+    const ids = (value: BrowserState) => paletteCommands(value).map((command) => command.id);
+    expect(ids(state)).not.toContain("add-split-pane");
+    const two: BrowserState = {
+      ...state,
+      split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
+    };
+    expect(paletteCommands(two).find((command) => command.id === "add-split-pane")).toMatchObject({
+      title: "Add split pane",
+      command: "addSplitPane",
+      args: [],
+    });
+    expect(paletteCommands(two).find((command) => command.id === "split-rows")).toMatchObject({
+      title: "Arrange panes in rows",
+      command: "setSplitLayout",
+      args: ["rows"],
+    });
+    expect(ids(two)).not.toContain("split-columns");
+    expect(ids(two)).not.toContain("split-grid");
+    const four: BrowserState = {
+      ...state,
+      split: { tabIds: [1, 2, 3, 4], layout: "grid", columns: [0.5, 0.5], rows: [0.5, 0.5] },
+    };
+    expect(ids(four)).not.toContain("add-split-pane");
+    expect(ids(four)).toEqual(expect.arrayContaining(["split-columns", "split-rows"]));
+    expect(ids(four)).not.toContain("split-grid");
+  });
 });

@@ -111,7 +111,9 @@
     event.preventDefault();
     let id: number | undefined;
     if (paneSelection) {
-      id = browserState.split!.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
+      const ids = browserState.split!.tabIds;
+      const index = ids.indexOf(tab.id) + (event.key === 'ArrowLeft' ? -1 : 1);
+      id = ids[Math.max(0, Math.min(ids.length - 1, index))];
       await api?.selectTab(id);
     } else id = await api?.cycleTab(event.key === nextKey ? 1 : -1);
     await tick();

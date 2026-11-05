@@ -23,6 +23,9 @@
     archive: 'M3 5h18v4H3z M5 9v10h14V9 M10 13h4',
     chevron: 'm9 6 6 6-6 6',
     space: 'm12 3 9 5-9 5-9-5z M3 13l9 5 9-5',
+    splitRows: 'M4 4h16v16H4z M4 12h16',
+    splitGrid: 'M4 4h16v16H4z M12 4v16 M4 12h16',
+    addPane: 'M4 4h10v16H4z M18 9v6 M15 12h6',
     compact: 'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',
   };
 </script>

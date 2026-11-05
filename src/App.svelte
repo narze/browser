@@ -177,6 +177,15 @@
       </form>
       <button class="icon-button" aria-label="Command palette" title={withKey('Command palette', 'commandPalette')} disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>
+      {#if browserState.split}
+        {@const split = browserState.split}
+        <div class="split-controls" role="group" aria-label="Split layout">
+          <button class="icon-button" class:settings-active={split.layout === 'columns'} aria-label="Columns" aria-pressed={split.layout === 'columns'} title="Arrange panes in columns" onclick={() => api?.setSplitLayout('columns')}><Icon name="split" size={16} /></button>
+          <button class="icon-button" class:settings-active={split.layout === 'rows'} aria-label="Rows" aria-pressed={split.layout === 'rows'} title="Arrange panes in rows" onclick={() => api?.setSplitLayout('rows')}><Icon name="splitRows" size={16} /></button>
+          <button class="icon-button" class:settings-active={split.layout === 'grid'} aria-label="Grid" aria-pressed={split.layout === 'grid'} title={split.tabIds.length < 3 ? 'A grid needs three or four panes' : 'Arrange panes in a grid'} disabled={split.tabIds.length < 3} onclick={() => api?.setSplitLayout('grid')}><Icon name="splitGrid" size={16} /></button>
+          <button class="icon-button" aria-label="Add split pane" title={split.tabIds.length < 4 ? 'Add split pane' : 'A split has at most four panes'} disabled={split.tabIds.length >= 4} onclick={() => api?.addSplitPane()}><Icon name="addPane" size={16} /></button>
+        </div>
+      {/if}
       <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.archiveOpen} aria-label="Archive" aria-pressed={browserState.archiveOpen} title={withKey('Archive', 'archive')} disabled={!api} onclick={() => browserState.archiveOpen ? api?.closeArchive() : api?.openArchive()}><Icon name="archive" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title={withKey('Settings', 'settings')} disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>

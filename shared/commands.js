@@ -92,6 +92,40 @@ export function validateCommandHandlers(handlers) {
     throw new Error("Browser command handlers must match the shared command table.");
 }
 
+const LAYOUT_TITLES = /** @type {const} */ ({ columns: "columns", rows: "rows", grid: "a grid" });
+
+/**
+ * @param {NonNullable<import('./browser').BrowserState['split']>} split
+ * @returns {PaletteCommand[]}
+ */
+function splitCommands(split) {
+  /** @type {PaletteCommand[]} */
+  const commands = [];
+  if (split.tabIds.length < 4)
+    commands.push({
+      id: "add-split-pane",
+      title: "Add split pane",
+      detail: "Show up to four pages at once",
+      icon: "addPane",
+      hint: "",
+      command: "addSplitPane",
+      args: [],
+    });
+  for (const layout of /** @type {const} */ (["columns", "rows", "grid"])) {
+    if (layout === split.layout || (layout === "grid" && split.tabIds.length < 3)) continue;
+    commands.push({
+      id: `split-${layout}`,
+      title: `Arrange panes in ${LAYOUT_TITLES[layout]}`,
+      detail: "Split view layout",
+      icon: layout === "columns" ? "split" : layout === "rows" ? "splitRows" : "splitGrid",
+      hint: "",
+      command: "setSplitLayout",
+      args: [layout],
+    });
+  }
+  return commands;
+}
+
 /**
  * @typedef {{ id: string, title: string, detail: string, icon: string, hint: string, command: keyof typeof browserCommands, args: unknown[] }} PaletteCommand
  * @param {import('./browser').BrowserState} state
@@ -131,6 +165,7 @@ export function paletteCommands(state) {
       command: "toggleSplit",
       args: [],
     },
+    ...(state.split ? splitCommands(state.split) : []),
     {
       id: "close-tab",
       title: "Close current tab",
