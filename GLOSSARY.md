@@ -15,3 +15,6 @@
 | Today           | Ordinary tabs below the pinned tabs. They do not persist and move to the archive when unused.                 |
 | Archive         | A list of closed or expired Today tabs that a user can filter, restore, or remove.                            |
 | Sleeping tab    | A tab whose page view is unloaded to free memory. It reloads, with its history, when selected.                |
+| Space           | A named, colored set of tabs, folders, and favorites with its own profile. One space shows at a time.         |
+| Profile         | The cookies, logins, cache, and site data of one space, kept in its own Electron session partition.           |
+| Route           | A rule that opens new tabs for a site, and its subdomains, in a specific space.                               |
