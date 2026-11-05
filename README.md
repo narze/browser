@@ -26,6 +26,8 @@ Features:
 - Split into **up to four panes**. While split, the toolbar shows **Columns**, **Rows**, and **Grid** (three or four panes) and **Add split pane**. Each divider resizes the two panes next to it. A pane's **x** button takes its tab out of the split and keeps the tab open.
 - **Drag a tab onto the page** to split with it. The half of the page under the pointer shows where the tab goes. Columns take a tab at the left or right of a pane, rows at the top or bottom. In a three-pane grid, the tall left pane takes a tab in its top or bottom half. Elsewhere in a grid, and with four panes, the tab replaces the pane under the pointer, or swaps places with it when it is already in the split.
 - **Compact mode** (Cmd/Ctrl+Shift+S, the View menu, the palette, or Settings) hides the toolbar and tabs so the page uses the whole window. Move the pointer to the top edge (or to the side of the tab sidebar) to show them again. They hide when the pointer moves back onto the page.
+- **Peek** at a link without leaving the page: Alt+click it. The link opens in a card above the current page, which stays visible behind it. In a pinned tab or a favorite, a click on a link to another site also opens a peek, so the tab stays on its page. Press Escape or click outside the card to close it, or click **Open as tab** to keep the page, as it is, in a new tab.
+- Open a **quick window** (Cmd/Ctrl+Alt+N, the File menu, or the palette) for a fast lookup in a small, separate window. Links that other apps open in the browser also show there. Click **Open in browser** to move the page, as it is, into the main window as a tab. Cmd/Ctrl+W closes the quick window.
 
 - Organize tabs like Arc and Zen. Drag a tab (or use the tab's context menu or the palette) into **Favorites** (an icon grid), **Pinned tabs**, or **Today**. Drag to reorder, or focus a tab and press Alt+Shift+Up/Down. A pinned or favorite tab remembers its home page: after it navigates away, a **Back to pinned page** button returns it, and closing it only puts it to sleep.
 - Group pinned tabs in **folders**. Create one from the palette (`> New folder`) or a tab's context menu, drag tabs into it, and click its header to collapse it. Folders **nest** to any depth: use a folder's context menu (**New folder inside**), the palette (`> New folder inside …` for the current tab's folder), or drag a folder onto the middle of another folder. Drag onto the top or bottom edge of a folder to put it before or after. Alt+Shift+Up/Down also moves tabs across folder edges and moves folders out of their parent. A collapsed folder hides everything in it except the tabs on screen. Deleting a folder moves its subfolders and tabs up one level. **Move to space** in a folder's menu moves it with everything in it.
@@ -44,6 +46,7 @@ Default shortcuts (all customizable):
 | Shortcut                  | Action                              |
 | ------------------------- | ----------------------------------- |
 | Cmd/Ctrl+T                | New tab                             |
+| Cmd/Ctrl+Alt+N            | New quick window                    |
 | Cmd/Ctrl+W                | Close tab                           |
 | Cmd/Ctrl+Shift+T          | Reopen closed tab                   |
 | Cmd/Ctrl+L                | Open address palette                |
