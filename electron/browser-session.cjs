@@ -230,8 +230,6 @@ function createBrowserSession({ now = Date.now, saved } = {}) {
         id: tab.id,
         visible:
           !screen &&
-          !splitResizing &&
-          !sidebarResizing &&
           !!tab.url &&
           !tab.error &&
           (split ? split.tabIds.includes(tab.id) : tab.id === activeId),

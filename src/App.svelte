@@ -191,8 +191,6 @@
         {#if !api}<p class="desktop-notice">Run <code>pnpm dev</code> to open the Electron browser.</p>{/if}
       </section>
       <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore {#if key('newTab')}<span class="footer-shortcut">New tab <kbd>{key('newTab')}</kbd></span>{/if}</footer>
-    {:else if browserState.sidebarResizing}
-      <section class="pane-placeholder"><Icon name="globe" size={28} /><h2>{current?.title}</h2><p>Resizing sidebar…</p></section>
     {/if}
   </main>
 </div>

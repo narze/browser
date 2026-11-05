@@ -45,6 +45,33 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
           .map((v) => v.getBounds()),
       );
     await expect.poll(async () => (await visibleViews()).length).toBe(2);
+    const resizeSidebar = async (position: "left" | "right") => {
+      await chrome.evaluate((layout) => window.browser!.setTabLayout(layout), position);
+      const sidebar = chrome.getByRole("separator", { name: "Resize tab sidebar" });
+      const rail = (await sidebar.boundingBox())!;
+      const before = await visibleViews();
+      await chrome.mouse.move(rail.x + rail.width / 2, rail.y + 80);
+      await chrome.mouse.down();
+      await chrome.mouse.move(
+        rail.x + rail.width / 2 + (position === "left" ? 50 : -50),
+        rail.y + 80,
+        { steps: 6 },
+      );
+      // Native views must follow the drag while the pointer is still held down.
+      await expect.poll(async () => (await visibleViews()).length).toBe(before.length);
+      await expect
+        .poll(async () => (await visibleViews())[0]?.width)
+        .toBeLessThan(before[0].width - 10);
+      await expect(chrome.locator(".pane-placeholder")).toHaveCount(0);
+      await chrome.mouse.up();
+      await expect
+        .poll(() => chrome.evaluate(async () => (await window.browser!.getState()).sidebarResizing))
+        .toBe(false);
+    };
+    await resizeSidebar("left");
+    await resizeSidebar("right");
+    await chrome.evaluate(() => window.browser!.setTabLayout("top"));
+    await expect.poll(async () => (await visibleViews())[0]?.x).toBe(0);
     const initial = await visibleViews();
     expect(initial[0].x + initial[0].width).toBeLessThan(initial[1].x);
     await app.evaluate(({ webContents }) => {
@@ -58,6 +85,11 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await chrome.mouse.move(bounds.x + bounds.width / 2, bounds.y + 80);
     await chrome.mouse.down();
     await chrome.mouse.move(bounds.x + 100, bounds.y + 80, { steps: 6 });
+    await expect.poll(async () => (await visibleViews()).length).toBe(2);
+    await expect
+      .poll(async () => (await visibleViews())[0]?.width)
+      .toBeGreaterThan(initial[0].width + 40);
+    await expect(chrome.locator(".pane-placeholder")).toHaveCount(0);
     await chrome.mouse.up();
     await expect
       .poll(async () => (await visibleViews())[0]?.width)
@@ -135,6 +167,8 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await expect(chrome.locator(".tabs .tab-entry")).toHaveCount(2);
 
     await expect.poll(async () => (await visibleViews()).length).toBe(1);
+    await resizeSidebar("left");
+    await resizeSidebar("right");
     await chrome.getByRole("button", { name: "Split tabs", exact: true }).click();
     await expect.poll(async () => (await visibleViews()).length).toBe(2);
     await chrome.getByRole("button", { name: "Close tab: Page /b" }).click();
