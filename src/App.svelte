@@ -8,7 +8,7 @@
   import { observePageLayout } from './page-layout';
   import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
   import { formatAccelerator, resolveShortcuts } from '../shared/shortcuts.js';
-  import type { BrowserState, TabLayout } from '../shared/browser';
+  import type { BrowserState } from '../shared/browser';
 
   const api = window.browser;
   let pageRegion: HTMLElement;
@@ -131,12 +131,6 @@
       <TabList state={browserState} {api} {vertical} closeShortcut={key('closeTab')} />
       <button class="icon-button new-tab" aria-label="New tab" title={withKey('New tab', 'newTab')} disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span>{#if key('newTab')}<kbd>{key('newTab')}</kbd>{/if}{/if}</button>
       <div class="drag-space"></div>
-      <label class="layout-control">
-        <span>Tabs</span>
-        <select aria-label="Tab layout" value={browserState.tabLayout} disabled={!api} onchange={async (event) => { const result = await api?.setTabLayout(event.currentTarget.value as TabLayout); inputError = result?.error || ''; }}>
-          {#each settingsSchema.tabLayout.options as option}<option value={option.value}>{option.label}</option>{/each}
-        </select>
-      </label>
       <span class="window-name">Browser</span>
     </div>
     <div class="toolbar">

@@ -60,7 +60,9 @@ test("settings preserve the current page and persist across launches", async () 
       .toBe(true);
 
     await chrome.getByRole("radio", { name: "Right", exact: true }).check();
-    await expect(chrome.getByRole("combobox", { name: "Tab layout" })).toHaveValue("right");
+    await expect
+      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).tabLayout)
+      .toBe("right");
     await chrome.getByLabel("Search engine").selectOption("google");
     await chrome.getByRole("checkbox", { name: /New-tab shortcuts/ }).uncheck();
     await expect(chrome.getByRole("status")).toHaveText("Saved.");
@@ -95,7 +97,9 @@ test("settings preserve the current page and persist across launches", async () 
     app = undefined;
     app = await launch();
     chrome = await app.firstWindow();
-    await expect(chrome.getByRole("combobox", { name: "Tab layout" })).toHaveValue("right");
+    await expect
+      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).tabLayout)
+      .toBe("right");
     await chrome.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(chrome.getByLabel("Search engine")).toHaveValue("google");
     await expect(chrome.getByLabel("Theme", { exact: true })).toHaveValue("dark");
