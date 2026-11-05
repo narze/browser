@@ -3,7 +3,7 @@
   import Icon from './Icon.svelte';
   import type { BrowserApi, BrowserState } from '../shared/browser';
 
-  let { state: browserState, api, nextKey, newKey }: { state: BrowserState; api: BrowserApi | undefined; nextKey: string; newKey: string } = $props();
+  let { state: browserState, api, nextKey, newKey, ondone }: { state: BrowserState; api: BrowserApi | undefined; nextKey: string; newKey: string; ondone: () => void } = $props();
   let editing = $state<number | null>(null);
   let editingSpace = $derived(browserState.spaces.find((space) => space.id === editing));
 
@@ -18,10 +18,11 @@
     const id = editing;
     editing = null;
     if (id !== null) void api?.renameSpace(id, value);
+    ondone();
   }
   function key(event: KeyboardEvent) {
     if (event.key === 'Enter') { event.preventDefault(); commit((event.currentTarget as HTMLInputElement).value); }
-    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); editing = null; }
+    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); editing = null; ondone(); }
   }
   onMount(() => api?.onEdit((target) => { if (target.kind === 'space') void startEdit(target.id); }));
 </script>

@@ -130,7 +130,7 @@
   {/if}
   <header class="chrome">
     <div class="tab-row">
-      <SpaceSwitcher state={browserState} {api} nextKey={key('nextSpace')} newKey={key('newSpace')} />
+      <SpaceSwitcher state={browserState} {api} nextKey={key('nextSpace')} newKey={key('newSpace')} ondone={() => { if (!current?.url) void focusAddress(); }} />
       <TabList state={browserState} {api} {vertical} closeShortcut={key('closeTab')} />
       <button class="icon-button new-tab" aria-label="New tab" title={withKey('New tab', 'newTab')} disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span>{#if key('newTab')}<kbd>{key('newTab')}</kbd>{/if}{/if}</button>
       <div class="drag-space"></div>
