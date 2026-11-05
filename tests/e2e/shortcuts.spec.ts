@@ -49,7 +49,7 @@ test("keyboard shortcuts can be changed, removed, reset, and persist", async () 
     await expect(tabs).toHaveCount(2);
 
     // New default actions work from inside a website.
-    const state = () => chrome.evaluate(() => window.browser.getState());
+    const state = () => chrome.evaluate(() => window.browser!.getState());
     await chrome.getByRole("tab", { name: "Page /a" }).click();
     await press("page", "C", [primary, "shift"]);
     await expect
