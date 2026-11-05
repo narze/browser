@@ -4,7 +4,7 @@ Tabs sit across the top or in a left or right rail. The user switches tabs by cl
 
 ## Sub-features
 
-- `layout-select` chooses Top, Left, or Right from the `Tab layout` select in the title bar.
+- `layout-select` chooses Top, Left, or Right from the tab placement radios on the Settings screen.
 - `layout-no-reload` keeps page state when placement changes.
 - `switch-click` selects a tab by clicking it.
 - `switch-cycle` moves through tabs in visual order with Ctrl+Tab / Ctrl+Shift+Tab.
@@ -13,7 +13,7 @@ Tabs sit across the top or in a left or right rail. The user switches tabs by cl
 
 ## How to get to it (user POV)
 
-- `Tabs` select (`Tab layout`) in the title bar, the Settings screen, or palette `> tabs on the left`.
+- The tab placement radios on the Settings screen, or palette `> tabs on the left`.
 - Click a tab, or use the shortcuts above.
 
 ## Driving it with verify.mjs
@@ -28,10 +28,10 @@ Preconditions:
 - **Click a tab.** Run `node $V click --role tab --name "Fixture /two"`. `wait --until "state.tabs.find(t => t.id === state.activeId).title === 'Fixture /two'"` passes.
 - **Cycle.** Run `node $V shortcut --key Tab --modifiers control --target chrome`. The active tab becomes `Fixture /three`. Run `node $V shortcut --key Tab --modifiers control,shift --target chrome` twice. The active tab becomes `Fixture /one`.
 - **By number.** Run `node $V shortcut --key 2 --modifiers meta --target chrome`. Active is `Fixture /two`. Run `node $V shortcut --key 9 --modifiers meta --target chrome`. Active is `Fixture /three`.
-- **Left rail.** Run `node $V select --role combobox --name "Tab layout" --value left`. `wait --until "state.settings.tabLayout === 'left'"` passes, and `node $V eval --js "return chrome.getByRole('tablist').getAttribute('aria-orientation')"` prints `vertical`. Run `node $V screenshot --out layout/left.png`. The rail is on the left and the page fills the rest.
+- **Left rail.** Run `node $V eval --js "return chrome.evaluate(() => window.browser.setTabLayout('left'))"`. `wait --until "state.settings.tabLayout === 'left'"` passes, and `node $V eval --js "return chrome.getByRole('tablist').getAttribute('aria-orientation')"` prints `vertical`. Run `node $V screenshot --out layout/left.png`. The rail is on the left and the page fills the rest.
 - **Arrow keys in the rail.** Run `node $V press --key ArrowUp --role tab --name "Fixture /three"`. The active tab becomes `Fixture /two`.
 - **No reload.** `node $V eval --js "return (await target('page:/two')).evaluate(() => window.layoutMarker)"` prints `kept`.
-- **Right, then top.** Repeat the select with `right` (screenshot `layout/right.png`) and `top`. `aria-orientation` returns to `horizontal`, and the marker still reads `kept`.
+- **Right, then top.** Repeat with `right` (screenshot `layout/right.png`) and `top`. `aria-orientation` returns to `horizontal`, and the marker still reads `kept`.
 
 ## Gotchas
 

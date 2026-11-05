@@ -67,8 +67,8 @@ test("real tabs, history, popups, isolation, and close-last-tab behavior", async
       return page.executeJavaScript('window.layoutMarker = "kept"');
     });
     expect(pageIdentity).toBe("kept");
-    for (const position of ["left", "right", "top"]) {
-      await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption(position);
+    for (const position of ["left", "right", "top"] as const) {
+      await chrome.evaluate((layout) => window.browser!.setTabLayout(layout), position);
       await expect(chrome.getByRole("tablist")).toHaveAttribute(
         "aria-orientation",
         position === "top" ? "horizontal" : "vertical",

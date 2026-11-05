@@ -25,7 +25,7 @@ A user sorts tabs into Favorites (an icon grid), Pinned tabs, folders of pinned 
 Preconditions:
 
 - Launch with `BROWSER_TEST_HOOKS=1 node $V launch --run org-<n>` to expose the clock hook for sleep and archive. `verify.mjs` passes the environment to Electron.
-- Select the left layout (`select --role combobox --name "Tab layout" --value left`) so drag targets are large.
+- Select the left layout (`eval --js "return chrome.evaluate(() => window.browser.setTabLayout('left'))"`) so drag targets are large.
 - Load `$O/a` to `$O/e` in five tabs and wait until none is loading.
 - Evidence directory: `org/`.
 

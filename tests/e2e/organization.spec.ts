@@ -56,7 +56,7 @@ test("favorites, pinned tabs, folders, rename, sleep, and archive work and persi
       await address().press("Enter");
       await expect(chrome.getByRole("tab", { name: `Site ${path}` })).toBeVisible();
     };
-    await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption("left");
+    await chrome.evaluate(() => window.browser!.setTabLayout("left"));
     await open("/a", false);
     for (const path of ["/b", "/c", "/d", "/e"]) await open(path);
     await expect.poll(async () => (await state()).tabs.every((tab) => !tab.loading)).toBe(true);

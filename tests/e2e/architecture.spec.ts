@@ -121,8 +121,8 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
           .map((view) => view.getBounds())
           .sort((a, b) => a.x - b.x),
       );
-    for (const position of ["left", "right", "top"]) {
-      await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption(position);
+    for (const position of ["left", "right", "top"] as const) {
+      await chrome.evaluate((layout) => window.browser!.setTabLayout(layout), position);
       await app.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0].setContentSize(940, 680),
       );

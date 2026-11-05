@@ -94,8 +94,8 @@ test("split tabs preserve pages, track focus, resize, and recover when a pane cl
     await expect.poll(async () => (await visibleViews()).length).toBe(0);
     await chrome.getByRole("button", { name: "Back to browsing" }).click();
     await expect.poll(async () => (await visibleViews()).length).toBe(2);
-    for (const position of ["left", "right", "top"]) {
-      await chrome.getByRole("combobox", { name: "Tab layout" }).selectOption(position);
+    for (const position of ["left", "right", "top"] as const) {
+      await chrome.evaluate((layout) => window.browser!.setTabLayout(layout), position);
       await app.evaluate(({ BrowserWindow }) =>
         BrowserWindow.getAllWindows()[0].setContentSize(900, 680),
       );
