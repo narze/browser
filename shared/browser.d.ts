@@ -46,11 +46,13 @@ export interface PageRegion {
 }
 type SettingsSchema = typeof import("./settings.js").settingsSchema;
 export type BrowserSettings = {
-  [K in keyof SettingsSchema]: SettingsSchema[K] extends { options: readonly { value: infer V }[] }
-    ? V
-    : SettingsSchema[K] extends { min: number }
-      ? number
-      : boolean;
+  [K in keyof SettingsSchema]: K extends "shortcuts"
+    ? Record<string, string>
+    : SettingsSchema[K] extends { options: readonly { value: infer V }[] }
+      ? V
+      : SettingsSchema[K] extends { min: number }
+        ? number
+        : boolean;
 };
 export type TabLayout = BrowserSettings["tabLayout"];
 export type PaletteMode = "navigate" | "commands";
@@ -88,6 +90,8 @@ export interface BrowserApi {
   setSidebarResizing(resizing: boolean): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
+  /** Pauses browser shortcuts while the settings page records a new one. */
+  setShortcutRecording(recording: boolean): Promise<void>;
   openSettings(): Promise<void>;
   closeSettings(): Promise<void>;
   getState(): Promise<BrowserState>;

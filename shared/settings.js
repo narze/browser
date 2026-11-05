@@ -1,4 +1,6 @@
 // @ts-check
+import { isShortcutOverrides, shortcutConflict } from "./shortcuts.js";
+
 export const settingsSchema = /** @type {const} */ ({
   theme: {
     label: "Theme",
@@ -50,6 +52,8 @@ export const settingsSchema = /** @type {const} */ ({
     ],
   },
   showShortcuts: { label: "New-tab shortcuts", default: true },
+  /** Changed keyboard shortcuts by action id; see shared/shortcuts.js. */
+  shortcuts: { label: "Keyboard shortcuts", default: /** @type {Record<string, string>} */ ({}) },
 });
 
 export const defaultSettings = /** @type {import('./browser').BrowserSettings} */ (
@@ -59,6 +63,7 @@ export const defaultSettings = /** @type {import('./browser').BrowserSettings} *
 /** @param {string} key @param {unknown} value */
 export function isSettingValue(key, value) {
   if (!Object.hasOwn(settingsSchema, key)) return false;
+  if (key === "shortcuts") return isShortcutOverrides(value);
   const setting = settingsSchema[/** @type {keyof typeof settingsSchema} */ (key)];
   if ("options" in setting) return setting.options.some((option) => option.value === value);
   if ("min" in setting)
@@ -87,12 +92,22 @@ export function clampSidebarWidth(width) {
   return Math.round(Math.max(min, Math.min(max, width)));
 }
 
-/** @param {unknown} patch @returns {Partial<import('./browser').BrowserSettings>} */
-export function validateSettingsPatch(patch) {
+/**
+ * @param {unknown} patch
+ * @param {string} [platform] When given, shortcuts must not share a key on this platform.
+ * @returns {Partial<import('./browser').BrowserSettings>}
+ */
+export function validateSettingsPatch(patch, platform) {
   if (!patch || typeof patch !== "object" || Array.isArray(patch))
     throw new Error("Invalid settings.");
   for (const [key, value] of Object.entries(patch)) {
     if (!isSettingValue(key, value)) throw new Error("Invalid setting: " + key);
   }
+  if (
+    platform &&
+    "shortcuts" in patch &&
+    shortcutConflict(/** @type {Record<string, string>} */ (patch.shortcuts), platform)
+  )
+    throw new Error("Two actions cannot share a shortcut.");
   return patch;
 }
