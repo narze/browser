@@ -21,16 +21,27 @@
     if (event.button !== 0) return;
     event.preventDefault();
     dragging = true;
+    // Capture keeps a release outside the window, and the window listeners keep the drag
+    // when hiding the page views drops that capture.
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+    window.addEventListener('pointermove', moveResize);
+    window.addEventListener('pointerup', stopResize);
+    window.addEventListener('pointercancel', stopResize);
+    window.addEventListener('blur', stopResize);
     void api.setSplitResizing(true);
   }
   function moveResize(event: PointerEvent) {
-    if (!dragging) return;
+    // Electron can send a move without a button when the page views hide; it is not part of the drag.
+    if (!dragging || !(event.buttons & 1)) return;
     const bounds = workspace.getBoundingClientRect();
     const gap = divider!.getBoundingClientRect().width;
     void api.resizeSplit((event.clientX - bounds.x - gap / 2) / (bounds.width - gap));
   }
   function stopResize() {
+    window.removeEventListener('pointermove', moveResize);
+    window.removeEventListener('pointerup', stopResize);
+    window.removeEventListener('pointercancel', stopResize);
+    window.removeEventListener('blur', stopResize);
     if (!dragging) return;
     dragging = false;
     void api.setSplitResizing(false);
@@ -49,7 +60,7 @@
       <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
       <div class="split-divider" bind:this={divider} class:dragging role="separator" aria-label="Resize split panes" aria-orientation="vertical"
         aria-valuemin="25" aria-valuemax="75" aria-valuenow={Math.round((browserState.split?.ratio ?? 0.5) * 100)} tabindex="0"
-        onpointerdown={startResize} onpointermove={moveResize} onpointerup={stopResize} onpointercancel={stopResize} onlostpointercapture={stopResize} onkeydown={resizeKey}></div>
+        onpointerdown={startResize} onkeydown={resizeKey}></div>
     {/if}
     <section class="split-pane" class:focused={browserState.activeId === tab.id} aria-label={side === 0 ? 'Left pane' : 'Right pane'}>
       <header class="pane-toolbar">
