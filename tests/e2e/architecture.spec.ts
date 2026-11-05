@@ -138,7 +138,7 @@ test("shortcuts follow split segments and native bounds follow chrome geometry",
     await chrome.mouse.move(940 * 0.65 + 7, dividerBounds.y + 100, { steps: 6 });
     await chrome.mouse.up();
     await expect
-      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).split?.ratio)
+      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).split?.columns[0])
       .toBeCloseTo(0.66, 1);
     await expect.poll(nativeBounds).toEqual(await expectedBounds());
     await chrome.getByRole("button", { name: "Exit split view" }).click();

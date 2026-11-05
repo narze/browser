@@ -82,6 +82,8 @@ export type BrowserSettings = {
         : boolean;
 };
 export type TabLayout = BrowserSettings["tabLayout"];
+export type SplitLayout = "columns" | "rows" | "grid";
+export type SplitEdge = "left" | "right" | "top" | "bottom";
 export type PaletteMode = "navigate" | "commands";
 export type PaletteAction =
   | { type: "navigate"; input: string; newTab: boolean }
@@ -90,7 +92,14 @@ export type PaletteAction =
 export interface BrowserState {
   palette: { query: string; mode: PaletteMode; requestId: number } | null;
   resolvedTheme: "light" | "dark";
-  split: { tabIds: [number, number]; ratio: number } | null;
+  split: {
+    /** Two to four tabs, in pane order. */
+    tabIds: number[];
+    layout: SplitLayout;
+    /** Track sizes as fractions of the width and height. A grid has two of each. */
+    columns: number[];
+    rows: number[];
+  } | null;
   splitResizing: boolean;
   sidebarResizing: boolean;
   settings: BrowserSettings;
@@ -117,7 +126,13 @@ export interface BrowserApi {
   executePalette(action: PaletteAction): Promise<{ error?: string }>;
   toggleSplit(): Promise<void>;
   setSplitTab(side: number, id: number): Promise<void>;
-  resizeSplit(ratio: number): Promise<void>;
+  /** Moves the divider after track `index` to `ratio` of its two neighboring tracks. */
+  resizeSplit(ratio: number, axis?: "columns" | "rows", index?: number): Promise<void>;
+  addSplitPane(): Promise<void>;
+  removeSplitPane(id: number): Promise<void>;
+  setSplitLayout(layout: SplitLayout): Promise<void>;
+  /** Drops a tab on the edge of a shown page to split with it. */
+  splitWith(id: number, target: number, edge: SplitEdge): Promise<void>;
   setSplitResizing(resizing: boolean): Promise<void>;
   setSidebarResizing(resizing: boolean): Promise<void>;
   toggleSidebar(): Promise<void>;

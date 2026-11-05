@@ -93,7 +93,7 @@ describe("browser command contract", () => {
     expect(choices.some((command) => command.id === "back")).toBe(false);
     const navigable: BrowserState = {
       ...state,
-      split: { tabIds: [1, 2], ratio: 0.5 },
+      split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
       tabs: [{ ...state.tabs[0], url: "https://example.com/", canGoBack: true }],
     };
     expect(paletteCommands(navigable).find((command) => command.id === "split")?.title).toBe(

@@ -886,7 +886,17 @@ function installIpc() {
     executePalette: executePalette,
     toggleSplit: toggleSplit,
     setSplitTab: (side, id) => dispatch({ type: "set-split-tab", side, id }),
-    resizeSplit: (ratio) => dispatch({ type: "resize-split", ratio }),
+    resizeSplit: (ratio, axis, index) => dispatch({ type: "resize-split", ratio, axis, index }),
+    addSplitPane: () => dispatch({ type: "add-split-pane" }),
+    removeSplitPane: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid tab ID.");
+      dispatch({ type: "remove-split-pane", id });
+    },
+    setSplitLayout: (layout) => dispatch({ type: "set-split-layout", layout }),
+    splitWith: (id, target, edge) => {
+      if (!isTabId(id) || !isTabId(target)) throw new Error("Invalid tab ID.");
+      dispatch({ type: "split-with", id, target, edge });
+    },
     setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
     toggleSidebar,

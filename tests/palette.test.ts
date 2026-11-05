@@ -90,7 +90,10 @@ describe("command palette results", () => {
     expect(paletteResults("> forward", state)).toEqual([]);
     expect(paletteResults("> back", state)[0].action).toEqual({ type: "command", id: "back" });
     expect(
-      paletteResults("> split", { ...state, split: { tabIds: [1, 2], ratio: 0.5 } })[0].title,
+      paletteResults("> split", {
+        ...state,
+        split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
+      })[0].title,
     ).toBe("Exit split view");
   });
   it("shows and searches custom tab names", () => {

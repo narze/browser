@@ -32,8 +32,15 @@ describe("measured page layout", () => {
     [{ id: 1, bounds: { x: 0, y: 0, width: 10, height: -1 } }],
     [{ id: 1, bounds: { x: Infinity, y: 0, width: 10, height: 1 } }],
     [1, 1].map((id) => ({ id, bounds: { x: 0, y: 0, width: 10, height: 10 } })),
-    [1, 2, 3].map((id) => ({ id, bounds: { x: 0, y: 0, width: 10, height: 10 } })),
+    [1, 2, 3, 4, 5].map((id) => ({ id, bounds: { x: 0, y: 0, width: 10, height: 10 } })),
   ])("rejects malformed or ambiguous reports: %j", (report) => {
     expect(() => normalizePageLayout(report, 640, 420)).toThrow();
+  });
+  it("accepts one region for each of up to four split panes", () => {
+    const report = [1, 2, 3, 4].map((id) => ({
+      id,
+      bounds: { x: (id - 1) * 10, y: 0, width: 10, height: 10 },
+    }));
+    expect(normalizePageLayout(report, 640, 420)).toEqual(report);
   });
 });

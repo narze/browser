@@ -7,7 +7,7 @@ const { isTabId } = require("./policy.cjs");
  * @returns {import('../shared/browser').PageRegion[]}
  */
 function normalizePageLayout(report, width, height) {
-  if (!Array.isArray(report) || report.length > 2) throw new Error("Invalid page layout.");
+  if (!Array.isArray(report) || report.length > 4) throw new Error("Invalid page layout.");
   const ids = new Set();
   return report.map((region) => {
     const bounds = region?.bounds;
