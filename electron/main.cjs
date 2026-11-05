@@ -941,7 +941,12 @@ function createPageView(id, profile) {
     }
   });
   // A pinned tab keeps its site: a link to another site opens in a peek.
-  const peeksLinks = (url) => tab()?.homeUrl && tab().zone !== "today" && url === hovered;
+  // A pinned tab or favorite peeks at a clicked link to another site, so the tab stays on its site.
+  const peeksLinks = (url) =>
+    tab()?.homeUrl &&
+    tab().zone !== "today" &&
+    url === hovered &&
+    !sameSite(url, view.webContents.getURL());
   // A sleeping or closed tab's page can still report events while it shuts down.
   const update = (patch) => {
     if (views.get(id) === view) dispatch({ type: "update-tab", id, patch });
@@ -1009,7 +1014,7 @@ function createPageView(id, profile) {
     });
   }
   contents.on("will-navigate", (event, url) => {
-    if (!event.isMainFrame || !peeksLinks(url) || sameSite(url, contents.getURL())) return;
+    if (!event.isMainFrame || !peeksLinks(url)) return;
     event.preventDefault();
     openPeek(url);
   });

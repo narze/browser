@@ -60,7 +60,8 @@ test("Alt+click and pinned tab links open a peek that closes or becomes a tab", 
       return response.end(
         `<title>Home ${request.url}</title><h1>Home ${request.url}</h1>
         <p><a id="away" href="http://away.test/page">Away link</a></p>
-        <p><a id="same" href="/second">Same site link</a></p>`,
+        <p><a id="same" href="/second">Same site link</a></p>
+        <p><a id="same-popup" href="/popup" target="_blank">Same site popup</a></p>`,
       );
     response.end(
       `<title>Away page</title><body style="background:#e8f0ff"><h1>Away ${request.url}</h1></body>`,
@@ -90,7 +91,7 @@ test("Alt+click and pinned tab links open a peek that closes or becomes a tab", 
     await address.fill("http://home.test/");
     await address.press("Enter");
     const tabs = chrome.getByRole("tab");
-    await expect(chrome.getByRole("tab", { name: "Home /" })).toBeVisible();
+    await expect(chrome.getByRole("tab", { name: "Home /", exact: true })).toBeVisible();
     const state = () => chrome.evaluate(() => window.browser!.getState());
 
     // Alt+click peeks at the link above the page, without a new tab.
@@ -161,12 +162,18 @@ test("Alt+click and pinned tab links open a peek that closes or becomes a tab", 
     // In a pinned tab, a link to another site peeks; a link on the same site does not.
     const home = (await state()).tabs.find((tab) => tab.url === "http://home.test/")!;
     await chrome.evaluate((id) => window.browser!.moveTab(id, "pinned", null, 0), home.id);
-    await chrome.getByRole("tab", { name: "Home /" }).click();
+    await chrome.getByRole("tab", { name: "Home /", exact: true }).click();
     await clickLink(app, "http://home.test/", "#away");
     await expect.poll(async () => (await state()).peek?.url).toBe("http://away.test/page");
     expect((await state()).tabs.find((tab) => tab.id === home.id)?.url).toBe("http://home.test/");
     await frame.getByRole("button", { name: "Close peek" }).click();
     await expect.poll(async () => (await state()).peek).toBeNull();
+    // A same-site link that opens a new window opens a normal tab, not a peek.
+    await clickLink(app, "http://home.test/", "#same-popup");
+    await expect(tabs).toHaveCount(3);
+    await expect(chrome.getByRole("tab", { name: "Home /popup" })).toBeVisible();
+    expect((await state()).peek).toBeNull();
+    await chrome.getByRole("tab", { name: "Home /", exact: true }).click();
     await clickLink(app, "http://home.test/", "#same");
     await expect
       .poll(async () => (await state()).tabs.find((tab) => tab.id === home.id)?.url)
