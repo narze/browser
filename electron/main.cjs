@@ -357,6 +357,8 @@ function runShortcut(id) {
       return runPaletteCommand("new-folder");
     case "toggleSplit":
       return toggleSplit();
+    case "toggleSidebar":
+      return toggleSidebar();
     case "settings":
       return showSettings(true);
     case "archive":
@@ -412,6 +414,7 @@ function installMenu() {
           item("forward"),
           item("copyUrl"),
           item("toggleSplit"),
+          item("toggleSidebar"),
           { type: "separator" },
           { role: "togglefullscreen" },
           item("devTools"),
@@ -604,6 +607,13 @@ function updateTheme() {
 
 function updateSettings(patch) {
   try {
+    // Moving tabs to a side should never land on a hidden, empty sidebar.
+    if (
+      patch?.tabLayout &&
+      patch.tabLayout !== settings.tabLayout &&
+      !Object.hasOwn(patch, "sidebarVisible")
+    )
+      patch = { ...patch, sidebarVisible: true };
     settings = settingsStore.update(patch);
     nativeTheme.themeSource = settings.theme;
     if ("shortcuts" in patch) installMenu();
@@ -692,6 +702,13 @@ function tick() {
   });
 }
 
+// The sidebar only exists for side tab layouts; top tabs ignore the toggle.
+function toggleSidebar() {
+  if (settings.tabLayout === "top") return;
+  dispatch({ type: "set-sidebar-resizing", resizing: false });
+  updateSettings({ sidebarVisible: !settings.sidebarVisible });
+}
+
 function installIpc() {
   const handlers = {
     reportPageLayout: (regions) => {
@@ -709,6 +726,7 @@ function installIpc() {
     resizeSplit: (ratio) => dispatch({ type: "resize-split", ratio }),
     setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
+    toggleSidebar,
     openSettings: () => showSettings(true),
     closeSettings: () => showSettings(false),
     setShortcutRecording: (recording) => {

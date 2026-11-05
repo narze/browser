@@ -20,6 +20,7 @@
   let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
+  let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);
   // Local width while dragging; persisted to settings once on release.
   let dragWidth = $state<number | null>(null);
   let sidebarDragging = false;
@@ -117,8 +118,8 @@
 
 <svelte:window onkeydown={keydown} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} style:--sidebar-width={vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
-  {#if vertical}
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} style:--sidebar-width={sidebarHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
+  {#if vertical && !sidebarHidden}
     <div class="tab-rail" aria-hidden="true"></div>
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
     <div class="sidebar-resizer" role="separator" aria-label="Resize tab sidebar" aria-orientation="vertical" title="Drag to resize · double-click to reset"

@@ -24,6 +24,7 @@ export const browserCommands = {
   resizeSplit: { channel: "browser:resize-split", palette: false },
   setSplitResizing: { channel: "browser:set-split-resizing", palette: false },
   setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
+  toggleSidebar: { channel: "browser:toggle-sidebar", palette: false },
   openSettings: { channel: "browser:open-settings", palette: false },
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },
@@ -221,6 +222,16 @@ export function paletteCommands(state) {
       args: [],
     },
   );
+  if (state.tabLayout !== "top")
+    commands.push({
+      id: "toggle-sidebar",
+      title: state.settings.sidebarVisible ? "Hide tab sidebar" : "Show tab sidebar",
+      detail: state.settings.sidebarVisible ? "Give pages the full width" : "Bring back your tabs",
+      icon: "split",
+      hint: shortcut("toggleSidebar"),
+      command: "toggleSidebar",
+      args: [],
+    });
   for (const { value, label } of settingsSchema.theme.options)
     commands.push({
       id: `theme-${value}`,

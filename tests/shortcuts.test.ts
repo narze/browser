@@ -53,6 +53,7 @@ describe("keyboard shortcuts", () => {
       togglePin: "CmdOrCtrl+D",
       copyUrl: "CmdOrCtrl+Shift+C",
       toggleSplit: "Ctrl+Shift+=",
+      toggleSidebar: "CmdOrCtrl+S",
     });
   });
 
