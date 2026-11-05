@@ -8,6 +8,7 @@
   import TabList from './TabList.svelte';
   import Archive from './Archive.svelte';
   import SpaceSwitcher from './SpaceSwitcher.svelte';
+  import MediaControls from './MediaControls.svelte';
   import { observePageLayout } from './page-layout';
   import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
   import { formatAccelerator, resolveShortcuts } from '../shared/shortcuts.js';
@@ -20,7 +21,7 @@
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', media: [], tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);
@@ -34,7 +35,15 @@
   let edgeReveal = $state(false);
   let chromeFocused = $state(false);
   let compact = $derived(browserState.settings.compactMode);
-  let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null || tabDrag.id !== null));
+  // A short message near the address bar, such as "Copied". Compact mode shows the toolbar for it.
+  let toast = $state('');
+  let toastTimer: ReturnType<typeof setTimeout> | undefined;
+  function showToast(message: string) {
+    toast = message;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => (toast = ''), 1600);
+  }
+  let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null || tabDrag.id !== null || !!toast));
   let chromeHidden = $derived(compact && !revealed);
   $effect(() => { void api?.setChromeRevealed(revealed); });
 
@@ -43,6 +52,10 @@
   let inputError = $state('');
   let addressInput: HTMLInputElement;
   let current = $derived(browserState.tabs.find((tab) => tab.id === browserState.activeId));
+  // The sidebar media card shows the newest tab with media that is not on screen.
+  let shownIds = $derived(browserState.split ? browserState.split.tabIds : [browserState.activeId]);
+  let mediaEntry = $derived(vertical && !sidebarHidden && !chromeHidden ? browserState.media.find((entry) => entry.playback && !shownIds.includes(entry.tabId)) : undefined);
+  let mediaTab = $derived(mediaEntry && browserState.tabs.find((tab) => tab.id === mediaEntry.tabId));
   let keys = $derived(resolveShortcuts(browserState.settings.shortcuts ?? {}));
   const key = (id: string) => formatAccelerator(keys[id] ?? '', browserState.platform);
   const withKey = (label: string, id: string) => (key(id) ? `${label} (${key(id)})` : label);
@@ -141,14 +154,15 @@
     const offState = api.onState(update);
     const offFocus = api.onFocusAddress(() => void focusAddress());
     const offEdge = api.onPageEdge(pageEdge);
+    const offToast = api.onToast(showToast);
     void api.getState().then((initial) => { update(initial); if (!current?.url) void focusAddress(); });
-    return () => { offState(); offFocus(); offEdge(); };
+    return () => { offState(); offFocus(); offEdge(); offToast(); clearTimeout(toastTimer); };
   });
 </script>
 
 <svelte:window onkeydown={keydown} onpointermove={pointerMove} onfocusin={trackFocus} onfocusout={trackFocus} onblur={trackFocus} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} class:chrome-hidden={chromeHidden} style:--sidebar-width={sidebarHidden || chromeHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} class:chrome-hidden={chromeHidden} class:has-media={!!mediaTab} style:--sidebar-width={sidebarHidden || chromeHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
   {#if vertical && !sidebarHidden && !chromeHidden}
     <div class="tab-rail" aria-hidden="true"></div>
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
@@ -161,6 +175,7 @@
     <div class="tab-row">
       <SpaceSwitcher state={browserState} {api} nextKey={key('nextSpace')} newKey={key('newSpace')} ondone={() => { if (!current?.url) void focusAddress(); }} />
       <TabList state={browserState} {api} {vertical} closeShortcut={key('closeTab')} />
+      {#if mediaEntry && mediaTab && api}<MediaControls entry={mediaEntry} tab={mediaTab} {api} />{/if}
       <button class="icon-button new-tab" aria-label="New tab" title={withKey('New tab', 'newTab')} disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span>{#if key('newTab')}<kbd>{key('newTab')}</kbd>{/if}{/if}</button>
       <div class="drag-space"></div>
       <span class="window-name">Browser</span>
@@ -175,7 +190,8 @@
         <span class="address-icon"><Icon name={current?.url.startsWith('https:') ? 'shield' : 'search'} size={15} /></span>
         <input bind:this={addressInput} bind:value={address} aria-label="Search or enter address" aria-invalid={!!inputError} placeholder="Search or enter address" autocomplete="off" spellcheck="false" disabled={!api} onfocus={() => addressInput.select()} />
         {#if inputError}<span class="input-error" role="alert" title={inputError}>{inputError}</span>{/if}
-        {#if key('openAddress')}<span class="address-shortcut">{key('openAddress')}</span>{/if}
+        <span class="address-toast" role="status">{#if toast}<Icon name="check" size={13} />{toast}{/if}</span>
+        {#if key('openAddress') && !toast}<span class="address-shortcut">{key('openAddress')}</span>{/if}
       </form>
       <button class="icon-button" aria-label="Command palette" title={withKey('Command palette', 'commandPalette')} disabled={!api} onclick={() => api?.openPalette()}><Icon name="command" size={17} /></button>
       <button class="icon-button home-button" aria-label="Home" title="New-tab page" disabled={!api} onclick={() => navigate('')}><Icon name="home" size={17} /></button>

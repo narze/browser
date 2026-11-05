@@ -2089,3 +2089,121 @@ span.folder-toggle {
     width 120ms ease,
     height 120ms ease;
 }
+
+/* Copy page address: a short toast in the address bar. */
+.address-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px 0 6px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  animation: toast-in 140ms ease-out;
+}
+.address-toast:empty {
+  display: none;
+}
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+/* Media: a mute button on tabs with sound, and a card above the space switcher. */
+.tab-audio {
+  border: 0;
+  background: transparent;
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 5px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.tab-audio:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.tab-audio[aria-pressed="true"] {
+  color: var(--accent);
+}
+.favorites .tab-audio,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab-audio {
+  display: none;
+}
+.split-tab-group .tab-audio {
+  width: 18px;
+  height: 20px;
+}
+.media-card {
+  position: fixed;
+  bottom: 52px;
+  /* Aligned with the tab rows, which sit inside the 2px padding of .tabs. */
+  width: calc(var(--sidebar-width) - 28px);
+  height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 5px 0 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 1px 3px var(--shadow);
+  -webkit-app-region: no-drag;
+}
+.left .media-card {
+  left: 14px;
+}
+.right .media-card {
+  right: 14px;
+}
+.vertical.has-media .tabs {
+  bottom: 106px;
+}
+.media-tab {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 4px 0 11px;
+  border: 0;
+  border-radius: 9px 0 0 9px;
+  background: none;
+  text-align: left;
+}
+.media-tab .tab-icon {
+  color: var(--accent);
+}
+.media-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.media-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text);
+}
+.media-text small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.media-button {
+  width: 28px;
+  height: 28px;
+}
+.media-button[aria-pressed="true"] {
+  color: var(--accent);
+}

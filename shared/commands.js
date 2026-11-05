@@ -2,7 +2,7 @@
 import { settingsSchema } from "./settings.js";
 import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
 
-/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge'>, { channel: string, palette: boolean }>} */
+/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge' | 'onToast'>, { channel: string, palette: boolean }>} */
 export const browserCommands = {
   getState: { channel: "browser:state", palette: true },
   openPalette: { channel: "browser:palette-open", palette: false },
@@ -19,6 +19,9 @@ export const browserCommands = {
   forward: { channel: "browser:forward", palette: false },
   reload: { channel: "browser:reload", palette: false },
   stop: { channel: "browser:stop", palette: false },
+  copyUrl: { channel: "browser:copy-url", palette: false },
+  toggleMute: { channel: "browser:toggle-mute", palette: false },
+  toggleMediaPlayback: { channel: "browser:toggle-media-playback", palette: false },
   toggleSplit: { channel: "browser:toggle-split", palette: false },
   setSplitTab: { channel: "browser:set-split-tab", palette: false },
   resizeSplit: { channel: "browser:resize-split", palette: false },
@@ -71,6 +74,7 @@ export const browserEvents = {
   onPageEdge: "browser:page-edge",
   onFocusAddress: "browser:focus-address",
   onEdit: "browser:edit",
+  onToast: "browser:toast",
 };
 
 /** @param {string} name @param {string} source @param {boolean} mainFrame */
@@ -186,6 +190,16 @@ export function paletteCommands(state) {
       icon: "reload",
       hint: shortcut("reload"),
       command: "reload",
+      args: [],
+    });
+  if (active?.url)
+    commands.push({
+      id: "copy-url",
+      title: "Copy page address",
+      detail: active.url,
+      icon: "copy",
+      hint: shortcut("copyUrl"),
+      command: "copyUrl",
       args: [],
     });
   if (active?.canGoBack)

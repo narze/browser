@@ -46,6 +46,15 @@ export interface BrowserTab {
   asleep: boolean;
   lastActiveAt: number;
 }
+/** A tab that plays or paused media, makes sound, or is muted. */
+export interface TabMedia {
+  tabId: number;
+  /** The state of its audio or video elements, or null when it has none that played. */
+  playback: "playing" | "paused" | null;
+  /** The tab makes sound now. */
+  audible: boolean;
+  muted: boolean;
+}
 export interface TabFolder {
   id: number;
   name: string;
@@ -95,6 +104,8 @@ export type PaletteAction =
 export interface BrowserState {
   palette: { query: string; mode: PaletteMode; requestId: number } | null;
   resolvedTheme: "light" | "dark";
+  /** Tabs with media, newest playback first. */
+  media: TabMedia[];
   split: {
     /** Two to four tabs, in pane order. */
     tabIds: number[];
@@ -169,6 +180,11 @@ export interface BrowserApi {
   forward(): Promise<void>;
   reload(): Promise<void>;
   stop(): Promise<void>;
+  /** Copies the address of the active page and shows a "Copied" toast. */
+  copyUrl(): Promise<void>;
+  toggleMute(id: number): Promise<void>;
+  /** Pauses the playing media of a tab, or plays the media that it paused. */
+  toggleMediaPlayback(id: number): Promise<void>;
   moveTab(id: number, zone: TabZone, folderId: number | null, index: number): Promise<void>;
   renameTab(id: number, title: string): Promise<void>;
   editTab(id: number): Promise<void>;
@@ -201,4 +217,6 @@ export interface BrowserApi {
   onFocusAddress(callback: () => void): () => void;
   /** Compact mode: the pointer moved onto, or away from, the window edge over a page. */
   onPageEdge(callback: (atEdge: boolean) => void): () => void;
+  /** A short message, such as "Copied", to show near the address bar. */
+  onToast(callback: (message: string) => void): () => void;
 }
