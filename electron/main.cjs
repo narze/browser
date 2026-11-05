@@ -715,7 +715,7 @@ function showTabMenu(id) {
         label: "Move to folder",
         submenu: [
           ...state.folders.map((folder) => ({
-            label: folder.name,
+            label: folderPath(state.folders, folder),
             type: "checkbox",
             checked: tab.folderId === folder.id,
             click: () => moveTab(id, "pinned", folder.id),
@@ -751,16 +751,43 @@ function showTabMenu(id) {
   Menu.buildFromTemplate(template).popup({ window });
 }
 
-function showFolderMenu(id) {
-  if (!window || !sessionState().folders.some((folder) => folder.id === id)) return;
-  Menu.buildFromTemplate([
+/** A nested folder's menu label names its parents too, for example "Archives / ZMK". */
+function folderPath(folders, folder) {
+  const parent = folders.find((entry) => entry.id === folder.parentId);
+  return parent ? `${folderPath(folders, parent)} / ${folder.name}` : folder.name;
+}
+
+function folderMenu(id) {
+  const state = sessionState();
+  const folder = state.folders.find((entry) => entry.id === id);
+  if (!folder) return null;
+  const otherSpaces = state.spaces.filter((space) => space.id !== folder.spaceId);
+  return [
+    { label: "New folder inside", click: () => dispatch({ type: "create-folder", parentId: id }) },
     { label: "Rename folder…", click: () => edit({ kind: "folder", id }) },
+    ...(otherSpaces.length
+      ? [
+          {
+            label: "Move to space",
+            submenu: otherSpaces.map((space) => ({
+              label: space.name,
+              click: () => dispatch({ type: "move-folder-to-space", id, spaceId: space.id }),
+            })),
+          },
+        ]
+      : []),
+    { type: "separator" },
     {
       label: "Delete folder",
-      toolTip: "Its tabs stay pinned.",
+      toolTip: "Its subfolders and tabs move up one level.",
       click: () => dispatch({ type: "delete-folder", id }),
     },
-  ]).popup({ window });
+  ];
+}
+
+function showFolderMenu(id) {
+  const template = window && folderMenu(id);
+  if (template) Menu.buildFromTemplate(template).popup({ window });
 }
 
 const SPACE_COLOR_LABELS = {
@@ -991,9 +1018,10 @@ function installIpc() {
       if (!isTabId(id)) throw new Error("Invalid tab ID.");
       showTabMenu(id);
     },
-    createFolder: (name, tabId) => {
+    createFolder: (name, tabId, parentId) => {
       if (tabId !== undefined && !isTabId(tabId)) throw new Error("Invalid tab ID.");
-      dispatch({ type: "create-folder", name, tabId });
+      if (parentId !== undefined && !isTabId(parentId)) throw new Error("Invalid folder ID.");
+      dispatch({ type: "create-folder", name, tabId, parentId });
     },
     renameFolder: (id, name) => {
       if (!isTabId(id)) throw new Error("Invalid folder ID.");
@@ -1007,9 +1035,10 @@ function installIpc() {
       if (!isTabId(id)) throw new Error("Invalid folder ID.");
       dispatch({ type: "delete-folder", id });
     },
-    moveFolder: (id, index) => {
-      if (!isTabId(id)) throw new Error("Invalid folder ID.");
-      dispatch({ type: "move-folder", id, index });
+    moveFolder: (id, index, parentId) => {
+      if (!isTabId(id) || (parentId != null && !isTabId(parentId)))
+        throw new Error("Invalid folder ID.");
+      dispatch({ type: "move-folder", id, index, parentId: parentId ?? null });
     },
     showFolderMenu: (id) => {
       if (!isTabId(id)) throw new Error("Invalid folder ID.");
@@ -1150,6 +1179,15 @@ app.whenReady().then(() => {
       advanceClock: (ms) => {
         clockOffset += ms;
         tick();
+      },
+      // Native context menus cannot be clicked from tests; this runs one menu item.
+      clickFolderMenu: (id, ...labels) => {
+        let items = folderMenu(id) ?? [];
+        for (const label of labels.slice(0, -1))
+          items = items.find((item) => item.label === label)?.submenu ?? [];
+        const item = items.find((entry) => entry.label === labels[labels.length - 1]);
+        if (!item?.click) throw new Error(`No folder menu item: ${labels.join(" > ")}`);
+        item.click();
       },
     };
   nativeTheme.themeSource = settings.theme;
