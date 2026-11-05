@@ -2,7 +2,8 @@
   import { onMount, tick } from 'svelte';
   import Icon from './Icon.svelte';
   import { beginTabDrag, endTabDrag } from './tab-drag.svelte';
-  import type { BrowserApi, BrowserState, BrowserTab, EditTarget, TabZone } from '../shared/browser';
+  import { childFolders, containerIds as treeContainerIds, isInside, nudgeFolder, nudgeTab } from './folder-tree';
+  import type { BrowserApi, BrowserState, BrowserTab, EditTarget, TabFolder, TabZone } from '../shared/browser';
 
   let { state: browserState, api, vertical, closeShortcut }: { state: BrowserState; api: BrowserApi | undefined; vertical: boolean; closeShortcut: string } = $props();
 
@@ -15,16 +16,21 @@
   let shown = $derived(browserState.split ? browserState.split.tabIds : [browserState.activeId]);
   let hasPinned = $derived(browserState.sections.pinned.length > 0 || browserState.folders.length > 0);
   let draggedTab = $derived(drag?.kind === 'tab' ? tabsById.get(drag.id) : undefined);
+  let folderSlots = $derived(new Map(browserState.sections.folders.map((section) => [section.id, section.slots])));
 
   const label = (tab: BrowserTab) => tab.customTitle || tab.title;
-
-  function containerIds(zone: TabZone, folderId: number | null) {
-    return browserState.tabs
-      .filter((tab) => tab.spaceId === browserState.activeSpaceId && tab.zone === zone && (zone !== 'pinned' || tab.folderId === folderId))
-      .map((tab) => tab.id);
-  }
+  const containerIds = (zone: TabZone, folderId: number | null) => treeContainerIds(browserState, zone, folderId);
+  const children = (parentId: number | null) => childFolders(browserState.folders, parentId);
+  /** The tab slots of a folder and of every folder inside it. */
+  const subtreeSlots = (folderId: number): number[][] => [
+    ...children(folderId).flatMap((child) => subtreeSlots(child.id)),
+    ...(folderSlots.get(folderId) ?? []),
+  ];
 
   async function startEdit(target: EditTarget) {
+    // Save a rename that is still open before the next one starts.
+    const open = document.getElementById('rename-input') as HTMLInputElement | null;
+    if (editing && open) commitEdit(open.value);
     editing = target;
     await tick();
     const input = document.getElementById('rename-input') as HTMLInputElement | null;
@@ -73,20 +79,47 @@
     drop = { zone: tab.zone, folderId: tab.folderId, index: position < 0 ? ids.length : position + (isAfter ? 1 : 0), marker: `tab-${tab.id}-${isAfter ? 'after' : 'before'}` };
   }
   function overContainer(event: DragEvent, zone: TabZone, folderId: number | null) {
+    if (drag?.kind === 'folder' && zone === 'pinned' && folderId === null) {
+      event.preventDefault();
+      event.stopPropagation();
+      const index = children(null).filter((folder) => folder.id !== drag!.id).length;
+      drop = { zone, folderId: null, index, marker: 'section-pinned' };
+      return;
+    }
     if (drag?.kind !== 'tab' || !canDrop(zone)) return;
     event.preventDefault();
     event.stopPropagation();
     const ids = containerIds(zone, folderId).filter((id) => id !== drag!.id);
     drop = { zone, folderId, index: ids.length, marker: folderId ? `folder-${folderId}-into` : `section-${zone}` };
   }
-  function overFolder(event: DragEvent, folderId: number) {
-    if (drag?.kind === 'tab') return overContainer(event, 'pinned', folderId);
-    if (drag?.kind !== 'folder') return;
+  function overFolder(event: DragEvent, folder: TabFolder) {
+    if (drag?.kind === 'tab') return overContainer(event, 'pinned', folder.id);
+    // A folder cannot move into itself or into a folder inside it.
+    if (drag?.kind !== 'folder' || isInside(browserState.folders, folder.id, drag.id)) return;
     event.preventDefault();
     event.stopPropagation();
-    const ids = browserState.folders.map((folder) => folder.id).filter((id) => id !== drag!.id);
-    const isAfter = after(event, !vertical);
-    drop = { zone: 'pinned', folderId, index: ids.indexOf(folderId) + (isAfter ? 1 : 0), marker: `folder-${folderId}-${isAfter ? 'after' : 'before'}` };
+    // The middle of a folder row drops into it; its edges drop before or after it.
+    const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const share = vertical ? (event.clientY - box.top) / box.height : (event.clientX - box.left) / box.width;
+    const others = (parentId: number | null) => children(parentId).map((entry) => entry.id).filter((id) => id !== drag!.id);
+    const into = (index: number, marker: string) => (drop = { zone: 'pinned', folderId: folder.id, index, marker });
+    if (share > 0.25 && share < 0.75) into(others(folder.id).length, `folder-${folder.id}-into`);
+    // Right under an open folder's row is the start of its contents.
+    else if (share >= 0.75 && vertical && !folder.collapsed) into(0, `folder-${folder.id}-after`);
+    else {
+      const isAfter = share >= 0.75;
+      const index = others(folder.parentId).indexOf(folder.id) + (isAfter ? 1 : 0);
+      drop = { zone: 'pinned', folderId: folder.parentId, index, marker: `folder-${folder.id}-${isAfter ? 'after' : 'before'}` };
+    }
+  }
+  /** Between the rows inside a folder: the end of that folder. */
+  function overContents(event: DragEvent, folder: TabFolder) {
+    if (drag?.kind === 'tab') return overContainer(event, 'pinned', folder.id);
+    if (drag?.kind !== 'folder' || isInside(browserState.folders, folder.id, drag.id)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const index = children(folder.id).filter((entry) => entry.id !== drag!.id).length;
+    drop = { zone: 'pinned', folderId: folder.id, index, marker: `folder-${folder.id}-into` };
   }
   function finishDrop(event: DragEvent) {
     event.preventDefault();
@@ -94,7 +127,7 @@
     const [source, target] = [drag, drop];
     endDrag();
     if (!source || !target) return;
-    if (source.kind === 'folder') void api?.moveFolder(source.id, target.index, null);
+    if (source.kind === 'folder') void api?.moveFolder(source.id, target.index, target.folderId).catch(() => {});
     else void api?.moveTab(source.id, target.zone, target.folderId, target.index).catch(() => {});
   }
   const marked = (marker: string) => drop?.marker === marker;
@@ -103,11 +136,10 @@
     const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
     const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
     if (event.altKey && event.shiftKey && (event.key === previousKey || event.key === nextKey)) {
-      // Keyboard reorder: move the tab one place inside its section or folder.
+      // Keyboard reorder: move the tab one place, and at a folder edge into the next folder.
       event.preventDefault();
-      const ids = containerIds(tab.zone, tab.folderId);
-      const index = ids.indexOf(tab.id) + (event.key === nextKey ? 1 : -1);
-      if (index >= 0 && index < ids.length) await api?.moveTab(tab.id, tab.zone, tab.folderId, index);
+      const place = nudgeTab(browserState, tab.id, event.key === nextKey ? 1 : -1);
+      if (place) await api?.moveTab(tab.id, tab.zone, place.folderId, place.index);
       await tick();
       document.getElementById(`tab-${tab.id}`)?.focus();
       return;
@@ -126,16 +158,28 @@
     await tick();
     if (id !== undefined) document.getElementById(`tab-${id}`)?.focus();
   }
+  async function folderKey(event: KeyboardEvent, folder: TabFolder) {
+    if (event.key === 'F2') { event.preventDefault(); void startEdit({ kind: 'folder', id: folder.id }); return; }
+    const previousKey = vertical ? 'ArrowUp' : 'ArrowLeft';
+    const nextKey = vertical ? 'ArrowDown' : 'ArrowRight';
+    if (!event.altKey || !event.shiftKey || (event.key !== previousKey && event.key !== nextKey)) return;
+    // Keyboard reorder: move the folder among its siblings, and at the edge out of its parent.
+    event.preventDefault();
+    const place = nudgeFolder(browserState.folders, folder.id, event.key === nextKey ? 1 : -1);
+    if (place) await api?.moveFolder(folder.id, place.index, place.parentId);
+    await tick();
+    document.getElementById(`folder-${folder.id}`)?.focus();
+  }
   function menu(event: MouseEvent, tabId: number) {
     event.preventDefault();
     void api?.showTabMenu(tabId);
   }
 </script>
 
-{#snippet renameField(value: string, name: string)}
+{#snippet renameField(value: string, name: string, target: EditTarget)}
   <!-- svelte-ignore a11y_autofocus (Rename starts from an explicit user action.) -->
   <input id="rename-input" class="rename-input" aria-label={name} {value} maxlength="120" autocomplete="off" spellcheck="false"
-    onkeydown={editKey} onblur={(event) => { if (editing) commitEdit(event.currentTarget.value); }} />
+    onkeydown={editKey} onblur={(event) => { if (editing?.kind === target.kind && editing.id === target.id) commitEdit(event.currentTarget.value); }} />
 {/snippet}
 
 {#snippet tabItem(tab: BrowserTab)}
@@ -146,7 +190,7 @@
     draggable={editing?.id !== tab.id} ondragstart={(event) => startDrag(event, 'tab', tab.id)} ondragend={endDrag}
     ondragover={(event) => overTab(event, tab)} ondrop={finishDrop} oncontextmenu={(event) => menu(event, tab.id)}>
     {#if editing?.kind === 'tab' && editing.id === tab.id}
-      <span class="tab-select"><span class="tab-icon"><Icon name="edit" size={14} /></span>{@render renameField(label(tab), 'Tab name')}</span>
+      <span class="tab-select"><span class="tab-icon"><Icon name="edit" size={14} /></span>{@render renameField(label(tab), 'Tab name', { kind: 'tab', id: tab.id })}</span>
     {:else}
       <button id={`tab-${tab.id}`} class="tab-select" role="tab" aria-label={label(tab)} title={tab.asleep ? `${label(tab)} (asleep)` : label(tab)} aria-selected={tab.id === browserState.activeId}
         tabindex={tab.id === browserState.activeId ? 0 : -1} onkeydown={(event) => tabKey(event, tab)}
@@ -175,6 +219,41 @@
   {/if}
 {/snippet}
 
+{#snippet folderNode(folder: TabFolder, depth: number)}
+  {@const subfolders = children(folder.id)}
+  {@const slots = folderSlots.get(folder.id) ?? []}
+  <!-- A collapsed folder hides its subfolders and tabs, except the tabs on screen. -->
+  {@const hidden = folder.collapsed ? subtreeSlots(folder.id) : []}
+  {@const visibleSlots = folder.collapsed ? hidden.filter((ids) => ids.some((id) => shown.includes(id))) : slots}
+  <div class="tab-folder" class:collapsed={folder.collapsed} role="group" aria-label={`Folder: ${folder.name}`} style:--depth={depth}>
+    <!-- svelte-ignore a11y_no_static_element_interactions (The folder button below is the keyboard path.) -->
+    <div class="folder-header" class:drop-into={marked(`folder-${folder.id}-into`)} class:drop-before={marked(`folder-${folder.id}-before`)} class:drop-after={marked(`folder-${folder.id}-after`)}
+      draggable={editing?.id !== folder.id} ondragstart={(event) => startDrag(event, 'folder', folder.id)} ondragend={endDrag}
+      ondragover={(event) => overFolder(event, folder)} ondrop={finishDrop}
+      oncontextmenu={(event) => { event.preventDefault(); void api?.showFolderMenu(folder.id); }}>
+      {#if editing?.kind === 'folder' && editing.id === folder.id}
+        <span class="folder-toggle"><span class="folder-icon"><Icon name={folder.collapsed ? 'folder' : 'folderOpen'} size={18} /></span>{@render renameField(folder.name, 'Folder name', { kind: 'folder', id: folder.id })}</span>
+      {:else}
+        <button id={`folder-${folder.id}`} class="folder-toggle" aria-expanded={!folder.collapsed} title={folder.name}
+          onclick={() => api?.toggleFolder(folder.id)} ondblclick={() => startEdit({ kind: 'folder', id: folder.id })}
+          onkeydown={(event) => folderKey(event, folder)}>
+          <span class="folder-icon"><Icon name={folder.collapsed ? 'folder' : 'folderOpen'} size={18} /></span><span class="folder-name">{folder.name}</span>
+          {#if folder.collapsed && hidden.length}<span class="folder-count">{hidden.flat().length}</span>{/if}
+        </button>
+      {/if}
+    </div>
+    {#if (!folder.collapsed && (subfolders.length || slots.length)) || visibleSlots.length}
+      <!-- svelte-ignore a11y_no_static_element_interactions (Drop target only; rows inside have keyboard paths.) -->
+      <div class="folder-tabs" style:--depth={depth + 1} ondragover={(event) => overContents(event, folder)} ondrop={finishDrop}>
+        {#if !folder.collapsed}{#each subfolders as child (child.id)}{@render folderNode(child, depth + 1)}{/each}{/if}
+        {#each visibleSlots as ids (ids.join())}{@render slot(ids)}{/each}
+      </div>
+    {:else if !folder.collapsed}
+      <span class="drop-hint folder-empty">Drop tabs here</span>
+    {/if}
+  </div>
+{/snippet}
+
 <div class="tabs" class:drag-active={!!drag} role="tablist" aria-label="Browser tabs" aria-orientation={vertical ? 'vertical' : 'horizontal'}>
   {#if browserState.sections.favorites.length || (draggedTab?.url && draggedTab.zone !== 'favorites')}
     <div class="tab-section favorites" class:drop-into={marked('section-favorites')} role="group" aria-label="Favorites"
@@ -186,33 +265,7 @@
   {#if hasPinned || (draggedTab?.url && draggedTab.zone !== 'pinned')}
     <div class="tab-section pinned" class:drop-into={marked('section-pinned')} role="group" aria-label="Pinned tabs"
       ondragover={(event) => overContainer(event, 'pinned', null)} ondrop={finishDrop}>
-      {#each browserState.sections.folders as section (section.id)}
-        {@const folder = browserState.folders.find((entry) => entry.id === section.id)!}
-        {@const visibleSlots = folder.collapsed ? section.slots.filter((ids) => ids.some((id) => shown.includes(id))) : section.slots}
-        <div class="tab-folder" class:collapsed={folder.collapsed} role="group" aria-label={`Folder: ${folder.name}`}>
-          <!-- svelte-ignore a11y_no_static_element_interactions (The folder button below is the keyboard path.) -->
-          <div class="folder-header" class:drop-into={marked(`folder-${folder.id}-into`)} class:drop-before={marked(`folder-${folder.id}-before`)} class:drop-after={marked(`folder-${folder.id}-after`)}
-            draggable={editing?.id !== folder.id} ondragstart={(event) => startDrag(event, 'folder', folder.id)} ondragend={endDrag}
-            ondragover={(event) => overFolder(event, folder.id)} ondrop={finishDrop}
-            oncontextmenu={(event) => { event.preventDefault(); void api?.showFolderMenu(folder.id); }}>
-            {#if editing?.kind === 'folder' && editing.id === folder.id}
-              <span class="folder-toggle"><Icon name="folder" size={14} />{@render renameField(folder.name, 'Folder name')}</span>
-            {:else}
-              <button class="folder-toggle" aria-expanded={!folder.collapsed} title={folder.name}
-                onclick={() => api?.toggleFolder(folder.id)} ondblclick={() => startEdit({ kind: 'folder', id: folder.id })}
-                onkeydown={(event) => { if (event.key === 'F2') { event.preventDefault(); void startEdit({ kind: 'folder', id: folder.id }); } }}>
-                <span class="folder-chevron"><Icon name="chevron" size={12} /></span><Icon name="folder" size={14} /><span class="folder-name">{folder.name}</span>
-                {#if folder.collapsed && section.slots.length}<span class="folder-count">{section.slots.flat().length}</span>{/if}
-              </button>
-            {/if}
-          </div>
-          {#if visibleSlots.length}
-            <div class="folder-tabs">{#each visibleSlots as ids (ids.join())}{@render slot(ids)}{/each}</div>
-          {:else if !folder.collapsed}
-            <span class="drop-hint folder-empty">Drop tabs here</span>
-          {/if}
-        </div>
-      {/each}
+      {#each children(null) as folder (folder.id)}{@render folderNode(folder, 0)}{/each}
       {#each browserState.sections.pinned as ids (ids.join())}{@render slot(ids)}{/each}
       {#if !hasPinned}<span class="drop-hint"><Icon name="pin" size={13} /> Drop to pin</span>{/if}
     </div>
