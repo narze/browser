@@ -159,4 +159,21 @@ describe("browser command contract", () => {
       "close-tab": "Ctrl+W",
     });
   });
+
+  it("offers the sidebar toggle only for side tab layouts", () => {
+    expect(paletteCommands(state).some((command) => command.id === "toggle-sidebar")).toBe(false);
+    const side: BrowserState = { ...state, tabLayout: "left" };
+    expect(paletteCommands(side).find((command) => command.id === "toggle-sidebar")).toMatchObject({
+      title: "Hide tab sidebar",
+      command: "toggleSidebar",
+      args: [],
+    });
+    const hidden: BrowserState = {
+      ...side,
+      settings: { ...side.settings, sidebarVisible: false },
+    };
+    expect(paletteCommands(hidden).find((command) => command.id === "toggle-sidebar")?.title).toBe(
+      "Show tab sidebar",
+    );
+  });
 });

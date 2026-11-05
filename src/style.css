@@ -1775,3 +1775,9 @@ span.folder-toggle {
   color: var(--muted);
   font-size: 12px;
 }
+
+/* ⌘S hides the side tab rail; pages take the full width. */
+.sidebar-hidden .tabs,
+.sidebar-hidden .new-tab {
+  display: none;
+}

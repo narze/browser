@@ -51,6 +51,7 @@ export const settingsSchema = /** @type {const} */ ({
       { value: "never", label: "Never", ms: null },
     ],
   },
+  sidebarVisible: { label: "Show tab sidebar", default: true },
   showShortcuts: { label: "New-tab shortcuts", default: true },
   /** Changed keyboard shortcuts by action id; see shared/shortcuts.js. */
   shortcuts: { label: "Keyboard shortcuts", default: /** @type {Record<string, string>} */ ({}) },

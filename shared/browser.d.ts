@@ -88,6 +88,7 @@ export interface BrowserApi {
   resizeSplit(ratio: number): Promise<void>;
   setSplitResizing(resizing: boolean): Promise<void>;
   setSidebarResizing(resizing: boolean): Promise<void>;
+  toggleSidebar(): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
   /** Pauses browser shortcuts while the settings page records a new one. */

@@ -33,6 +33,7 @@ export const shortcutActions = [
   { id: "togglePin", label: "Pin or unpin tab", default: "CmdOrCtrl+D" },
   { id: "toggleFavorite", label: "Add to or remove from favorites", default: "CmdOrCtrl+Shift+D" },
   { id: "toggleSplit", label: "Split view", default: "Ctrl+Shift+=" },
+  { id: "toggleSidebar", label: "Show or hide tab sidebar", default: "CmdOrCtrl+S" },
   { id: "newFolder", label: "New folder", default: "" },
   { id: "settings", label: "Settings", default: "CmdOrCtrl+," },
   { id: "archive", label: "Archive", default: "CmdOrCtrl+Shift+A" },
