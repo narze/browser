@@ -12,6 +12,7 @@ const state: BrowserState = {
   palette: null,
   split: null,
   splitResizing: false,
+  sidebarResizing: false,
   settingsOpen: false,
   activeId: 1,
   platform: "darwin",

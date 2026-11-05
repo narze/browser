@@ -22,7 +22,11 @@ describe("browser preferences", () => {
     const store = createSettingsStore(profile());
     for (const [key, setting] of Object.entries(settingsSchema)) {
       const choices =
-        "options" in setting ? setting.options.map((option) => option.value) : [true, false];
+        "options" in setting
+          ? setting.options.map((option) => option.value)
+          : "min" in setting
+            ? [setting.min, setting.default, setting.max]
+            : [true, false];
       for (const value of choices) {
         expect(isSettingValue(key, value)).toBe(true);
         store.update({ [key]: value });
@@ -31,6 +35,8 @@ describe("browser preferences", () => {
     }
     expect(isSettingValue("__proto__", {})).toBe(false);
     expect(isSettingValue("theme", "sepia")).toBe(false);
+    for (const width of [159, 481, 200.5, NaN, "220"])
+      expect(isSettingValue("sidebarWidth", width)).toBe(false);
   });
   it("persists changes and merges later changes without losing other preferences", () => {
     const file = profile();
@@ -42,6 +48,7 @@ describe("browser preferences", () => {
       showShortcuts: false,
       searchEngine: "google",
       theme: "dark",
+      sidebarWidth: 220,
     });
   });
   it("rejects invalid settings without changing memory or disk", () => {
@@ -58,6 +65,7 @@ describe("browser preferences", () => {
       { unknown: true },
       { theme: "sepia" },
       { theme: null },
+      { sidebarWidth: 1000 },
     ]) {
       expect(() => store.update(patch)).toThrow();
       expect(readFileSync(file, "utf8")).toBe(saved);
@@ -72,6 +80,7 @@ describe("browser preferences", () => {
       searchEngine: "duckduckgo",
       showShortcuts: true,
       theme: "system",
+      sidebarWidth: 220,
     });
     writeFileSync(
       file,
@@ -82,6 +91,7 @@ describe("browser preferences", () => {
       searchEngine: "duckduckgo",
       showShortcuts: true,
       theme: "system",
+      sidebarWidth: 220,
     });
   });
   it("uses the selected search engine while preserving direct addresses", () => {

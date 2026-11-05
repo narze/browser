@@ -30,9 +30,16 @@ const state: BrowserState = {
   ],
   split: null,
   splitResizing: false,
+  sidebarResizing: false,
   tabLayout: "top",
   settingsOpen: false,
-  settings: { theme: "system", tabLayout: "top", searchEngine: "duckduckgo", showShortcuts: true },
+  settings: {
+    theme: "system",
+    tabLayout: "top",
+    searchEngine: "duckduckgo",
+    showShortcuts: true,
+    sidebarWidth: 220,
+  },
 };
 describe("command palette results", () => {
   it("offers navigation plus matching open tabs for a query", () => {

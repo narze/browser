@@ -605,7 +605,7 @@ async function host(id) {
     note: (a) => String(a.text || ""),
     async live(a) {
       if (!liveSession) {
-        const { startLive } = await import("./live.mjs");
+        const { startLive } = await import("../../live-browser/scripts/live.mjs");
         liveSession = await startLive({ app, port: Number(a.port || 6090) });
         current.liveUrl = liveSession.url;
         write({ ready: true });
@@ -619,7 +619,7 @@ async function host(id) {
       await app.close();
       await start();
       if (livePort) {
-        const { startLive } = await import("./live.mjs");
+        const { startLive } = await import("../../live-browser/scripts/live.mjs");
         liveSession = await startLive({ app, port: livePort });
       }
       write({ ready: true });

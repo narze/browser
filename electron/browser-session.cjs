@@ -8,7 +8,7 @@
  * | { type: 'toggle-split' | 'close-palette' }
  * | { type: 'set-split-tab', side: number, id: number }
  * | { type: 'resize-split', ratio: number }
- * | { type: 'set-split-resizing', resizing: boolean }
+ * | { type: 'set-split-resizing' | 'set-sidebar-resizing', resizing: boolean }
  * | { type: 'show-settings', open: boolean }
  * | { type: 'open-palette', mode: 'navigate' | 'commands' }} SessionCommand
  */
@@ -21,6 +21,7 @@ function createBrowserSession() {
   /** @type {import('../shared/browser').BrowserState['split']} */
   let split = null;
   let splitResizing = false;
+  let sidebarResizing = false;
   let settingsOpen = false;
   /** @type {import('../shared/browser').BrowserState['palette']} */
   let palette = null;
@@ -44,6 +45,7 @@ function createBrowserSession() {
       visible:
         !settingsOpen &&
         !splitResizing &&
+        !sidebarResizing &&
         !!tab.url &&
         !tab.error &&
         (split ? split.tabIds.includes(tab.id) : tab.id === activeId),
@@ -53,6 +55,7 @@ function createBrowserSession() {
       activeId,
       split,
       splitResizing,
+      sidebarResizing,
       settingsOpen,
       palette,
       tabSlots,
@@ -67,7 +70,7 @@ function createBrowserSession() {
       split.tabIds[split.tabIds.indexOf(activeId) === 1 ? 1 : 0] = id;
     }
     activeId = id;
-    settingsOpen = splitResizing = false;
+    settingsOpen = splitResizing = sidebarResizing = false;
     palette = null;
     return true;
   }
@@ -164,16 +167,20 @@ function createBrowserSession() {
         if (typeof command.resizing !== "boolean") throw new Error("Invalid resize state.");
         splitResizing = !!split && !settingsOpen && !palette && command.resizing;
         break;
+      case "set-sidebar-resizing":
+        if (typeof command.resizing !== "boolean") throw new Error("Invalid resize state.");
+        sidebarResizing = !settingsOpen && !palette && command.resizing;
+        break;
       case "show-settings":
         settingsOpen = command.open;
-        splitResizing = false;
+        splitResizing = sidebarResizing = false;
         palette = null;
         focus();
         break;
       case "open-palette":
         if (!["commands", "navigate"].includes(command.mode))
           throw new Error("Invalid palette mode.");
-        splitResizing = false;
+        splitResizing = sidebarResizing = false;
         palette = {
           mode: command.mode,
           query:
@@ -185,7 +192,13 @@ function createBrowserSession() {
         palette = null;
         break;
       case "focus-tab":
-        if (!settingsOpen && !splitResizing && !palette && split?.tabIds.includes(command.id))
+        if (
+          !settingsOpen &&
+          !splitResizing &&
+          !sidebarResizing &&
+          !palette &&
+          split?.tabIds.includes(command.id)
+        )
           activeId = command.id;
         break;
       case "navigate": {
