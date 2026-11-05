@@ -51,6 +51,8 @@ const state: BrowserState = {
   splitResizing: false,
   sidebarResizing: false,
   tabDragging: false,
+  peek: null,
+  mini: null,
   tabLayout: "top",
   settingsOpen: false,
   archiveOpen: false,

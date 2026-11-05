@@ -512,7 +512,10 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
           (split ? split.tabIds.includes(tab.id) : tab.id === activeId),
       }));
     if (floats.peek)
-      pages.push({ id: floats.peek.id, visible: !screen && !!floats.peek.url && !floats.peek.error });
+      pages.push({
+        id: floats.peek.id,
+        visible: !screen && !!floats.peek.url && !floats.peek.error,
+      });
     if (floats.mini)
       pages.push({ id: floats.mini.id, visible: !!floats.mini.url && !floats.mini.error });
     return structuredClone({
@@ -858,8 +861,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       }
       case "update-tab": {
         const tab =
-          findTab(command.id) ??
-          Object.values(floats).find((page) => page?.id === command.id);
+          findTab(command.id) ?? Object.values(floats).find((page) => page?.id === command.id);
         if (!tab) break;
         Object.assign(tab, command.patch, { id: tab.id });
         if (tab.homeUrl && tab.url === tab.homeUrl && command.patch.title)
@@ -1089,8 +1091,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         spaces = spaces.filter((entry) => entry !== space);
         folders = folders.filter((folder) => folder.spaceId !== space.id);
         routes = routes.filter((route) => route.spaceId !== space.id);
-        for (const kind of FLOAT_KINDS)
-          if (floats[kind]?.spaceId === space.id) floats[kind] = null;
+        for (const kind of FLOAT_KINDS) if (floats[kind]?.spaceId === space.id) floats[kind] = null;
         for (const entry of archive) if (entry.spaceId === space.id) entry.spaceId = activeSpaceId;
         spaceMemory.delete(space.id);
         if (!spaces.some((entry) => entry.profile === space.profile))

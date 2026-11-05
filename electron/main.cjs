@@ -14,7 +14,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const crypto = require("node:crypto");
 const { resolveAddress } = require("./navigation.cjs");
-const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
+const { isWebUrl, isTabId, canOpenPopup, sameSite } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
@@ -28,6 +28,7 @@ const {
 } = require("../shared/shortcuts.js");
 const { createBrowserSession } = require("./browser-session.cjs");
 const { normalizePageLayout } = require("./page-layout.cjs");
+const { peekLayout, QUICK_TOOLBAR_HEIGHT } = require("../shared/float-layout.js");
 const {
   browserCommands,
   browserEvents,
@@ -60,11 +61,25 @@ const views = new Map();
 // The profile each page view was created with. A view cannot change its partition.
 const viewProfiles = new Map();
 let paletteView;
+// The peek frame: a trusted view with the backdrop and card, under the peeked page.
+let peekView;
+let peekShown = false;
+// The quick window, a small separate window with one page.
+let miniWindow;
+// The window that shows each page view, and the page views with rounded corners.
+const viewHosts = new Map();
+const roundedViews = new Set();
 let pageRegions = [];
 let commandHandlers;
 let shortcuts = new Map();
 // While the chrome records a new shortcut, keys reach it instead of running actions.
 let shortcutRecording = false;
+// Mouse events carry no modifier keys, so Alt+click reads the Alt key from key events.
+let altHeld = false;
+function trackAlt(_event, input) {
+  if (input.type === "keyDown" || input.type === "keyUp")
+    altHeld = input.key === "Alt" ? input.type === "keyDown" : input.alt;
+}
 // Compact mode: whether the chrome shows its toolbar and tabs, and the last edge
 // state sent to it (null makes the next page pointer move report again).
 let chromeRevealed = false;
@@ -122,40 +137,66 @@ function browsingSession(profile) {
   return browsing;
 }
 const profileOf = (state, tab) => state.spaces.find((space) => space.id === tab.spaceId).profile;
+// Tabs, and the pages outside the tab list: the peek and the quick window's page.
+const pageTabs = (state) => [...state.tabs, ...[state.peek, state.mini].filter(Boolean)];
+const hostFor = (state, id) => (state.mini?.id === id ? miniWindow : window);
+function attach(id, view, host) {
+  host.contentView.addChildView(view);
+  viewHosts.set(id, host);
+}
+function detach(id, view) {
+  const host = viewHosts.get(id);
+  if (host && !host.isDestroyed()) host.contentView.removeChildView(view);
+  viewHosts.delete(id);
+  roundedViews.delete(id);
+}
 
 // Session transitions are pure; this adapter owns all native view side effects.
 function dispatch(command) {
   const shownBefore = shownTabs(sessionState());
   const result = browserSession.dispatch(command);
+  const pages = pageTabs(result.state);
+  if (result.state.mini) createQuickWindow();
+  // The frame goes in first, so the peeked page shows above it.
+  if (result.state.peek) showPeekFrame();
   // A tab moved to a space with another profile gets a new view in that profile.
   const moved = [];
   for (const [id, view] of views) {
-    const tab = result.state.tabs.find((entry) => entry.id === id);
+    const tab = pages.find((entry) => entry.id === id);
     if (!tab || tab.asleep || viewProfiles.get(id) === profileOf(result.state, tab)) continue;
     views.delete(id);
     viewProfiles.delete(id);
     mediaPlayback.delete(id);
-    window.contentView.removeChildView(view);
+    detach(id, view);
     view.webContents.close({ waitForBeforeUnload: false });
     if (tab.url) moved.push(tab);
   }
-  for (const tab of result.state.tabs) {
+  for (const tab of pages) {
     if (!tab.asleep && !views.has(tab.id)) {
       const profile = profileOf(result.state, tab);
       const view = createPageView(tab.id, profile);
       views.set(tab.id, view);
       viewProfiles.set(tab.id, profile);
-      window.contentView.addChildView(view);
+      attach(tab.id, view, hostFor(result.state, tab.id));
+    }
+  }
+  // The quick window's page moves to the main window with its view when it becomes a tab.
+  for (const [id, view] of views) {
+    const tab = pages.find((entry) => entry.id === id);
+    const host = hostFor(result.state, id);
+    if (tab && !tab.asleep && host && viewHosts.get(id) !== host) {
+      detach(id, view);
+      attach(id, view, host);
     }
   }
   // The history of tabs that close, for archive effects below.
   const closedHistory = new Map();
   for (const [id, view] of views) {
-    const tab = result.state.tabs.find((entry) => entry.id === id);
+    const tab = pages.find((entry) => entry.id === id);
     if (tab && !tab.asleep) continue;
     views.delete(id);
     viewProfiles.delete(id);
-    window.contentView.removeChildView(view);
+    detach(id, view);
     const navigation = view.webContents.navigationHistory;
     (tab ? sleepingHistory : closedHistory).set(id, {
       entries: navigation.getAllEntries(),
@@ -188,6 +229,16 @@ function dispatch(command) {
   if (!result.state.palette && paletteView?.getVisible()) {
     paletteView.setVisible(false);
     window.contentView.removeChildView(paletteView);
+  }
+  if (!result.state.peek && peekShown) {
+    peekShown = false;
+    peekView.setVisible(false);
+    window.contentView.removeChildView(peekView);
+  }
+  if (!result.state.mini && miniWindow) {
+    const quick = miniWindow;
+    miniWindow = null;
+    quick.destroy();
   }
   layout();
   publish();
@@ -377,6 +428,11 @@ function serveFavicon(request) {
 
 function focusActive() {
   const state = sessionState();
+  if (state.peek) {
+    if (state.peek.url && !state.peek.error) views.get(state.peek.id).webContents.focus();
+    else peekView?.webContents.focus();
+    return;
+  }
   const tab = activeTab();
   const screenOpen = state.settingsOpen || state.archiveOpen;
   if (!screenOpen && tab?.url && !tab.error) activeView().webContents.focus();
@@ -387,9 +443,15 @@ function focusActive() {
 }
 
 function publish() {
-  if (window && !window.isDestroyed()) window.webContents.send(browserEvents.onState, getState());
-  if (paletteView && !paletteView.webContents.isDestroyed())
-    paletteView.webContents.send(browserEvents.onState, getState());
+  if (!window || window.isDestroyed()) return;
+  const state = getState();
+  for (const contents of [
+    window.webContents,
+    paletteView?.webContents,
+    peekView?.webContents,
+    miniWindow?.webContents,
+  ])
+    if (contents && !contents.isDestroyed()) contents.send(browserEvents.onState, state);
 }
 
 function layout() {
@@ -405,6 +467,25 @@ function layout() {
   const regions = normalizePageLayout(pageRegions, width, height);
   for (const page of state.pages) {
     const view = views.get(page.id);
+    if (page.id === state.peek?.id) {
+      if (peekView) peekView.setBounds({ x: 0, y: 0, width, height });
+      round(page.id, view, 8);
+      view.setBounds(peekLayout(width, height).page);
+      view.setVisible(page.visible);
+      continue;
+    }
+    if (page.id === state.mini?.id) {
+      const [quickWidth, quickHeight] = miniWindow.getContentSize();
+      view.setBounds({
+        x: 0,
+        y: QUICK_TOOLBAR_HEIGHT,
+        width: quickWidth,
+        height: Math.max(0, quickHeight - QUICK_TOOLBAR_HEIGHT),
+      });
+      view.setVisible(page.visible);
+      continue;
+    }
+    round(page.id, view, 0);
     const region = currentLayout ? regions.find((entry) => entry.id === page.id) : undefined;
     if (region?.bounds.width > 0 && region.bounds.height > 0) {
       view.setBounds(region.bounds);
@@ -413,23 +494,138 @@ function layout() {
   }
 }
 
+// A peeked page has rounded corners inside its card; a tab page has none.
+function round(id, view, radius) {
+  if (roundedViews.has(id) === radius > 0) return;
+  view.setBorderRadius(radius);
+  if (radius) roundedViews.add(id);
+  else roundedViews.delete(id);
+}
+
+/** Loads the trusted interface, at a hash route for the small views and windows. */
+function loadInterface(contents, hash) {
+  const devUrl = process.env.ELECTRON_RENDERER_URL;
+  if (devUrl) void contents.loadURL(hash ? new URL(`#${hash}`, devUrl).href : devUrl);
+  else void contents.loadFile(path.join(__dirname, "../dist/index.html"), hash ? { hash } : {});
+}
+
+/** A transparent trusted view above the pages, never a website preload. */
+function createOverlayView(hash) {
+  const view = new WebContentsView({
+    webPreferences: {
+      preload: path.join(__dirname, "../dist/preload.cjs"),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  view.setBackgroundColor("#00000000");
+  view.webContents.on("will-navigate", (event) => event.preventDefault());
+  view.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  view.webContents.on("before-input-event", shortcutKey);
+  view.webContents.on("before-input-event", trackAlt);
+  loadInterface(view.webContents, hash);
+  return view;
+}
+
+function showPeekFrame() {
+  if (!peekView) {
+    peekView = createOverlayView("peek");
+    peekView.webContents.on("did-finish-load", publish);
+    peekView.webContents.on("render-process-gone", () => {
+      const gone = peekView;
+      peekView = null;
+      if (peekShown) window?.contentView.removeChildView(gone);
+      peekShown = false;
+      gone.webContents.close({ waitForBeforeUnload: false });
+      if (sessionState().peek) dispatch({ type: "close-float", kind: "peek" });
+    });
+  }
+  if (peekShown) return;
+  peekShown = true;
+  window.contentView.addChildView(peekView);
+  peekView.setVisible(true);
+}
+
+function openPeek(url) {
+  try {
+    dispatch({ type: "open-float", kind: "peek", url });
+  } catch {
+    // Settings or the archive are open; the link stays where it is.
+  }
+}
+
+function createQuickWindow() {
+  if (miniWindow) return;
+  const quick = new BrowserWindow({
+    width: 560,
+    height: 700,
+    minWidth: 380,
+    minHeight: 320,
+    title: "Quick window",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#121722" : "#f5f7fa",
+    titleBarStyle: process.platform === "darwin" ? "hiddenInset" : "default",
+    trafficLightPosition: { x: 16, y: 16 },
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: path.join(__dirname, "../dist/preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  miniWindow = quick;
+  quick.webContents.on("before-input-event", (event, input) =>
+    shortcutKey(event, input, quick.webContents),
+  );
+  quick.webContents.on("before-input-event", trackAlt);
+  quick.on("blur", () => (altHeld = false));
+  quick.webContents.on("will-navigate", (event) => event.preventDefault());
+  quick.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  quick.webContents.on("did-finish-load", publish);
+  quick.on("resize", layout);
+  // The page view must leave the window before the window goes away.
+  quick.on("close", () => {
+    if (miniWindow !== quick) return;
+    miniWindow = null;
+    const id = sessionState().mini?.id;
+    if (views.has(id)) detach(id, views.get(id));
+    dispatch({ type: "close-float", kind: "mini" });
+  });
+  loadInterface(quick.webContents, "mini");
+}
+
+function openQuickWindow(url = "") {
+  if (!window) createWindow();
+  dispatch({ type: "open-float", kind: "mini", url });
+  miniWindow.show();
+  miniWindow.focus();
+  if (url) views.get(sessionState().mini.id).webContents.focus();
+  else miniWindow.webContents.send(browserEvents.onFocusAddress);
+}
+
+function moveQuickWindowToTab() {
+  dispatch({ type: "expand-float", kind: "mini" });
+  window.show();
+  window.focus();
+  focusActive();
+}
+
+// Links from other apps open in the quick window.
+const linksIn = (argv) => argv.filter((value) => isWebUrl(value));
+const waitingLinks = [];
+function openLink(url) {
+  if (!isWebUrl(url)) return;
+  if (!app.isReady()) waitingLinks.push(url);
+  else openQuickWindow(url);
+}
+
 // The palette is a trusted local view above the page views, never a website preload.
 function openPalette(mode = "commands") {
   if (!window || !["navigate", "commands"].includes(mode)) return;
   dispatch({ type: "open-palette", mode });
   if (!paletteView) {
-    paletteView = new WebContentsView({
-      webPreferences: {
-        preload: path.join(__dirname, "../dist/preload.cjs"),
-        sandbox: true,
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
-    });
-    paletteView.setBackgroundColor("#00000000");
-    paletteView.webContents.on("will-navigate", (event) => event.preventDefault());
-    paletteView.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
-    paletteView.webContents.on("before-input-event", shortcutKey);
+    paletteView = createOverlayView("palette");
     paletteView.webContents.on("did-finish-load", () => {
       publish();
       if (sessionState().palette) paletteView.webContents.focus();
@@ -439,12 +635,6 @@ function openPalette(mode = "commands") {
       paletteView.webContents.close({ waitForBeforeUnload: false });
       paletteView = null;
     });
-    const devUrl = process.env.ELECTRON_RENDERER_URL;
-    if (devUrl) void paletteView.webContents.loadURL(new URL("#palette", devUrl).href);
-    else
-      void paletteView.webContents.loadFile(path.join(__dirname, "../dist/index.html"), {
-        hash: "palette",
-      });
   }
   window.contentView.addChildView(paletteView);
   paletteView.setVisible(true);
@@ -461,7 +651,7 @@ function closePalette(restoreFocus = true) {
 
 // Browser shortcuts run before the page sees the key, so websites cannot take them.
 // Page-priority shortcuts are left to the menu, which runs only for unhandled keys.
-function shortcutKey(event, input) {
+function shortcutKey(event, input, source) {
   if (input.type !== "keyDown" || shortcutRecording) return;
   const accelerator = acceleratorFromKey(
     {
@@ -477,7 +667,8 @@ function shortcutKey(event, input) {
   const id = accelerator && shortcuts.get(accelerator);
   if (!id || shortcutActions.find((action) => action.id === id).pagePriority) return;
   event.preventDefault();
-  runShortcut(id);
+  const quickPage = views.get(sessionState().mini?.id)?.webContents;
+  runShortcut(id, !!miniWindow && [miniWindow.webContents, quickPage].includes(source));
 }
 
 function runPaletteCommand(id) {
@@ -485,7 +676,44 @@ function runPaletteCommand(id) {
   if (command) commandHandlers[command.command](...command.args);
 }
 
-function runShortcut(id) {
+// Page actions in the quick window act on its page; other actions are for the main window.
+function runQuickShortcut(id) {
+  const page = sessionState().mini;
+  const contents = views.get(page?.id)?.webContents;
+  switch (id) {
+    case "closeTab":
+      dispatch({ type: "close-float", kind: "mini" });
+      return true;
+    case "newQuickWindow":
+    case "openAddress":
+      miniWindow.webContents.focus();
+      miniWindow.webContents.send(browserEvents.onFocusAddress);
+      return true;
+    case "reload":
+      if (page?.error) dispatch({ type: "open-float", kind: "mini", url: page.url });
+      else if (page?.url) contents.reload();
+      return true;
+    case "back":
+    case "forward": {
+      const navigation = contents?.navigationHistory;
+      if (id === "back" && navigation?.canGoBack()) navigation.goBack();
+      if (id === "forward" && navigation?.canGoForward()) navigation.goForward();
+      return true;
+    }
+    case "copyUrl":
+      if (page?.url) clipboard.writeText(page.url);
+      return true;
+    case "devTools":
+      (page?.url ? contents : miniWindow.webContents).toggleDevTools();
+      return true;
+  }
+  window?.focus();
+  return false;
+}
+
+function runShortcut(id, quick = false) {
+  if (quick && miniWindow && runQuickShortcut(id)) return;
+  if (id === "newQuickWindow") return openQuickWindow();
   if (id === "newTab") {
     if (!window) createWindow();
     else newTab();
@@ -568,7 +796,7 @@ function installMenu() {
     const accelerator = shortcutRecording ? null : normalizeAccelerator(keys[id], process.platform);
     return {
       label: id === "settings" ? "Settings…" : action.label,
-      click: () => runShortcut(id),
+      click: (_item, focused) => runShortcut(id, !!miniWindow && focused === miniWindow),
       ...(accelerator ? { accelerator } : {}),
     };
   };
@@ -579,6 +807,7 @@ function installMenu() {
         label: "File",
         submenu: [
           item("newTab"),
+          item("newQuickWindow"),
           item("closeTab"),
           item("reopenClosedTab"),
           { type: "separator" },
@@ -694,7 +923,25 @@ function createPageView(id, profile) {
     },
   });
   const contents = view.webContents;
-  const tab = () => sessionState().tabs.find((entry) => entry.id === id);
+  const tab = () => pageTabs(sessionState()).find((entry) => entry.id === id);
+  // The link under the pointer, so a click on it can open in a peek.
+  let hovered = "";
+  contents.on("update-target-url", (_event, url) => (hovered = url));
+  // Alt+click on a link peeks at it, except in the quick window.
+  contents.on("before-mouse-event", (event, mouse) => {
+    if (
+      mouse.type === "mouseDown" &&
+      mouse.button === "left" &&
+      altHeld &&
+      isWebUrl(hovered) &&
+      sessionState().mini?.id !== id
+    ) {
+      event.preventDefault();
+      openPeek(hovered);
+    }
+  });
+  // A pinned tab keeps its site: a link to another site opens in a peek.
+  const peeksLinks = (url) => tab()?.homeUrl && tab().zone !== "today" && url === hovered;
   // A sleeping or closed tab's page can still report events while it shuts down.
   const update = (patch) => {
     if (views.get(id) === view) dispatch({ type: "update-tab", id, patch });
@@ -761,7 +1008,16 @@ function createPageView(id, profile) {
       if (!isWebUrl(targetUrl)) event.preventDefault();
     });
   }
+  contents.on("will-navigate", (event, url) => {
+    if (!event.isMainFrame || !peeksLinks(url) || sameSite(url, contents.getURL())) return;
+    event.preventDefault();
+    openPeek(url);
+  });
   contents.setWindowOpenHandler(({ url }) => {
+    if (isWebUrl(url) && peeksLinks(url)) {
+      openPeek(url);
+      return { action: "deny" };
+    }
     const now = performance.now();
     if (isWebUrl(url) && canOpenPopup(lastPopupAt, now)) {
       lastPopupAt = now;
@@ -770,10 +1026,18 @@ function createPageView(id, profile) {
     }
     return { action: "deny" };
   });
-  contents.on("before-input-event", shortcutKey);
-  contents.on("input-event", (_event, input) => pagePointer(view, input));
-  contents.on("before-input-event", (_event, input) => {
-    if (input.type === "keyDown" && input.key === "Escape" && tab()?.loading) contents.stop();
+  contents.on("before-input-event", (event, input) => shortcutKey(event, input, contents));
+  contents.on("before-input-event", trackAlt);
+  contents.on("input-event", (_event, input) => {
+    if (sessionState().mini?.id !== id) pagePointer(view, input);
+  });
+  contents.on("before-input-event", (event, input) => {
+    if (input.type !== "keyDown" || input.key !== "Escape") return;
+    // Escape closes a peek, like a click outside it.
+    if (sessionState().peek?.id === id) {
+      event.preventDefault();
+      dispatch({ type: "close-float", kind: "peek" });
+    } else if (tab()?.loading) contents.stop();
   });
   return view;
 }
@@ -809,8 +1073,9 @@ function showSettings(open) {
 }
 
 function updateTheme() {
-  if (window && !window.isDestroyed())
-    window.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#121722" : "#f5f7fa");
+  for (const target of [window, miniWindow])
+    if (target && !target.isDestroyed())
+      target.setBackgroundColor(nativeTheme.shouldUseDarkColors ? "#121722" : "#f5f7fa");
   publish();
 }
 
@@ -1090,6 +1355,24 @@ function installIpc() {
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
     capturePages,
     setTabDragging: (dragging) => dispatch({ type: "set-tab-dragging", dragging }),
+    closePeek: () => dispatch({ type: "close-float", kind: "peek" }),
+    expandPeek: () => dispatch({ type: "expand-float", kind: "peek" }),
+    openQuickWindow: () => openQuickWindow(),
+    navigateQuickWindow: (input) => {
+      if (typeof input !== "string" || input.length > 16_384)
+        return { error: "Enter a valid address." };
+      try {
+        const url = resolveAddress(input, settings.searchEngine);
+        if (!url) return { error: "Enter an address or a search." };
+        dispatch({ type: "open-float", kind: "mini", url });
+        views.get(sessionState().mini.id).webContents.focus();
+        return {};
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    moveQuickWindowToTab,
+    closeQuickWindow: () => dispatch({ type: "close-float", kind: "mini" }),
     toggleSidebar,
     toggleCompactMode,
     setChromeRevealed,
@@ -1258,7 +1541,11 @@ function installIpc() {
           ? "chrome"
           : event.sender === paletteView?.webContents
             ? "palette"
-            : "remote";
+            : event.sender === peekView?.webContents
+              ? "peek"
+              : event.sender === miniWindow?.webContents
+                ? "mini"
+                : "remote";
       if (!canInvokeCommand(name, source, event.senderFrame === event.sender.mainFrame))
         throw new Error("Browser controls are only available to the app interface.");
       return handlers[name](...args);
@@ -1287,6 +1574,8 @@ function createWindow() {
     },
   });
   window.webContents.on("before-input-event", shortcutKey);
+  window.webContents.on("before-input-event", trackAlt);
+  window.on("blur", () => (altHeld = false));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.on("resize", layout);
@@ -1294,6 +1583,16 @@ function createWindow() {
     if (paletteView && !paletteView.webContents.isDestroyed())
       paletteView.webContents.close({ waitForBeforeUnload: false });
     paletteView = null;
+    if (peekView && !peekView.webContents.isDestroyed())
+      peekView.webContents.close({ waitForBeforeUnload: false });
+    peekView = null;
+    peekShown = false;
+    // The quick window shares the session of the main window, so it closes too.
+    const quick = miniWindow;
+    miniWindow = null;
+    quick?.destroy();
+    viewHosts.clear();
+    roundedViews.clear();
     const closingViews = [...views.values()];
     views.clear();
     window = null;
@@ -1308,9 +1607,7 @@ function createWindow() {
     updateWindowButtons();
     publish();
   });
-  const devUrl = process.env.ELECTRON_RENDERER_URL;
-  if (devUrl) void window.loadURL(devUrl);
-  else void window.loadFile(path.join(__dirname, "../dist/index.html"));
+  loadInterface(window.webContents);
   // Session restore: show the saved tab and split after the chrome loads, so the
   // browser controls come first. Without a saved tab, start with a new tab.
   const restoredId = sessionState().activeId;
@@ -1328,7 +1625,21 @@ protocol.registerSchemesAsPrivileged([
 app.setName("Browser");
 const profileDirectory = app.commandLine.getSwitchValue("user-data-dir");
 if (profileDirectory) app.setPath("userData", path.resolve(profileDirectory));
+// One app per profile: a second launch hands its links to the first and quits.
+const primaryInstance = app.requestSingleInstanceLock();
+if (!primaryInstance) app.quit();
+app.on("second-instance", (_event, argv) => {
+  const links = linksIn(argv.slice(1));
+  if (links.length) links.forEach(openLink);
+  else if (!window) createWindow();
+  else window.focus();
+});
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  openLink(url);
+});
 app.whenReady().then(() => {
+  if (!primaryInstance) return;
   settingsStore = createSettingsStore(path.join(app.getPath("userData"), "settings.json"));
   settings = settingsStore.get();
   tabStore = createTabStore(path.join(app.getPath("userData"), "tabs.json"));
@@ -1358,6 +1669,8 @@ app.whenReady().then(() => {
   installIpc();
   installMenu();
   createWindow();
+  for (const url of [...linksIn(process.argv.slice(1)), ...waitingLinks.splice(0)])
+    openQuickWindow(url);
   app.on("activate", () => {
     if (!BrowserWindow.getAllWindows().length) createWindow();
   });

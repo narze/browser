@@ -19,7 +19,11 @@ const canOpenPopup = (lastOpenedAt, now) => now - lastOpenedAt >= 750;
 /** The last two parts of a host name, without "www.": a cheap guess at the site. */
 function site(url) {
   try {
-    return new URL(url).hostname.replace(/^www\./, "").split(".").slice(-2).join(".");
+    return new URL(url).hostname
+      .replace(/^www\./, "")
+      .split(".")
+      .slice(-2)
+      .join(".");
   } catch {
     return null;
   }

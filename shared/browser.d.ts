@@ -134,6 +134,10 @@ export interface BrowserState {
   tabSlots: number[][];
   activeId: number;
   platform: string;
+  /** A link shown above the current page. It is not in the tab list until expanded. */
+  peek: BrowserTab | null;
+  /** The page of the quick window, a small separate window for fast lookups. */
+  mini: BrowserTab | null;
 }
 export interface PageSnapshot {
   id: number;
@@ -159,6 +163,15 @@ export interface BrowserApi {
   /** Still images of the shown pages, to stand in for them while a tab drag hides them. */
   capturePages(): Promise<PageSnapshot[]>;
   setTabDragging(dragging: boolean): Promise<void>;
+  closePeek(): Promise<void>;
+  /** Opens the peeked page as a tab, with its page as it is. */
+  expandPeek(): Promise<void>;
+  /** Opens the quick window, empty or with a web address. */
+  openQuickWindow(): Promise<void>;
+  navigateQuickWindow(input: string): Promise<{ error?: string }>;
+  /** Moves the quick window's page into the main window as a tab. */
+  moveQuickWindowToTab(): Promise<void>;
+  closeQuickWindow(): Promise<void>;
   toggleSidebar(): Promise<void>;
   toggleCompactMode(): Promise<void>;
   /** Compact mode: tells the window whether the hidden toolbar and tabs are showing. */

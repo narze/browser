@@ -2224,3 +2224,126 @@ span.folder-toggle {
 .media-button[aria-pressed="true"] {
   color: var(--accent);
 }
+
+/* Peek: the frame view draws a backdrop and a card; the page view sits in the card. */
+.peek-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(12 16 24 / 0.42);
+  animation: peek-fade 0.16s ease-out;
+}
+.peek-card {
+  position: fixed;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.3);
+}
+.peek-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 6px 0 14px;
+}
+.peek-globe {
+  display: flex;
+  color: var(--muted);
+}
+.peek-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.peek-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 600;
+}
+.peek-title small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.peek-error {
+  margin: 48px 24px;
+  color: var(--error);
+  font-size: 13px;
+  text-align: center;
+}
+@keyframes peek-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Quick window: a toolbar above its page. */
+.quick-toolbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--toolbar);
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+.quick-toolbar.mac {
+  padding-left: 80px;
+}
+.quick-toolbar .address-bar {
+  height: 30px;
+  -webkit-app-region: no-drag;
+}
+.quick-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 12px;
+  white-space: nowrap;
+  -webkit-app-region: no-drag;
+}
+.quick-open:hover:not(:disabled) {
+  background: var(--hover);
+}
+.quick-open:disabled {
+  opacity: 0.45;
+}
+.quick-body {
+  position: fixed;
+  inset: 44px 0 0;
+  display: grid;
+  place-items: center;
+}
+.quick-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 24px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+.quick-message strong {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+p.quick-message {
+  color: var(--error);
+}

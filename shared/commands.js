@@ -2,9 +2,13 @@
 import { settingsSchema } from "./settings.js";
 import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
 
-/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge' | 'onToast'>, { channel: string, palette: boolean }>} */
+/**
+ * `palette` commands are open to the command palette view. `views` names the other
+ * trusted views that can run a command: the peek frame and the quick window.
+ * @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge' | 'onToast'>, { channel: string, palette: boolean, views?: readonly ('peek' | 'mini')[] }>}
+ */
 export const browserCommands = {
-  getState: { channel: "browser:state", palette: true },
+  getState: { channel: "browser:state", palette: true, views: ["peek", "mini"] },
   openPalette: { channel: "browser:palette-open", palette: false },
   closePalette: { channel: "browser:palette-close", palette: true },
   executePalette: { channel: "browser:palette-execute", palette: true },
@@ -33,6 +37,12 @@ export const browserCommands = {
   setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
   capturePages: { channel: "browser:capture-pages", palette: false },
   setTabDragging: { channel: "browser:set-tab-dragging", palette: false },
+  closePeek: { channel: "browser:peek-close", palette: false, views: ["peek"] },
+  expandPeek: { channel: "browser:peek-expand", palette: false, views: ["peek"] },
+  openQuickWindow: { channel: "browser:quick-open", palette: false },
+  navigateQuickWindow: { channel: "browser:quick-navigate", palette: false, views: ["mini"] },
+  moveQuickWindowToTab: { channel: "browser:quick-to-tab", palette: false, views: ["mini"] },
+  closeQuickWindow: { channel: "browser:quick-close", palette: false, views: ["mini"] },
   toggleSidebar: { channel: "browser:toggle-sidebar", palette: false },
   toggleCompactMode: { channel: "browser:toggle-compact-mode", palette: false },
   setChromeRevealed: { channel: "browser:chrome-revealed", palette: false },
@@ -80,10 +90,12 @@ export const browserEvents = {
 /** @param {string} name @param {string} source @param {boolean} mainFrame */
 export function canInvokeCommand(name, source, mainFrame) {
   if (!mainFrame || !Object.hasOwn(browserCommands, name)) return false;
+  /** @type {{ palette: boolean, views?: readonly string[] }} */
+  const command = browserCommands[/** @type {keyof typeof browserCommands} */ (name)];
   return (
     source === "chrome" ||
-    (source === "palette" &&
-      browserCommands[/** @type {keyof typeof browserCommands} */ (name)].palette)
+    (source === "palette" && command.palette) ||
+    !!command.views?.includes(source)
   );
 }
 
@@ -341,6 +353,15 @@ export function paletteCommands(state) {
         args: [active.id, space.id],
       });
   }
+  commands.push({
+    id: "quick-window",
+    title: "New quick window",
+    detail: "Look something up in a small window",
+    icon: "quick",
+    hint: shortcut("newQuickWindow"),
+    command: "openQuickWindow",
+    args: [],
+  });
   commands.push({
     id: "compact-mode",
     title: state.settings.compactMode ? "Turn off compact mode" : "Turn on compact mode",
