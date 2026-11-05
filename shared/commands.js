@@ -265,6 +265,17 @@ export function paletteCommands(state) {
       command: "createFolder",
       args: [],
     },
+    ...state.folders
+      .filter((folder) => folder.id === active?.folderId)
+      .map((folder) => ({
+        id: "new-subfolder",
+        title: `New folder inside ${folder.name}`,
+        detail: "Nest a folder in the current tab's folder",
+        icon: "folder",
+        hint: "",
+        command: /** @type {const} */ ("createFolder"),
+        args: [undefined, undefined, folder.id],
+      })),
     {
       id: "new-space",
       title: "New space",

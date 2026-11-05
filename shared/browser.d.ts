@@ -51,6 +51,8 @@ export interface TabFolder {
   name: string;
   collapsed: boolean;
   spaceId: number;
+  /** The folder this folder is in, or null at the top level. Always in the same space. */
+  parentId: number | null;
 }
 export interface ArchiveEntry {
   id: number;
@@ -62,6 +64,7 @@ export interface ArchiveEntry {
 }
 export interface TabSections {
   favorites: number[][];
+  /** Every folder of the space, depth first, with the tabs directly in it. */
   folders: { id: number; slots: number[][] }[];
   pinned: number[][];
   today: number[][];
@@ -108,7 +111,7 @@ export interface BrowserState {
   settingsOpen: boolean;
   archiveOpen: boolean;
   archive: ArchiveEntry[];
-  /** The folders of the active space. */
+  /** The folders of the active space, depth first. */
   folders: TabFolder[];
   /** The sections and slots of the active space. */
   sections: TabSections;
@@ -172,11 +175,12 @@ export interface BrowserApi {
   resetTab(id: number): Promise<void>;
   sleepTab(id: number): Promise<{ error?: string }>;
   showTabMenu(id: number): Promise<void>;
-  createFolder(name?: string, tabId?: number): Promise<void>;
+  createFolder(name?: string, tabId?: number, parentId?: number): Promise<void>;
   renameFolder(id: number, name: string): Promise<void>;
   toggleFolder(id: number): Promise<void>;
   deleteFolder(id: number): Promise<void>;
-  moveFolder(id: number, index: number): Promise<void>;
+  /** Makes a folder child `index` of `parentId` (null: the top level). */
+  moveFolder(id: number, index: number, parentId: number | null): Promise<void>;
   showFolderMenu(id: number): Promise<void>;
   openArchive(): Promise<void>;
   closeArchive(): Promise<void>;

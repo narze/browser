@@ -23,10 +23,11 @@ const { isWebUrl } = require("./policy.cjs");
  * | { type: 'open-palette', mode: 'navigate' | 'commands' }
  * | { type: 'move-tab', id: number, zone: TabZone, folderId?: number | null, index: number }
  * | { type: 'rename-tab', id: number, title: string }
- * | { type: 'create-folder', name?: string, tabId?: number }
+ * | { type: 'create-folder', name?: string, tabId?: number, parentId?: number | null }
  * | { type: 'rename-folder', id: number, name: string }
  * | { type: 'toggle-folder' | 'delete-folder' | 'restore-archived' | 'remove-archived', id: number }
- * | { type: 'move-folder', id: number, index: number }
+ * | { type: 'move-folder', id: number, index: number, parentId?: number | null }
+ * | { type: 'move-folder-to-space', id: number, spaceId: number }
  * | { type: 'tick', archiveAfter: number | null, sleepAfter: number | null, keepAwake: number[] }
  * | { type: 'create-space' }
  * | { type: 'switch-space' | 'delete-space' | 'remove-route', id: number }
@@ -181,8 +182,16 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
           name,
           collapsed: folder.collapsed === true,
           spaceId: spaceOf(folder),
+          parentId: folder.parentId ?? null,
         });
       }
+    // Version 2 folders have no parent. A missing parent, a parent in another space,
+    // or a cycle puts the folder at the top level.
+    for (const folder of folders) {
+      const parent = folders.find((entry) => entry.id === folderIds.get(folder.parentId));
+      folder.parentId = parent && parent.spaceId === folder.spaceId ? parent.id : null;
+    }
+    for (const folder of folders) if (isInside(folder.parentId, folder.id)) folder.parentId = null;
     if (Array.isArray(record.tabs))
       for (const saved of record.tabs) {
         if (!saved || !["favorites", "pinned"].includes(saved.zone) || !isWebUrl(saved.homeUrl))
@@ -229,7 +238,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
 
   function exportOrganization() {
     return structuredClone({
-      version: 2,
+      version: 3,
       activeSpaceId,
       spaces,
       folders,
@@ -278,7 +287,45 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   }
   const shownIds = () => (split ? [...split.tabIds] : activeId ? [activeId] : []);
   const spaceTabs = (spaceId = activeSpaceId) => tabs.filter((tab) => tab.spaceId === spaceId);
-  const spaceFolders = () => folders.filter((folder) => folder.spaceId === activeSpaceId);
+  /** @param {number | null} parentId @param {number} spaceId */
+  const childFolders = (parentId, spaceId) =>
+    folders.filter((folder) => folder.parentId === parentId && folder.spaceId === spaceId);
+  /**
+   * A folder and all folders inside it, depth first.
+   * @param {import('../shared/browser').TabFolder} folder
+   * @returns {import('../shared/browser').TabFolder[]}
+   */
+  const subtree = (folder) => [
+    folder,
+    ...childFolders(folder.id, folder.spaceId).flatMap((child) => subtree(child)),
+  ];
+  /** The folders of the active space, depth first, in sidebar order. */
+  const spaceFolders = () => childFolders(null, activeSpaceId).flatMap((folder) => subtree(folder));
+  /** True when folder `id` is `ancestorId` or is inside it. @param {number | null} id @param {number} ancestorId */
+  function isInside(id, ancestorId) {
+    const seen = new Set();
+    while (id !== null && !seen.has(id)) {
+      if (id === ancestorId) return true;
+      seen.add(id);
+      id = folders.find((folder) => folder.id === id)?.parentId ?? null;
+    }
+    return false;
+  }
+  /**
+   * Puts a folder in `folders` so that it is child `index` of its parent.
+   * @param {import('../shared/browser').TabFolder} folder @param {number} index
+   */
+  function placeFolder(folder, index) {
+    folders.splice(folders.indexOf(folder), 1);
+    const siblings = childFolders(folder.parentId, folder.spaceId);
+    const anchor = siblings[index];
+    const insertAt = anchor
+      ? folders.indexOf(anchor)
+      : siblings.length
+        ? folders.indexOf(siblings[siblings.length - 1]) + 1
+        : folders.length;
+    folders.splice(insertAt, 0, folder);
+  }
 
   /** Equal track sizes for the panes. A grid has two columns and two rows. */
   function arrangeSplit(/** @type {number[]} */ tabIds, /** @type {SplitLayout} */ layout) {
@@ -315,13 +362,16 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   }
 
   function getSections() {
-    // Visual order: favorites, each folder, loose pinned tabs, then today.
+    // Visual order: favorites, each folder (its subfolders, then its tabs),
+    // loose pinned tabs, then today.
+    /** @param {import('../shared/browser').TabFolder} folder @returns {{ key: number, ids: number[] }[]} */
+    const folderGroups = (folder) => [
+      ...childFolders(folder.id, folder.spaceId).flatMap(folderGroups),
+      { key: folder.id, ids: container("pinned", folder.id).map((tab) => tab.id) },
+    ];
     const groups = [
       { key: "favorites", ids: container("favorites").map((tab) => tab.id) },
-      ...spaceFolders().map((folder) => ({
-        key: folder.id,
-        ids: container("pinned", folder.id).map((tab) => tab.id),
-      })),
+      ...childFolders(null, activeSpaceId).flatMap(folderGroups),
       { key: "pinned", ids: container("pinned").map((tab) => tab.id) },
       { key: "today", ids: container("today").map((tab) => tab.id) },
     ];
@@ -346,12 +396,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       pinned: slots.get("pinned"),
       today: slots.get("today"),
     };
-    const tabSlots = [
-      ...sections.favorites,
-      ...sections.folders.flatMap((folder) => folder.slots),
-      ...sections.pinned,
-      ...sections.today,
-    ];
+    const tabSlots = groups.flatMap((group) => /** @type {number[][]} */ (slots.get(group.key)));
     return { sections, tabSlots };
   }
 
@@ -426,23 +471,29 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   }
 
   /**
-   * Takes a tab out of the active space's view and shows another tab of that space.
-   * @param {number} id @param {() => void} change removes or moves the tab
+   * Takes tabs out of the active space's view and shows another tab of that space.
+   * @param {number[]} ids @param {() => void} change removes or moves the tabs
    */
-  function leave(id, change) {
+  function leave(ids, change) {
     const order = getSections().tabSlots.flat();
+    const leaving = (/** @type {number} */ id) => ids.includes(id);
     let replacement;
-    if (split?.tabIds.includes(id)) {
-      const neighbor = leaveSplit(id);
-      if (activeId === id) replacement = neighbor;
-      else replacement = activeId;
+    if (split?.tabIds.some(leaving)) {
+      const index = Math.max(0, split.tabIds.indexOf(activeId));
+      const rest = split.tabIds.filter((id) => !leaving(id));
+      replacement = leaving(activeId) ? rest[Math.min(index, rest.length - 1)] : activeId;
+      if (rest.length > 1) arrangeSplit(rest, split.layout);
+      else {
+        split = null;
+        splitResizing = false;
+      }
     }
     change();
-    if (activeId === id && replacement === undefined) {
-      const position = order.indexOf(id);
+    if (leaving(activeId) && replacement === undefined) {
+      const position = order.indexOf(activeId);
       const candidates = [...order.slice(position + 1), ...order.slice(0, position).reverse()];
       replacement =
-        candidates.find((entry) => findTab(entry) && !findTab(entry)?.asleep) ??
+        candidates.find((entry) => !leaving(entry) && findTab(entry) && !findTab(entry)?.asleep) ??
         container("today")[0]?.id ??
         createTab();
     }
@@ -453,7 +504,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   function closeTab(id) {
     const tab = findTab(id);
     if (!tab) return;
-    leave(id, () => {
+    leave([id], () => {
       if (tab.zone === "today") {
         archiveTab(tab, "closed");
         tabs.splice(tabs.indexOf(tab), 1);
@@ -759,14 +810,21 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         break;
       }
       case "create-folder": {
+        const parent = command.parentId == null ? null : requireFolder(command.parentId);
+        if (parent && parent.spaceId !== activeSpaceId)
+          throw new Error("That folder no longer exists.");
+        if (command.tabId !== undefined) requireTab(command.tabId);
         const folder = {
           id: nextFolderId++,
           name: cleanName(command.name) || "New folder",
           collapsed: false,
           spaceId: activeSpaceId,
+          parentId: parent?.id ?? null,
         };
-        if (command.tabId !== undefined) requireTab(command.tabId);
         folders.push(folder);
+        // Open the parents, so the new folder shows for its name.
+        for (let id = folder.parentId; id !== null; id = requireFolder(id).parentId)
+          requireFolder(id).collapsed = false;
         if (command.tabId !== undefined)
           run({
             type: "move-tab",
@@ -789,23 +847,48 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         break;
       }
       case "delete-folder": {
-        requireFolder(command.id);
-        folders = folders.filter((folder) => folder.id !== command.id);
-        for (const tab of tabs) if (tab.folderId === command.id) tab.folderId = null;
+        // Subfolders and tabs move up one level, to the deleted folder's place.
+        const folder = requireFolder(command.id);
+        const children = childFolders(folder.id, folder.spaceId);
+        folders = folders.filter((entry) => !children.includes(entry));
+        folders.splice(folders.indexOf(folder), 1, ...children);
+        for (const child of children) child.parentId = folder.parentId;
+        for (const tab of tabs) if (tab.folderId === folder.id) tab.folderId = folder.parentId;
         break;
       }
       case "move-folder": {
         const folder = requireFolder(command.id);
         if (!isIndex(command.index)) throw new Error("Invalid folder position.");
-        folders.splice(folders.indexOf(folder), 1);
-        const siblings = folders.filter((entry) => entry.spaceId === folder.spaceId);
-        const anchor = siblings[command.index];
-        const insertAt = anchor
-          ? folders.indexOf(anchor)
-          : siblings.length
-            ? folders.indexOf(siblings[siblings.length - 1]) + 1
-            : folders.length;
-        folders.splice(insertAt, 0, folder);
+        const parentId = command.parentId === undefined ? folder.parentId : command.parentId;
+        if (parentId !== null) {
+          const parent = requireFolder(parentId);
+          if (parent.spaceId !== folder.spaceId) throw new Error("That folder no longer exists.");
+          if (isInside(parent.id, folder.id)) throw new Error("A folder cannot move into itself.");
+        }
+        folder.parentId = parentId;
+        placeFolder(folder, command.index);
+        break;
+      }
+      case "move-folder-to-space": {
+        const folder = requireFolder(command.id);
+        const space = requireSpace(command.spaceId);
+        if (folder.spaceId === space.id) break;
+        const moved = subtree(folder);
+        const ids = moved.map((entry) => entry.id);
+        const movedTabs = tabs.filter((tab) => tab.folderId !== null && ids.includes(tab.folderId));
+        const move = () => {
+          // The subtree goes to the end of the other space's top level.
+          folders = [...folders.filter((entry) => !moved.includes(entry)), ...moved];
+          folder.parentId = null;
+          for (const entry of moved) entry.spaceId = space.id;
+          for (const tab of movedTabs) tab.spaceId = space.id;
+        };
+        if (folder.spaceId === activeSpaceId)
+          leave(
+            movedTabs.map((tab) => tab.id),
+            move,
+          );
+        else move();
         break;
       }
       case "restore-archived": {
@@ -910,7 +993,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
           tab.spaceId = space.id;
           tab.folderId = null;
         };
-        if (tab.spaceId === activeSpaceId) leave(tab.id, move);
+        if (tab.spaceId === activeSpaceId) leave([tab.id], move);
         else move();
         break;
       }

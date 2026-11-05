@@ -139,6 +139,21 @@ describe("browser command contract", () => {
       args: [1],
     });
   });
+  it("offers a new folder inside the current tab's folder", () => {
+    expect(paletteCommands(state).some((command) => command.id === "new-subfolder")).toBe(false);
+    const inFolder = { ...state.tabs[0], url: "https://example.com/", zone: "pinned" as const };
+    const nested = paletteCommands({
+      ...state,
+      tabs: [{ ...inFolder, folderId: 3 }],
+      folders: [{ id: 3, name: "Archives", collapsed: false, spaceId: 1, parentId: null }],
+    });
+    expect(nested.find((command) => command.id === "new-subfolder")).toMatchObject({
+      title: "New folder inside Archives",
+      icon: "folder",
+      command: "createFolder",
+      args: [undefined, undefined, 3],
+    });
+  });
   it("offers space commands", () => {
     const work = {
       id: 2,

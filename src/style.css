@@ -33,6 +33,8 @@
   --divider-hover: #a9bfe5;
   --shadow: #283e6310;
   --focus-shadow: #5373a81c;
+  --folder-open: #3d9a5c;
+  --folder-open-row: #ffffff8c;
 }
 
 :root[data-theme="dark"] {
@@ -70,6 +72,8 @@
   --divider-hover: #47618b;
   --shadow: #00000026;
   --focus-shadow: #759cdb20;
+  --folder-open: #7cc995;
+  --folder-open-row: #ffffff0d;
 }
 
 :root {
@@ -1452,13 +1456,17 @@ input::placeholder {
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--text);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 2px;
 }
 .vertical .folder-toggle {
   flex: 1;
+  height: 38px;
+  gap: var(--row-gap);
+  padding: 0 9px 0 calc(var(--row-start) + var(--depth, 0) * var(--indent));
+  font-size: 13px;
   margin-bottom: 0;
 }
 span.folder-toggle {
@@ -1467,13 +1475,23 @@ span.folder-toggle {
 .folder-toggle:hover {
   background: var(--hover);
 }
-.folder-chevron {
+.folder-icon {
   display: flex;
-  color: var(--muted);
-  transition: transform 120ms ease;
+  flex-shrink: 0;
+  color: var(--text-secondary);
 }
-.folder-toggle[aria-expanded="true"] .folder-chevron {
-  transform: rotate(90deg);
+.vertical .folder-icon {
+  width: var(--icon-slot);
+}
+.tab-folder:not(.collapsed) > .folder-header .folder-icon {
+  color: var(--folder-open);
+}
+/* An open folder's row is softly highlighted, like Arc. */
+.vertical .tab-folder:not(.collapsed) > .folder-header .folder-toggle {
+  background: var(--folder-open-row);
+}
+.vertical .tab-folder:not(.collapsed) > .folder-header .folder-toggle:hover {
+  background: var(--hover);
 }
 .folder-name {
   overflow: hidden;
@@ -1496,9 +1514,35 @@ span.folder-toggle {
 .vertical .folder-tabs {
   flex-direction: column;
   align-items: stretch;
-  padding-left: 14px;
-  margin-left: 12px;
-  border-left: 1px solid var(--border);
+  gap: 4px;
+}
+/* Nested rows use the full sidebar width; their content moves in one step per level,
+   so a child's icon lines up under its parent's name. */
+.vertical .tabs {
+  --row-start: 12px;
+  --icon-slot: 20px;
+  --row-gap: 12px;
+  --indent: calc(var(--icon-slot) + var(--row-gap));
+}
+/* Split segments and favorite tiles keep their own compact layout. */
+.vertical :is(.pinned, .today) .tab-entry:not(.split-tab-group) > .tab > .tab-select {
+  gap: var(--row-gap);
+  padding-left: calc(var(--row-start) + var(--depth, 0) * var(--indent));
+}
+/* Icons start at the left edge of their slot, so a child's icon starts where its
+   parent's name starts. Line icons have 2px of empty space at their left side. */
+.vertical :is(.pinned, .today) .tab-entry:not(.split-tab-group) .favicon {
+  margin-right: calc(var(--icon-slot) - 16px);
+}
+.vertical :is(.pinned, .today) .tab-entry:not(.split-tab-group) .spinner {
+  margin-right: calc(var(--icon-slot) - 13px);
+}
+.vertical :is(.pinned, .today) .tab-entry:not(.split-tab-group) .tab-icon {
+  width: var(--icon-slot);
+}
+.vertical :is(.pinned, .today) .tab-entry:not(.split-tab-group) .tab-icon svg,
+.vertical .folder-icon svg {
+  margin-left: -2px;
 }
 .section-divider {
   flex-shrink: 0;
@@ -1536,7 +1580,7 @@ span.folder-toggle {
   border-color: var(--border);
 }
 .vertical .folder-empty {
-  margin-left: 26px;
+  margin-left: calc((var(--depth, 0) + 1) * var(--indent));
 }
 .tabs:not(.drag-active) .folder-empty {
   display: none;

@@ -12,7 +12,7 @@
 | Tab layout      | The placement of the tab strip or rail: top, left, or right.                                                  |
 | Favorites       | Tabs shown as an icon grid at the top of the tab list. They persist and reset to their home page when closed. |
 | Pinned tab      | A saved tab with a home page. Closing it puts it to sleep and returns it to its home page.                    |
-| Folder          | A named, collapsible group of pinned tabs.                                                                    |
+| Folder          | A named, collapsible group of pinned tabs and other folders. A folder and everything in it share one space.   |
 | Today           | Ordinary tabs below the pinned tabs. They do not persist and move to the archive when unused.                 |
 | Archive         | A list of closed or expired Today tabs that a user can filter, restore, or remove.                            |
 | Sleeping tab    | A tab whose page view is unloaded to free memory. It reloads, with its history, when selected.                |
