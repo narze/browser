@@ -169,7 +169,12 @@ describe("auto-archive (A4)", () => {
     expect(archive.map((entry) => entry.url)).toEqual(["https://b.test/", "https://a.test/"]);
     expect(archive[0]).toMatchObject({ reason: "closed", title: "b.test" });
     const restored = session.dispatch({ type: "restore-archived", id: archive[1].id });
-    expect(restored.effects).toContainEqual({ type: "load", id: 5, url: "https://a.test/" });
+    expect(restored.effects).toContainEqual({
+      type: "restore",
+      id: 5,
+      url: "https://a.test/",
+      archiveId: archive[1].id,
+    });
     expect(session.getState()).toMatchObject({ activeId: 5, archiveOpen: false });
     expect(session.getState().archive).toHaveLength(1);
     session.dispatch({ type: "remove-archived", id: archive[0].id });
@@ -302,7 +307,8 @@ describe("saved organization", () => {
     ]);
     expect(state.sections.folders).toEqual([{ id: 1, slots: [[2]] }]);
     expect(state.archive.map((entry) => entry.url)).toEqual(["https://d.test/"]);
-    expect(state.activeId).toBe(0);
+    // The tab that was active when the browser closed is active again.
+    expect(state.activeId).toBe(3);
   });
 
   it("ignores damaged saved data", () => {

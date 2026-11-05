@@ -36,14 +36,20 @@ const {
   paletteCommands,
 } = require("../shared/commands.js");
 
-// Prototype: today tabs are in memory; spaces, favorites, pinned tabs, folders,
-// routes, and the archive persist in tabs.json. Remote pages never receive the
+// Prototype: tabs, splits, spaces, folders, routes, and the archive persist in
+// tabs.json and return asleep after a restart. Remote pages never receive the
 // chrome preload. Each space browses in its own session partition.
 let settingsStore;
 let tabStore;
 let faviconDirectory;
 // Sleeping tabs keep their back/forward list here, outside the session state.
 const sleepingHistory = new Map();
+// The back/forward list of each archive entry from this app session, for reopening.
+const archivedHistory = new Map();
+// Media playback of each page view, "playing" or "paused", in the order it started.
+const mediaPlayback = new Map();
+// Tabs whose video moved to picture in picture when the user left them.
+const pictureInPicture = new Set();
 let clockOffset = 0;
 const now = () => Date.now() + clockOffset;
 const newSession = () => createBrowserSession({ now, saved: tabStore?.get() });
@@ -65,6 +71,7 @@ let chromeRevealed = false;
 let pointerAtEdge = false;
 
 const sessionState = () => browserSession.getState();
+const shownTabs = (state) => (state.split ? state.split.tabIds : [state.activeId]);
 const activeTab = () => sessionState().tabs.find((tab) => tab.id === sessionState().activeId);
 const activeView = () => views.get(sessionState().activeId);
 
@@ -73,6 +80,7 @@ function getState() {
   return {
     ...state,
     resolvedTheme: nativeTheme.shouldUseDarkColors ? "dark" : "light",
+    media: mediaState(),
     tabLayout: settings.tabLayout,
     settings,
     platform: process.platform,
@@ -82,6 +90,23 @@ function getState() {
       canGoForward: !!views.get(tab.id)?.webContents.navigationHistory.canGoForward(),
     })),
   };
+}
+
+// Tabs with media, sound, or a mute, newest playback first.
+function mediaState() {
+  const started = [...mediaPlayback.keys()].reverse();
+  const ids = [...started, ...[...views.keys()].filter((id) => !mediaPlayback.has(id))];
+  return ids.flatMap((tabId) => {
+    const contents = views.get(tabId)?.webContents;
+    if (!contents || contents.isDestroyed()) return [];
+    const entry = {
+      tabId,
+      playback: mediaPlayback.get(tabId) ?? null,
+      audible: contents.isCurrentlyAudible(),
+      muted: contents.isAudioMuted(),
+    };
+    return entry.playback || entry.audible || entry.muted ? [entry] : [];
+  });
 }
 
 const partition = (profile) => `persist:${profile}`;
@@ -100,6 +125,7 @@ const profileOf = (state, tab) => state.spaces.find((space) => space.id === tab.
 
 // Session transitions are pure; this adapter owns all native view side effects.
 function dispatch(command) {
+  const shownBefore = shownTabs(sessionState());
   const result = browserSession.dispatch(command);
   // A tab moved to a space with another profile gets a new view in that profile.
   const moved = [];
@@ -108,6 +134,7 @@ function dispatch(command) {
     if (!tab || tab.asleep || viewProfiles.get(id) === profileOf(result.state, tab)) continue;
     views.delete(id);
     viewProfiles.delete(id);
+    mediaPlayback.delete(id);
     window.contentView.removeChildView(view);
     view.webContents.close({ waitForBeforeUnload: false });
     if (tab.url) moved.push(tab);
@@ -121,6 +148,8 @@ function dispatch(command) {
       window.contentView.addChildView(view);
     }
   }
+  // The history of tabs that close, for archive effects below.
+  const closedHistory = new Map();
   for (const [id, view] of views) {
     const tab = result.state.tabs.find((entry) => entry.id === id);
     if (tab && !tab.asleep) continue;
@@ -128,26 +157,41 @@ function dispatch(command) {
     viewProfiles.delete(id);
     window.contentView.removeChildView(view);
     const navigation = view.webContents.navigationHistory;
-    if (tab)
-      sleepingHistory.set(id, {
-        entries: navigation.getAllEntries(),
-        index: navigation.getActiveIndex(),
-      });
+    (tab ? sleepingHistory : closedHistory).set(id, {
+      entries: navigation.getAllEntries(),
+      index: navigation.getActiveIndex(),
+    });
     view.webContents.close({ waitForBeforeUnload: false });
   }
-  for (const id of sleepingHistory.keys())
-    if (!result.state.tabs.some((tab) => tab.id === id)) sleepingHistory.delete(id);
-  try {
-    tabStore.save(browserSession.exportOrganization());
-  } catch (error) {
-    console.error("Could not save tabs:", error);
-  }
+  for (const id of mediaPlayback.keys()) if (!views.has(id)) mediaPlayback.delete(id);
+  for (const id of pictureInPicture) if (!views.has(id)) pictureInPicture.delete(id);
+  for (const [id, saved] of sleepingHistory)
+    if (!result.state.tabs.some((tab) => tab.id === id)) {
+      sleepingHistory.delete(id);
+      closedHistory.set(id, saved);
+    }
+  const reopenedHistory = new Map();
+  for (const effect of result.effects)
+    if (effect.type === "archive" && closedHistory.has(effect.id))
+      archivedHistory.set(effect.archiveId, closedHistory.get(effect.id));
+    else if (effect.type === "restore")
+      reopenedHistory.set(effect.id, archivedHistory.get(effect.archiveId));
+  for (const id of archivedHistory.keys())
+    if (!result.state.archive.some((entry) => entry.id === id)) archivedHistory.delete(id);
+  // A divider drag saves once, when it ends.
+  if (!result.state.splitResizing)
+    try {
+      tabStore.save(browserSession.exportOrganization());
+    } catch (error) {
+      console.error("Could not save tabs:", error);
+    }
   if (!result.state.palette && paletteView?.getVisible()) {
     paletteView.setVisible(false);
     window.contentView.removeChildView(paletteView);
   }
   layout();
   publish();
+  followMedia(shownBefore, shownTabs(result.state));
   for (const tab of moved)
     void views
       .get(tab.id)
@@ -159,7 +203,11 @@ function dispatch(command) {
       if (!effect.url) contents.stop();
       // did-fail-load owns visible errors, including redirects.
       void contents.loadURL(effect.url || "about:blank").catch(() => {});
-    } else if (effect.type === "wake") wake(effect.id, effect.url);
+    } else if (effect.type === "wake") {
+      wake(effect.id, effect.url, sleepingHistory.get(effect.id));
+      sleepingHistory.delete(effect.id);
+    } else if (effect.type === "restore")
+      wake(effect.id, effect.url, reopenedHistory.get(effect.id));
     else if (effect.type === "edit") edit(effect);
     else if (effect.type === "clear-profile") clearProfile(effect.profile);
     else if (effect.type === "focus") focusActive();
@@ -167,15 +215,95 @@ function dispatch(command) {
   return result;
 }
 
-// Restore the back/forward list when the tab still shows the page it slept on.
-function wake(id, url) {
+// Restore the back/forward list when the tab still shows the page it slept or closed on.
+function wake(id, url, saved) {
   const contents = views.get(id)?.webContents;
   if (!contents) return;
-  const saved = sleepingHistory.get(id);
-  sleepingHistory.delete(id);
   if (saved?.entries[saved.index]?.url === url)
     void contents.navigationHistory.restore(saved).catch(() => contents.loadURL(url));
   else void contents.loadURL(url || "about:blank").catch(() => {});
+}
+
+// Page scripts for media controls. They run in every frame, as if the user acted.
+const PAUSED_MEDIA = 'Symbol.for("browser.pausedMedia")';
+const PAUSE_MEDIA = `(() => {
+  const paused = (window[${PAUSED_MEDIA}] = new Set());
+  for (const media of document.querySelectorAll("video, audio"))
+    if (!media.paused) paused.add(media), media.pause();
+  return paused.size > 0;
+})()`;
+const PLAY_MEDIA = `(() => {
+  const paused = window[${PAUSED_MEDIA}];
+  const media = paused?.size
+    ? [...paused]
+    : [...document.querySelectorAll("video, audio")].filter((m) => m.currentTime > 0 && !m.ended);
+  for (const item of media) item.play().catch(() => {});
+  paused?.clear();
+  return media.length > 0;
+})()`;
+const ENTER_PICTURE_IN_PICTURE = `(async () => {
+  if (document.pictureInPictureElement) return true;
+  const video = [...document.querySelectorAll("video")].find(
+    (v) => !v.paused && !v.ended && v.readyState >= 2 && !v.disablePictureInPicture,
+  );
+  if (!video || !document.pictureInPictureEnabled) return false;
+  return video.requestPictureInPicture().then(() => true, () => false);
+})()`;
+const EXIT_PICTURE_IN_PICTURE = `document.pictureInPictureElement
+  ? document.exitPictureInPicture().then(() => true, () => false)
+  : false`;
+
+/** Runs a script in each frame of a page; with `first`, stops at the first true result. */
+async function runInFrames(contents, code, first = false) {
+  if (contents.isDestroyed()) return false;
+  let result = false;
+  for (const frame of contents.mainFrame.framesInSubtree) {
+    try {
+      result = (await frame.executeJavaScript(code, true)) === true || result;
+    } catch {
+      // A frame can navigate or close while the script runs.
+    }
+    if (result && first) break;
+  }
+  return result;
+}
+
+// Auto picture in picture: a playing video keeps showing after the user leaves its
+// tab, and goes back into the page when the user returns.
+function followMedia(before, after) {
+  for (const id of before)
+    if (
+      !after.includes(id) &&
+      settings.autoPictureInPicture &&
+      mediaPlayback.get(id) === "playing" &&
+      views.has(id)
+    )
+      void runInFrames(views.get(id).webContents, ENTER_PICTURE_IN_PICTURE, true).then(
+        (entered) => entered && views.has(id) && pictureInPicture.add(id),
+      );
+  for (const id of after)
+    if (!before.includes(id) && pictureInPicture.delete(id) && views.has(id))
+      void runInFrames(views.get(id).webContents, EXIT_PICTURE_IN_PICTURE);
+}
+
+function toggleMute(id) {
+  const contents = views.get(id)?.webContents;
+  if (!contents) return;
+  contents.setAudioMuted(!contents.isAudioMuted());
+  publish();
+}
+
+function toggleMediaPlayback(id) {
+  const contents = views.get(id)?.webContents;
+  if (!contents) return;
+  void runInFrames(contents, mediaPlayback.get(id) === "playing" ? PAUSE_MEDIA : PLAY_MEDIA);
+}
+
+function copyUrl() {
+  const url = activeTab()?.url;
+  if (!url || !window || window.isDestroyed()) return;
+  clipboard.writeText(url);
+  window.webContents.send(browserEvents.onToast, "Copied");
 }
 
 // A deleted space takes its cookies, logins, and cache with it.
@@ -389,8 +517,7 @@ function runShortcut(id) {
     case "forward":
       return history(id);
     case "copyUrl":
-      if (activeTab()?.url) clipboard.writeText(activeTab().url);
-      break;
+      return copyUrl();
     case "nextTab":
     case "nextTabAlternate":
       return cycleTab(1);
@@ -595,7 +722,25 @@ function createPageView(id, profile) {
   const navigated = (_event, url) => {
     if (isWebUrl(url)) update({ url, error: null });
   };
+  // A new document starts without media; same-document navigations keep it.
+  contents.on("did-navigate", () => {
+    if (views.get(id) === view) mediaPlayback.delete(id);
+  });
   contents.on("did-navigate", navigated);
+  contents.on("media-started-playing", () => {
+    if (views.get(id) !== view) return;
+    mediaPlayback.delete(id);
+    mediaPlayback.set(id, "playing");
+    publish();
+  });
+  contents.on("media-paused", () => {
+    if (views.get(id) !== view || !mediaPlayback.has(id)) return;
+    mediaPlayback.set(id, "paused");
+    publish();
+  });
+  contents.on("audio-state-changed", () => {
+    if (views.get(id) === view) publish();
+  });
   contents.on("page-favicon-updated", async (_event, favicons) => {
     const source = favicons.find((url) => isWebUrl(url) || url.startsWith("data:image/"));
     const name = source ? await cacheFavicon(source, profile) : null;
@@ -850,7 +995,8 @@ function tick() {
     type: "tick",
     archiveAfter: durationMs("archiveAfter", settings.archiveAfter),
     sleepAfter: durationMs("sleepAfter", settings.sleepAfter),
-    keepAwake: audible,
+    // A tab whose video shows in picture in picture stays awake too.
+    keepAwake: [...audible, ...pictureInPicture],
   });
 }
 
@@ -1093,6 +1239,15 @@ function installIpc() {
     forward: () => history("forward"),
     reload,
     stop: () => activeView()?.webContents.stop(),
+    copyUrl,
+    toggleMute: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid tab ID.");
+      toggleMute(id);
+    },
+    toggleMediaPlayback: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid tab ID.");
+      toggleMediaPlayback(id);
+    },
   };
   validateCommandHandlers(handlers);
   commandHandlers = handlers;
@@ -1156,7 +1311,14 @@ function createWindow() {
   const devUrl = process.env.ELECTRON_RENDERER_URL;
   if (devUrl) void window.loadURL(devUrl);
   else void window.loadFile(path.join(__dirname, "../dist/index.html"));
-  newTab();
+  // Session restore: show the saved tab and split after the chrome loads, so the
+  // browser controls come first. Without a saved tab, start with a new tab.
+  const restoredId = sessionState().activeId;
+  if (!restoredId) newTab();
+  else
+    window.webContents.once("did-finish-load", () => {
+      if (sessionState().activeId === restoredId) dispatch({ type: "select-tab", id: restoredId });
+    });
 }
 
 // favicon://icon/<name> serves cached tab icons to the trusted chrome.

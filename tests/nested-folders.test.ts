@@ -209,7 +209,7 @@ describe("saved nested folders", () => {
     session.dispatch({ type: "move-tab", id: 1, zone: "pinned", folderId: 2, index: 0 });
     session.dispatch({ type: "toggle-folder", id: 1 });
     const saved = JSON.parse(JSON.stringify(session.exportOrganization()));
-    expect(saved.version).toBe(3);
+    expect(saved.version).toBe(4);
     expect(saved.folders.map((folder: { parentId: number | null }) => folder.parentId)).toEqual([
       null,
       1,
@@ -218,7 +218,9 @@ describe("saved nested folders", () => {
     ]);
     const state = createBrowserSession({ saved }).getState();
     expect(state.folders).toEqual(session.getState().folders);
-    expect(state.sections.folders[1]).toEqual({ id: 2, slots: [[1]] });
+    // Restored tabs get new ids, so find the moved tab by its page.
+    const moved = state.tabs.find((entry) => entry.url === "https://a.test/")!;
+    expect(state.sections.folders[1]).toEqual({ id: 2, slots: [[moved.id]] });
   });
 
   it("loads version 2 folders at the top level", () => {

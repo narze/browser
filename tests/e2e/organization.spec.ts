@@ -213,12 +213,18 @@ test("favorites, pinned tabs, folders, rename, sleep, and archive work and persi
     await chrome.getByRole("button", { name: "Close tab: Site /e" }).click();
     await expect.poll(async () => (await state()).archive.length).toBe(1);
 
-    // Everything except today tabs survives a restart.
+    // Everything survives a restart. Today tabs keep their page (D6).
     const saved = JSON.parse(await readFile(join(profile, "tabs.json"), "utf8"));
-    expect(saved.tabs.map((tab: { homeUrl: string }) => tab.homeUrl)).toEqual([
-      `${origin}/a`,
-      `${origin}/b`,
-      `${origin}/c`,
+    expect(
+      saved.tabs.map((tab: { zone: string; url: string; homeUrl: string | null }) => [
+        tab.zone,
+        tab.homeUrl ?? tab.url,
+      ]),
+    ).toEqual([
+      ["today", `${origin}/next`],
+      ["favorites", `${origin}/a`],
+      ["pinned", `${origin}/b`],
+      ["pinned", `${origin}/c`],
     ]);
     await app.close();
     app = await launch();
@@ -237,21 +243,23 @@ test("favorites, pinned tabs, folders, rename, sleep, and archive work and persi
         };
       })
       .toEqual({
+        // Restored tabs get new ids in saved order.
         sections: {
-          favorites: [[1]],
-          folders: [{ id: 1, slots: [[3]] }],
-          pinned: [[2]],
-          today: [[4]],
+          favorites: [[2]],
+          folders: [{ id: 1, slots: [[4]] }],
+          pinned: [[3]],
+          today: [[1]],
         },
         asleep: true,
         archive: ["Site /e"],
       });
+    await expect(chrome.getByRole("tab", { name: "Reading list" })).toBeVisible();
     await expect(
       chrome.getByRole("group", { name: "Favorites" }).locator("img.favicon"),
     ).toHaveAttribute("src", /^favicon:\/\//);
     await chrome.getByRole("group", { name: "Favorites" }).getByRole("tab").click();
     await expect
-      .poll(async () => (await state()).tabs[0])
+      .poll(async () => (await state()).tabs.find((tab) => tab.zone === "favorites"))
       .toMatchObject({ asleep: false, loading: false });
     await expect(address()).toHaveValue(`${origin}/a`);
   } finally {

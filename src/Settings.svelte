@@ -116,6 +116,11 @@
         {#each settingsSchema.sleepAfter.options as option}<option value={option.value}>{option.label}</option>{/each}
       </select>
     </div>
+    <div class="preference-row">
+      <label for="auto-picture-in-picture"><strong>{settingsSchema.autoPictureInPicture.label}</strong><span>A playing video moves to a small window when you leave its tab.</span></label>
+      <input id="auto-picture-in-picture" class="settings-toggle" type="checkbox" checked={settings.autoPictureInPicture} disabled={busy}
+        onchange={(event) => save({ autoPictureInPicture: event.currentTarget.checked })} />
+    </div>
   </section>
   <section class="settings-section" aria-labelledby="routing-title">
     <h2 id="routing-title">Link routing</h2>

@@ -28,6 +28,12 @@
     splitGrid: 'M4 4h16v16H4z M12 4v16 M4 12h16',
     addPane: 'M4 4h10v16H4z M18 9v6 M15 12h6',
     compact: 'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',
+    check: 'm5 12.5 4.5 4.5L19 7.5',
+    copy: 'M9 9h10v11H9z M15 9V4H5v11h4',
+    volume: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4z M15.5 9a4.5 4.5 0 0 1 0 6 M18 6.5a8 8 0 0 1 0 11',
+    muted: 'M4 9.5h3.5L12 5.5v13l-4.5-4H4z M16 9.5l5 5 M21 9.5l-5 5',
+    play: 'M8 5.5v13l10.5-6.5z',
+    pause: 'M9 5.5v13 M15 5.5v13',
   };
 </script>
 

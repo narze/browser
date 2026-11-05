@@ -27,6 +27,7 @@ const state: BrowserState = {
   tabSlots: [[1]],
   tabLayout: "top",
   resolvedTheme: "light",
+  media: [],
   settings: { ...defaultSettings },
   tabs: [
     {
@@ -221,6 +222,21 @@ describe("browser command contract", () => {
     expect(paletteCommands(hidden).find((command) => command.id === "toggle-sidebar")?.title).toBe(
       "Show tab sidebar",
     );
+  });
+
+  it("copies the page address only when the tab shows a page (D2)", () => {
+    expect(paletteCommands(state).some((command) => command.id === "copy-url")).toBe(false);
+    const page = { ...state.tabs[0], url: "https://example.com/a" };
+    expect(
+      paletteCommands({ ...state, tabs: [page] }).find((command) => command.id === "copy-url"),
+    ).toMatchObject({ title: "Copy page address", hint: "⇧⌘C", command: "copyUrl", args: [] });
+  });
+
+  it("controls the media of a tab from the chrome only (D5)", () => {
+    for (const name of ["copyUrl", "toggleMute", "toggleMediaPlayback"]) {
+      expect(canInvokeCommand(name, "chrome", true)).toBe(true);
+      expect(canInvokeCommand(name, "palette", true)).toBe(false);
+    }
   });
 
   it("turns compact mode on and off in every tab layout", () => {

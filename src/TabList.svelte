@@ -191,6 +191,7 @@
 
 {#snippet tabItem(tab: BrowserTab)}
   {@const changed = !!tab.homeUrl && tab.url !== tab.homeUrl && !tab.asleep}
+  {@const sound = browserState.media.find((entry) => entry.tabId === tab.id && (entry.audible || entry.muted))}
   <!-- svelte-ignore a11y_no_static_element_interactions (Each tab has a keyboard-accessible button; dragging is an extra pointer path.) -->
   <div class="tab" class:active={tab.id === browserState.activeId} class:asleep={tab.asleep} class:editing={editing?.kind === 'tab' && editing.id === tab.id}
     class:drop-before={marked(`tab-${tab.id}-before`)} class:drop-after={marked(`tab-${tab.id}-after`)} class:dragging={drag?.kind === 'tab' && drag.id === tab.id}
@@ -208,6 +209,9 @@
         {:else}<span class="tab-icon"><Icon name={tab.url ? 'globe' : 'plus'} size={14} /></span>{/if}
         <span class="tab-title">{label(tab)}</span>
       </button>
+      {#if sound}
+        <button class="tab-audio" aria-label={`Mute tab: ${label(tab)}`} aria-pressed={sound.muted} title={sound.muted ? 'Unmute tab' : 'Mute tab'} onclick={() => api?.toggleMute(tab.id)}><Icon name={sound.muted ? 'muted' : 'volume'} size={13} /></button>
+      {/if}
       {#if changed}
         <button class="reset-tab" aria-label={`Back to pinned page: ${label(tab)}`} title={`Back to ${tab.homeTitle || tab.homeUrl}`} onclick={() => api?.resetTab(tab.id)}><Icon name="home" size={12} /></button>
       {/if}

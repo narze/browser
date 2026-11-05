@@ -182,7 +182,7 @@ test("nested folders: create, drag, keyboard, collapse, delete, and persist", as
     await (await row("Archives")).click();
     await expect(group("Nreal")).toBeVisible();
 
-    // Saved as version 3 with parent ids, and restored after a restart.
+    // Saved with parent ids (version 4 also saves today tabs), and restored after a restart.
     await expect
       .poll(async () => {
         const saved = JSON.parse(await readFile(join(profile, "tabs.json"), "utf8"));
@@ -191,7 +191,7 @@ test("nested folders: create, drag, keyboard, collapse, delete, and persist", as
           saved.folders.map((folder: { parentId: unknown }) => folder.parentId),
         ];
       })
-      .toEqual([3, [null, null, archives, archives]]);
+      .toEqual([4, [null, null, archives, archives]]);
     // Ids change on load; names, parents, and open state stay.
     const shape = async () => {
       const { folders } = await state();

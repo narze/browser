@@ -5,6 +5,7 @@ import type { BrowserState } from "../shared/browser";
 const state: BrowserState = {
   palette: null,
   resolvedTheme: "light",
+  media: [],
   platform: "darwin",
   activeId: 2,
   tabSlots: [[1], [2]],
@@ -70,6 +71,7 @@ const state: BrowserState = {
     shortcuts: {},
     sidebarVisible: true,
     compactMode: false,
+    autoPictureInPicture: true,
   },
 };
 describe("command palette results", () => {

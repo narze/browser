@@ -96,7 +96,9 @@ test("keyboard shortcuts can be changed, removed, reset, and persist", async () 
     await expect(chrome.getByRole("list", { name: "Customized shortcuts" })).toContainText(
       "New tab",
     );
-    await expect(chrome.getByRole("status")).toHaveText("Saved.");
+    await expect(chrome.getByRole("region", { name: "Settings" }).getByRole("status")).toHaveText(
+      "Saved.",
+    );
 
     // A shortcut that another action uses is rejected.
     const reloadKey = key("reload");
