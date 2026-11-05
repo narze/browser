@@ -35,7 +35,10 @@ const { isWebUrl } = require("./policy.cjs");
  * | { type: 'rename-space', id: number, name: string }
  * | { type: 'set-space-color', id: number, color: string }
  * | { type: 'move-tab-to-space', id: number, spaceId: number }
- * | { type: 'add-route', host: string, spaceId: number }} SessionCommand
+ * | { type: 'add-route', host: string, spaceId: number }
+ * | { type: 'open-float', kind: FloatKind, url: string }
+ * | { type: 'close-float' | 'expand-float', kind: FloatKind }} SessionCommand
+ * @typedef {'peek' | 'mini'} FloatKind
  * @typedef {{ type: 'load' | 'wake', id: number, url: string } | { type: 'focus' }
  * | { type: 'edit', kind: import('../shared/browser').EditTarget['kind'], id: number }
  * | { type: 'clear-profile', profile: string }
@@ -46,6 +49,7 @@ const { isWebUrl } = require("./policy.cjs");
  */
 
 const ZONES = ["favorites", "pinned", "today"];
+const FLOAT_KINDS = ["peek", "mini"];
 const SPLIT_LAYOUTS = ["columns", "rows", "grid"];
 const SPLIT_EDGES = ["left", "right", "top", "bottom"];
 const MAX_PANES = 4;
@@ -143,6 +147,12 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   let sidebarResizing = false;
   /** A tab drag over the pages hides them, so the chrome can show drop zones. */
   let tabDragging = false;
+  /**
+   * Pages outside the tab list: a peek above the current page, and the page of the
+   * quick window. Each has the shape of a tab, so it can become one with its page.
+   * @type {Record<FloatKind, import('../shared/browser').BrowserTab | null>}
+   */
+  const floats = { peek: null, mini: null };
   /** @type {'settings' | 'archive' | null} */
   let screen = null;
   /** @type {import('../shared/browser').BrowserState['palette']} */
@@ -155,7 +165,14 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
 
   /** @param {string} url @param {Partial<import('../shared/browser').BrowserTab>} [fields] */
   function addTab(url, fields = {}) {
-    const tab = {
+    const tab = newPage(url, fields);
+    tabs.push(tab);
+    return tab;
+  }
+
+  /** @param {string} url @param {Partial<import('../shared/browser').BrowserTab>} [fields] */
+  function newPage(url, fields = {}) {
+    return {
       id: nextId++,
       url,
       title: hostname(url),
@@ -174,8 +191,6 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       lastActiveAt: now(),
       ...fields,
     };
-    tabs.push(tab);
-    return tab;
   }
 
   /** @param {string} name @param {string} color @param {string} profile */
@@ -496,6 +511,13 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
           !tab.error &&
           (split ? split.tabIds.includes(tab.id) : tab.id === activeId),
       }));
+    if (floats.peek)
+      pages.push({
+        id: floats.peek.id,
+        visible: !screen && !!floats.peek.url && !floats.peek.error,
+      });
+    if (floats.mini)
+      pages.push({ id: floats.mini.id, visible: !!floats.mini.url && !floats.mini.error });
     return structuredClone({
       tabs,
       activeId,
@@ -514,6 +536,8 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       spaces,
       activeSpaceId,
       routes,
+      peek: floats.peek,
+      mini: floats.mini,
     });
   }
 
@@ -529,6 +553,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     screen = null;
     splitResizing = sidebarResizing = tabDragging = false;
     palette = null;
+    floats.peek = null;
     return true;
   }
 
@@ -625,6 +650,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     }
     screen = null;
     palette = null;
+    floats.peek = null;
   }
 
   /** The space whose most specific route matches a URL. @param {string} url */
@@ -794,12 +820,14 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         screen = command.open ? (command.type === "show-settings" ? "settings" : "archive") : null;
         splitResizing = sidebarResizing = tabDragging = false;
         palette = null;
+        floats.peek = null;
         focus();
         break;
       case "open-palette":
         if (!["commands", "navigate"].includes(command.mode))
           throw new Error("Invalid palette mode.");
         splitResizing = sidebarResizing = tabDragging = false;
+        floats.peek = null;
         palette = {
           mode: command.mode,
           query: command.mode === "navigate" ? findTab(activeId)?.url || "" : "",
@@ -832,7 +860,8 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         break;
       }
       case "update-tab": {
-        const tab = findTab(command.id);
+        const tab =
+          findTab(command.id) ?? Object.values(floats).find((page) => page?.id === command.id);
         if (!tab) break;
         Object.assign(tab, command.patch, { id: tab.id });
         if (tab.homeUrl && tab.url === tab.homeUrl && command.patch.title)
@@ -1062,6 +1091,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         spaces = spaces.filter((entry) => entry !== space);
         folders = folders.filter((folder) => folder.spaceId !== space.id);
         routes = routes.filter((route) => route.spaceId !== space.id);
+        for (const kind of FLOAT_KINDS) if (floats[kind]?.spaceId === space.id) floats[kind] = null;
         for (const entry of archive) if (entry.spaceId === space.id) entry.spaceId = activeSpaceId;
         spaceMemory.delete(space.id);
         if (!spaces.some((entry) => entry.profile === space.profile))
@@ -1096,6 +1126,39 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       case "remove-route":
         routes = routes.filter((route) => route.id !== command.id);
         break;
+      case "open-float": {
+        const { kind, url } = command;
+        if (!FLOAT_KINDS.includes(kind) || (url && !isWebUrl(url)))
+          throw new Error("Invalid page.");
+        if (kind === "peek" && (!url || screen)) throw new Error("Invalid peek.");
+        if (kind === "peek") palette = null;
+        // A quick window browses in the space that a route names for its link.
+        const page = (floats[kind] ??= newPage("", {
+          spaceId: (kind === "mini" && url && routeFor(url)) || activeSpaceId,
+        }));
+        if (url) {
+          Object.assign(page, { url, title: hostname(url), loading: true, error: null });
+          effects.push({ type: "load", id: page.id, url });
+        }
+        if (kind === "peek") focus();
+        break;
+      }
+      case "close-float":
+        if (!FLOAT_KINDS.includes(command.kind)) throw new Error("Invalid page.");
+        if (command.kind === "peek" && floats.peek) focus();
+        floats[command.kind] = null;
+        break;
+      case "expand-float": {
+        const page = FLOAT_KINDS.includes(command.kind) ? floats[command.kind] : null;
+        if (!page?.url) throw new Error("There is no page to open as a tab.");
+        // The page joins the tab list with its id, so its view and history stay.
+        floats[command.kind] = null;
+        page.lastActiveAt = now();
+        tabs.push(page);
+        select(page.id);
+        focus();
+        break;
+      }
       default:
         throw new Error("Unknown session command.");
     }

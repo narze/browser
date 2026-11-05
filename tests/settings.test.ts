@@ -30,7 +30,7 @@ describe("browser preferences", () => {
     for (const [key, setting] of Object.entries(settingsSchema)) {
       const choices =
         key === "shortcuts"
-          ? [{ newTab: "Alt+Cmd+N", closeTab: "" }, {}]
+          ? [{ newTab: "Alt+Cmd+Y", closeTab: "" }, {}]
           : "options" in setting
             ? setting.options.map((option) => option.value)
             : "min" in setting

@@ -91,8 +91,8 @@ test("keyboard shortcuts can be changed, removed, reset, and persist", async () 
     // Record a new shortcut for "New tab".
     await newTabKey.click();
     await expect(newTabKey).toHaveText("Type shortcut…");
-    await press("chrome", "N", [primary, "alt"]);
-    await expect(newTabKey).toHaveAccessibleName(`New tab ${label("⌥⌘N", "Ctrl+Alt+N")}`);
+    await press("chrome", "Y", [primary, "alt"]);
+    await expect(newTabKey).toHaveAccessibleName(`New tab ${label("⌥⌘Y", "Ctrl+Alt+Y")}`);
     await expect(chrome.getByRole("list", { name: "Customized shortcuts" })).toContainText(
       "New tab",
     );
@@ -123,22 +123,22 @@ test("keyboard shortcuts can be changed, removed, reset, and persist", async () 
     await chrome.getByRole("button", { name: "Back to browsing" }).click();
     await chrome.getByRole("tab", { name: "Page /a" }).click();
     await press("page", "T", [primary]);
-    await press("page", "N", [primary, "alt"]);
+    await press("page", "Y", [primary, "alt"]);
     await expect(tabs).toHaveCount(3);
     const accelerator = await app.evaluate(({ Menu }) => {
       const file = Menu.getApplicationMenu()!.items.find((item) => item.label === "File")!;
       return file.submenu!.items.find((item) => item.label === "New tab")!.accelerator;
     });
-    expect(accelerator).toBe(mac ? "Alt+Cmd+N" : "Ctrl+Alt+N");
+    expect(accelerator).toBe(mac ? "Alt+Cmd+Y" : "Ctrl+Alt+Y");
     const saved = JSON.parse(await readFile(join(profile, "settings.json"), "utf8"));
-    expect(saved.shortcuts).toEqual({ newTab: mac ? "Alt+Cmd+N" : "Ctrl+Alt+N", reload: "" });
+    expect(saved.shortcuts).toEqual({ newTab: mac ? "Alt+Cmd+Y" : "Ctrl+Alt+Y", reload: "" });
 
     await app.close();
     app = await launch();
     chrome = await app.firstWindow();
     await chrome.getByRole("button", { name: "Settings", exact: true }).click();
     await expect(
-      chrome.getByRole("button", { name: `New tab ${label("⌥⌘N", "Ctrl+Alt+N")}` }),
+      chrome.getByRole("button", { name: `New tab ${label("⌥⌘Y", "Ctrl+Alt+Y")}` }),
     ).toBeVisible();
     await chrome.getByRole("button", { name: "Reset Reload page shortcut" }).click();
     await expect(

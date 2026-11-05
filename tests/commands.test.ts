@@ -14,6 +14,8 @@ const state: BrowserState = {
   splitResizing: false,
   sidebarResizing: false,
   tabDragging: false,
+  peek: null,
+  mini: null,
   settingsOpen: false,
   archiveOpen: false,
   archive: [],
@@ -63,6 +65,16 @@ describe("browser command contract", () => {
       expect(canInvokeCommand(name, "palette", false)).toBe(false);
     }
     expect(canInvokeCommand("constructor", "chrome", true)).toBe(false);
+    const allowed = (source: string) =>
+      Object.keys(browserCommands).filter((name) => canInvokeCommand(name, source, true));
+    expect(allowed("peek")).toEqual(["getState", "closePeek", "expandPeek"]);
+    expect(allowed("mini")).toEqual([
+      "getState",
+      "navigateQuickWindow",
+      "moveQuickWindowToTab",
+      "closeQuickWindow",
+    ]);
+    expect(canInvokeCommand("closePeek", "peek", false)).toBe(false);
     expect(canInvokeCommand("missing", "chrome", true)).toBe(false);
   });
 
@@ -237,6 +249,15 @@ describe("browser command contract", () => {
       expect(canInvokeCommand(name, "chrome", true)).toBe(true);
       expect(canInvokeCommand(name, "palette", true)).toBe(false);
     }
+  });
+
+  it("opens a quick window from the palette", () => {
+    expect(paletteCommands(state).find((command) => command.id === "quick-window")).toMatchObject({
+      title: "New quick window",
+      command: "openQuickWindow",
+      args: [],
+      hint: "⌥⌘N",
+    });
   });
 
   it("turns compact mode on and off in every tab layout", () => {

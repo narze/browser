@@ -21,7 +21,7 @@
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', media: [], tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', media: [], tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, peek: null, mini: null, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);

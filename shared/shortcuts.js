@@ -12,6 +12,7 @@
 /** @type {readonly ShortcutAction[]} */
 export const shortcutActions = [
   { id: "newTab", label: "New tab", default: "CmdOrCtrl+T" },
+  { id: "newQuickWindow", label: "New quick window", default: "CmdOrCtrl+Alt+N" },
   { id: "closeTab", label: "Close tab", default: "CmdOrCtrl+W" },
   { id: "reopenClosedTab", label: "Reopen closed tab", default: "CmdOrCtrl+Shift+T" },
   { id: "openAddress", label: "Open address palette", default: "CmdOrCtrl+L" },

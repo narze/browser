@@ -8,6 +8,8 @@
 | Split           | Two to four tabs shown together in columns, rows, or a grid, with a focused pane and adjustable dividers.     |
 | Pane            | One page area in a split.                                                                                     |
 | Compact mode    | A view that hides the toolbar and tabs until the pointer reaches their window edge.                           |
+| Peek            | A link shown in a card above the current page, without a new tab. It can close or become a tab.               |
+| Quick window    | A small, separate window for a fast lookup. Its page can move into the main window as a tab.                  |
 | Chrome          | The browser's local controls surrounding web pages.                                                           |
 | Tab layout      | The placement of the tab strip or rail: top, left, or right.                                                  |
 | Favorites       | Tabs shown as an icon grid at the top of the tab list. They persist and reset to their home page when closed. |
