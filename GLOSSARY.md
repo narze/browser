@@ -4,9 +4,10 @@
 | --------------- | ------------------------------------------------------------------------------------------------------------- |
 | Browser session | The open tabs, selected tab, split panes, and temporary browser screens for the current window.               |
 | Tab             | One page with its own navigation history and page state.                                                      |
-| Tab slot        | One entry in the tab strip or rail. A split pair shares one slot containing two tab segments.                 |
-| Split           | Two tabs displayed side by side, with a focused pane and an adjustable divider.                               |
-| Pane            | The left or right page area in a split.                                                                       |
+| Tab slot        | One entry in the tab strip or rail. A split shares one slot with a tab segment for each pane.                 |
+| Split           | Two to four tabs shown together in columns, rows, or a grid, with a focused pane and adjustable dividers.     |
+| Pane            | One page area in a split.                                                                                     |
+| Compact mode    | A view that hides the toolbar and tabs until the pointer reaches their window edge.                           |
 | Chrome          | The browser's local controls surrounding web pages.                                                           |
 | Tab layout      | The placement of the tab strip or rail: top, left, or right.                                                  |
 | Favorites       | Tabs shown as an icon grid at the top of the tab list. They persist and reset to their home page when closed. |

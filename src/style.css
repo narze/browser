@@ -969,17 +969,41 @@ kbd {
   content: "";
   position: absolute;
   left: 3px;
-  top: calc(50% - 18px);
+  top: calc(var(--grip-at, 50%) - 18px);
   height: 36px;
   width: 2px;
   border-radius: 2px;
   background: var(--divider-grip);
+}
+.split-divider.horizontal {
+  cursor: row-resize;
+}
+.split-divider.horizontal::after {
+  left: calc(var(--grip-at, 50%) - 18px);
+  top: 3px;
+  width: 36px;
+  height: 2px;
 }
 .split-divider:hover,
 .split-divider.dragging,
 .split-divider:focus-visible {
   background: var(--divider-hover);
   outline: none;
+}
+.pane-remove {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+}
+.pane-remove:hover {
+  background: var(--hover);
+  color: var(--text);
 }
 .pane-placeholder {
   max-width: 420px;
@@ -1976,4 +2000,48 @@ span.folder-toggle {
 }
 .route-add:disabled {
   opacity: 0.45;
+}
+
+/* Compact mode: pages use the whole window until the pointer reaches the chrome's edge. */
+.chrome-hidden .chrome {
+  display: none;
+}
+
+/* Split layout controls appear in the toolbar while a split is open. */
+.split-controls {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--field);
+}
+.split-controls .icon-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+}
+
+/* Tab drag over the pages: still images stand in for the hidden pages, under the drop zone. */
+.page-drop {
+  position: fixed;
+  z-index: 20;
+}
+.page-drop img {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+.page-drop-zone {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+  transition:
+    left 120ms ease,
+    top 120ms ease,
+    width 120ms ease,
+    height 120ms ease;
 }

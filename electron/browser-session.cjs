@@ -3,6 +3,7 @@ const { isWebUrl } = require("./policy.cjs");
 
 /**
  * @typedef {import('../shared/browser').TabZone} TabZone
+ * @typedef {import('../shared/browser').SplitLayout} SplitLayout
  * @typedef {{ type: 'new-tab', url?: string, spaceId?: number }
  * | { type: 'select-tab' | 'close-tab' | 'focus-tab' | 'reset-tab' | 'sleep-tab', id: number }
  * | { type: 'select-position', position: number }
@@ -11,8 +12,13 @@ const { isWebUrl } = require("./policy.cjs");
  * | { type: 'update-tab', id: number, patch: Partial<import('../shared/browser').BrowserTab> }
  * | { type: 'toggle-split' | 'close-palette' | 'clear-archive' }
  * | { type: 'set-split-tab', side: number, id: number }
- * | { type: 'resize-split', ratio: number }
+ * | { type: 'add-split-pane' }
+ * | { type: 'remove-split-pane', id: number }
+ * | { type: 'set-split-layout', layout: SplitLayout }
+ * | { type: 'split-with', id: number, target: number, edge: 'left' | 'right' | 'top' | 'bottom' }
+ * | { type: 'resize-split', ratio: number, axis?: 'columns' | 'rows', index?: number }
  * | { type: 'set-split-resizing' | 'set-sidebar-resizing', resizing: boolean }
+ * | { type: 'set-tab-dragging', dragging: boolean }
  * | { type: 'show-settings' | 'show-archive', open: boolean }
  * | { type: 'open-palette', mode: 'navigate' | 'commands' }
  * | { type: 'move-tab', id: number, zone: TabZone, folderId?: number | null, index: number }
@@ -35,6 +41,9 @@ const { isWebUrl } = require("./policy.cjs");
  */
 
 const ZONES = ["favorites", "pinned", "today"];
+const SPLIT_LAYOUTS = ["columns", "rows", "grid"];
+const SPLIT_EDGES = ["left", "right", "top", "bottom"];
+const MAX_PANES = 4;
 const ARCHIVE_LIMIT = 200;
 const TITLE_LIMIT = 120;
 const FAVICON = /^[a-f0-9]{32}\.(png|ico|svg|jpg|gif|webp)$/;
@@ -95,6 +104,8 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   let split = null;
   let splitResizing = false;
   let sidebarResizing = false;
+  /** A tab drag over the pages hides them, so the chrome can show drop zones. */
+  let tabDragging = false;
   /** @type {'settings' | 'archive' | null} */
   let screen = null;
   /** @type {import('../shared/browser').BrowserState['palette']} */
@@ -269,6 +280,33 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   const spaceTabs = (spaceId = activeSpaceId) => tabs.filter((tab) => tab.spaceId === spaceId);
   const spaceFolders = () => folders.filter((folder) => folder.spaceId === activeSpaceId);
 
+  /** Equal track sizes for the panes. A grid has two columns and two rows. */
+  function arrangeSplit(/** @type {number[]} */ tabIds, /** @type {SplitLayout} */ layout) {
+    if (tabIds.length < 3 && layout === "grid") layout = "columns";
+    const equal = (/** @type {number} */ count) => Array(count).fill(1 / count);
+    const count = tabIds.length;
+    split = {
+      tabIds,
+      layout,
+      columns: equal(layout === "rows" ? 1 : layout === "grid" ? 2 : count),
+      rows: equal(layout === "columns" ? 1 : layout === "grid" ? 2 : count),
+    };
+  }
+
+  /** Takes a tab out of the split; one remaining pane ends the split. */
+  function leaveSplit(/** @type {number} */ id) {
+    if (!split) return undefined;
+    const index = split.tabIds.indexOf(id);
+    const rest = split.tabIds.filter((entry) => entry !== id);
+    const neighbor = rest[Math.min(index, rest.length - 1)];
+    if (rest.length > 1) arrangeSplit(rest, split.layout);
+    else {
+      split = null;
+      splitResizing = false;
+    }
+    return neighbor;
+  }
+
   /** The tabs in one zone or folder of a space, in visual order. */
   function container(zone, folderId = null, spaceId = activeSpaceId) {
     return spaceTabs(spaceId).filter(
@@ -325,6 +363,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         id: tab.id,
         visible:
           !screen &&
+          !tabDragging &&
           !!tab.url &&
           !tab.error &&
           (split ? split.tabIds.includes(tab.id) : tab.id === activeId),
@@ -335,6 +374,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       split,
       splitResizing,
       sidebarResizing,
+      tabDragging,
       settingsOpen: screen === "settings",
       archiveOpen: screen === "archive",
       palette,
@@ -355,11 +395,11 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     if (!tab) return false;
     if (tab.spaceId !== activeSpaceId) enterSpace(tab.spaceId, id);
     if (split && !split.tabIds.includes(id)) {
-      split.tabIds[split.tabIds.indexOf(activeId) === 1 ? 1 : 0] = id;
+      split.tabIds[Math.max(0, split.tabIds.indexOf(activeId))] = id;
     }
     activeId = id;
     screen = null;
-    splitResizing = sidebarResizing = false;
+    splitResizing = sidebarResizing = tabDragging = false;
     palette = null;
     return true;
   }
@@ -393,9 +433,9 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     const order = getSections().tabSlots.flat();
     let replacement;
     if (split?.tabIds.includes(id)) {
-      replacement = split.tabIds.find((entry) => entry !== id);
-      split = null;
-      splitResizing = false;
+      const neighbor = leaveSplit(id);
+      if (activeId === id) replacement = neighbor;
+      else replacement = activeId;
     }
     change();
     if (activeId === id && replacement === undefined) {
@@ -505,7 +545,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
           const originalId = activeId;
           const other = spaceTabs().find((tab) => tab.id !== originalId);
           const otherId = other?.id ?? createTab();
-          split = { tabIds: [originalId, otherId], ratio: 0.5 };
+          arrangeSplit([originalId, otherId], "columns");
           activeId = other ? originalId : otherId;
         }
         if (select(activeId)) focus();
@@ -513,23 +553,95 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       case "set-split-tab": {
         if (
           !split ||
-          ![0, 1].includes(command.side) ||
+          !isIndex(command.side) ||
+          command.side >= split.tabIds.length ||
           findTab(command.id)?.spaceId !== activeSpaceId
         )
           throw new Error("Invalid split tab.");
-        const opposite = 1 - command.side;
-        if (split.tabIds[opposite] === command.id)
-          split.tabIds[opposite] = split.tabIds[command.side];
+        const current = split.tabIds.indexOf(command.id);
+        if (current >= 0) split.tabIds[current] = split.tabIds[command.side];
         split.tabIds[command.side] = command.id;
         select(command.id);
         focus();
         break;
       }
-      case "resize-split":
-        if (typeof command.ratio !== "number" || !Number.isFinite(command.ratio))
-          throw new Error("Invalid split ratio.");
-        if (split) split.ratio = Math.max(0.25, Math.min(0.75, command.ratio));
+      case "add-split-pane": {
+        if (split && split.tabIds.length >= MAX_PANES)
+          throw new Error("A split has at most four panes.");
+        const id = createTab();
+        arrangeSplit([...shownIds(), id], split?.layout ?? "columns");
+        select(id);
+        focus();
         break;
+      }
+      case "remove-split-pane": {
+        if (!split?.tabIds.includes(command.id)) throw new Error("That tab is not in the split.");
+        const neighbor = leaveSplit(command.id);
+        if (select(activeId === command.id ? neighbor : activeId)) focus();
+        break;
+      }
+      case "set-split-layout":
+        if (!split || !SPLIT_LAYOUTS.includes(command.layout))
+          throw new Error("Invalid split layout.");
+        if (command.layout === "grid" && split.tabIds.length < 3)
+          throw new Error("A grid needs three or four panes.");
+        arrangeSplit(split.tabIds, command.layout);
+        break;
+      case "split-with": {
+        const shown = shownIds();
+        if (
+          !SPLIT_EDGES.includes(command.edge) ||
+          findTab(command.id)?.spaceId !== activeSpaceId ||
+          !shown.includes(command.target)
+        )
+          throw new Error("Invalid split drop.");
+        if (command.id === command.target) break;
+        const before = command.edge === "left" || command.edge === "top";
+        if (!split) {
+          arrangeSplit(
+            before ? [command.id, command.target] : [command.target, command.id],
+            command.edge === "left" || command.edge === "right" ? "columns" : "rows",
+          );
+        } else if (
+          split.layout === "grid" ||
+          (!split.tabIds.includes(command.id) && split.tabIds.length >= MAX_PANES)
+        ) {
+          // Grid cells have fixed places: the tab swaps or replaces, except in the tall
+          // left pane of a three-pane grid, which splits into the two left cells.
+          const ids = split.tabIds;
+          const target = ids.indexOf(command.target);
+          const from = ids.indexOf(command.id);
+          if (from >= 0) [ids[from], ids[target]] = [ids[target], ids[from]];
+          else if (ids.length === 3 && target === 0 && !["left", "right"].includes(command.edge))
+            arrangeSplit(
+              before ? [command.id, ids[1], ids[0], ids[2]] : [ids[0], ids[1], command.id, ids[2]],
+              "grid",
+            );
+          else ids[target] = command.id;
+        } else {
+          const rest = split.tabIds.filter((entry) => entry !== command.id);
+          rest.splice(rest.indexOf(command.target) + (before ? 0 : 1), 0, command.id);
+          arrangeSplit(rest, split.layout);
+        }
+        select(command.id);
+        focus();
+        break;
+      }
+      case "resize-split": {
+        const { ratio, axis = "columns", index = 0 } = command;
+        if (typeof ratio !== "number" || !Number.isFinite(ratio))
+          throw new Error("Invalid split ratio.");
+        if (!split) break;
+        const sizes = axis === "columns" ? split.columns : axis === "rows" ? split.rows : null;
+        if (!sizes || !isIndex(index) || index + 1 >= sizes.length)
+          throw new Error("Invalid split divider.");
+        // Each divider moves only its two neighbors; no pane gets too small to use.
+        const pair = sizes[index] + sizes[index + 1];
+        const min = Math.min(0.25, 0.5 / sizes.length);
+        sizes[index] = Math.max(min, Math.min(pair - min, ratio * pair));
+        sizes[index + 1] = pair - sizes[index];
+        break;
+      }
       case "set-split-resizing":
         if (typeof command.resizing !== "boolean") throw new Error("Invalid resize state.");
         splitResizing = !!split && !screen && !palette && command.resizing;
@@ -538,17 +650,21 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         if (typeof command.resizing !== "boolean") throw new Error("Invalid resize state.");
         sidebarResizing = !screen && !palette && command.resizing;
         break;
+      case "set-tab-dragging":
+        if (typeof command.dragging !== "boolean") throw new Error("Invalid drag state.");
+        tabDragging = !screen && !palette && command.dragging;
+        break;
       case "show-settings":
       case "show-archive":
         screen = command.open ? (command.type === "show-settings" ? "settings" : "archive") : null;
-        splitResizing = sidebarResizing = false;
+        splitResizing = sidebarResizing = tabDragging = false;
         palette = null;
         focus();
         break;
       case "open-palette":
         if (!["commands", "navigate"].includes(command.mode))
           throw new Error("Invalid palette mode.");
-        splitResizing = sidebarResizing = false;
+        splitResizing = sidebarResizing = tabDragging = false;
         palette = {
           mode: command.mode,
           query: command.mode === "navigate" ? findTab(activeId)?.url || "" : "",

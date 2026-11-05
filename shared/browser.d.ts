@@ -82,6 +82,8 @@ export type BrowserSettings = {
         : boolean;
 };
 export type TabLayout = BrowserSettings["tabLayout"];
+export type SplitLayout = "columns" | "rows" | "grid";
+export type SplitEdge = "left" | "right" | "top" | "bottom";
 export type PaletteMode = "navigate" | "commands";
 export type PaletteAction =
   | { type: "navigate"; input: string; newTab: boolean }
@@ -90,9 +92,18 @@ export type PaletteAction =
 export interface BrowserState {
   palette: { query: string; mode: PaletteMode; requestId: number } | null;
   resolvedTheme: "light" | "dark";
-  split: { tabIds: [number, number]; ratio: number } | null;
+  split: {
+    /** Two to four tabs, in pane order. */
+    tabIds: number[];
+    layout: SplitLayout;
+    /** Track sizes as fractions of the width and height. A grid has two of each. */
+    columns: number[];
+    rows: number[];
+  } | null;
   splitResizing: boolean;
   sidebarResizing: boolean;
+  /** A tab is being dragged over the pages, which hide so the chrome can show drop zones. */
+  tabDragging: boolean;
   settings: BrowserSettings;
   settingsOpen: boolean;
   archiveOpen: boolean;
@@ -110,6 +121,11 @@ export interface BrowserState {
   activeId: number;
   platform: string;
 }
+export interface PageSnapshot {
+  id: number;
+  /** A data URL. */
+  image: string;
+}
 export interface BrowserApi {
   reportPageLayout(regions: PageRegion[]): Promise<void>;
   openPalette(mode?: PaletteMode): Promise<void>;
@@ -117,10 +133,22 @@ export interface BrowserApi {
   executePalette(action: PaletteAction): Promise<{ error?: string }>;
   toggleSplit(): Promise<void>;
   setSplitTab(side: number, id: number): Promise<void>;
-  resizeSplit(ratio: number): Promise<void>;
+  /** Moves the divider after track `index` to `ratio` of its two neighboring tracks. */
+  resizeSplit(ratio: number, axis?: "columns" | "rows", index?: number): Promise<void>;
+  addSplitPane(): Promise<void>;
+  removeSplitPane(id: number): Promise<void>;
+  setSplitLayout(layout: SplitLayout): Promise<void>;
+  /** Drops a tab on the edge of a shown page to split with it. */
+  splitWith(id: number, target: number, edge: SplitEdge): Promise<void>;
   setSplitResizing(resizing: boolean): Promise<void>;
   setSidebarResizing(resizing: boolean): Promise<void>;
+  /** Still images of the shown pages, to stand in for them while a tab drag hides them. */
+  capturePages(): Promise<PageSnapshot[]>;
+  setTabDragging(dragging: boolean): Promise<void>;
   toggleSidebar(): Promise<void>;
+  toggleCompactMode(): Promise<void>;
+  /** Compact mode: tells the window whether the hidden toolbar and tabs are showing. */
+  setChromeRevealed(revealed: boolean): Promise<void>;
   setTabLayout(layout: TabLayout): Promise<{ error?: string }>;
   updateSettings(settings: Partial<BrowserSettings>): Promise<{ error?: string }>;
   /** Pauses browser shortcuts while the settings page records a new one. */
@@ -167,4 +195,6 @@ export interface BrowserApi {
   onEdit(callback: (target: EditTarget) => void): () => void;
   onState(callback: (state: BrowserState) => void): () => void;
   onFocusAddress(callback: () => void): () => void;
+  /** Compact mode: the pointer moved onto, or away from, the window edge over a page. */
+  onPageEdge(callback: (atEdge: boolean) => void): () => void;
 }

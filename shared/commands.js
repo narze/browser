@@ -2,7 +2,7 @@
 import { settingsSchema } from "./settings.js";
 import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
 
-/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit'>, { channel: string, palette: boolean }>} */
+/** @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge'>, { channel: string, palette: boolean }>} */
 export const browserCommands = {
   getState: { channel: "browser:state", palette: true },
   openPalette: { channel: "browser:palette-open", palette: false },
@@ -22,9 +22,17 @@ export const browserCommands = {
   toggleSplit: { channel: "browser:toggle-split", palette: false },
   setSplitTab: { channel: "browser:set-split-tab", palette: false },
   resizeSplit: { channel: "browser:resize-split", palette: false },
+  addSplitPane: { channel: "browser:add-split-pane", palette: false },
+  removeSplitPane: { channel: "browser:remove-split-pane", palette: false },
+  setSplitLayout: { channel: "browser:set-split-layout", palette: false },
+  splitWith: { channel: "browser:split-with", palette: false },
   setSplitResizing: { channel: "browser:set-split-resizing", palette: false },
   setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
+  capturePages: { channel: "browser:capture-pages", palette: false },
+  setTabDragging: { channel: "browser:set-tab-dragging", palette: false },
   toggleSidebar: { channel: "browser:toggle-sidebar", palette: false },
+  toggleCompactMode: { channel: "browser:toggle-compact-mode", palette: false },
+  setChromeRevealed: { channel: "browser:chrome-revealed", palette: false },
   openSettings: { channel: "browser:open-settings", palette: false },
   closeSettings: { channel: "browser:close-settings", palette: false },
   updateSettings: { channel: "browser:update-settings", palette: false },
@@ -60,6 +68,7 @@ export const browserCommands = {
 
 export const browserEvents = {
   onState: "browser:state-changed",
+  onPageEdge: "browser:page-edge",
   onFocusAddress: "browser:focus-address",
   onEdit: "browser:edit",
 };
@@ -83,6 +92,40 @@ export function validateCommandHandlers(handlers) {
     )
   )
     throw new Error("Browser command handlers must match the shared command table.");
+}
+
+const LAYOUT_TITLES = /** @type {const} */ ({ columns: "columns", rows: "rows", grid: "a grid" });
+
+/**
+ * @param {NonNullable<import('./browser').BrowserState['split']>} split
+ * @returns {PaletteCommand[]}
+ */
+function splitCommands(split) {
+  /** @type {PaletteCommand[]} */
+  const commands = [];
+  if (split.tabIds.length < 4)
+    commands.push({
+      id: "add-split-pane",
+      title: "Add split pane",
+      detail: "Show up to four pages at once",
+      icon: "addPane",
+      hint: "",
+      command: "addSplitPane",
+      args: [],
+    });
+  for (const layout of /** @type {const} */ (["columns", "rows", "grid"])) {
+    if (layout === split.layout || (layout === "grid" && split.tabIds.length < 3)) continue;
+    commands.push({
+      id: `split-${layout}`,
+      title: `Arrange panes in ${LAYOUT_TITLES[layout]}`,
+      detail: "Split view layout",
+      icon: layout === "columns" ? "split" : layout === "rows" ? "splitRows" : "splitGrid",
+      hint: "",
+      command: "setSplitLayout",
+      args: [layout],
+    });
+  }
+  return commands;
 }
 
 /**
@@ -124,6 +167,7 @@ export function paletteCommands(state) {
       command: "toggleSplit",
       args: [],
     },
+    ...(state.split ? splitCommands(state.split) : []),
     {
       id: "close-tab",
       title: "Close current tab",
@@ -272,6 +316,17 @@ export function paletteCommands(state) {
         args: [active.id, space.id],
       });
   }
+  commands.push({
+    id: "compact-mode",
+    title: state.settings.compactMode ? "Turn off compact mode" : "Turn on compact mode",
+    detail: state.settings.compactMode
+      ? "Always show the toolbar and tabs"
+      : "Hide the toolbar and tabs until you point at the window edge",
+    icon: "compact",
+    hint: shortcut("toggleCompactMode"),
+    command: "toggleCompactMode",
+    args: [],
+  });
   for (const { value, label } of settingsSchema.theme.options)
     commands.push({
       id: `theme-${value}`,

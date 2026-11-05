@@ -62,6 +62,7 @@ describe("browser preferences", () => {
       sleepAfter: "1h",
       shortcuts: {},
       sidebarVisible: true,
+      compactMode: false,
     });
   });
   it("rejects invalid settings without changing memory or disk", () => {
@@ -102,6 +103,7 @@ describe("browser preferences", () => {
       sleepAfter: "1h",
       shortcuts: {},
       sidebarVisible: true,
+      compactMode: false,
     });
     writeFileSync(
       file,
@@ -117,6 +119,7 @@ describe("browser preferences", () => {
       sleepAfter: "1h",
       shortcuts: {},
       sidebarVisible: true,
+      compactMode: false,
     });
   });
   it("keeps valid stored shortcuts and drops unknown or damaged ones", () => {

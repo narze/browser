@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import Icon from './Icon.svelte';
+  import { beginTabDrag, endTabDrag } from './tab-drag.svelte';
   import type { BrowserApi, BrowserState, BrowserTab, EditTarget, TabZone } from '../shared/browser';
 
   let { state: browserState, api, vertical, closeShortcut }: { state: BrowserState; api: BrowserApi | undefined; vertical: boolean; closeShortcut: string } = $props();
@@ -49,8 +50,14 @@
     drag = { kind, id };
     event.dataTransfer?.setData('text/plain', `${kind}:${id}`);
     if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
+    // A tab can also drop on a page to split with it.
+    if (kind === 'tab' && api) void beginTabDrag(api, id);
   }
-  function endDrag() { drag = null; drop = null; }
+  function endDrag() {
+    drag = null;
+    drop = null;
+    if (api) endTabDrag(api);
+  }
   const after = (event: DragEvent, horizontal: boolean) => {
     const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
     return horizontal ? event.clientX > box.left + box.width / 2 : event.clientY > box.top + box.height / 2;
@@ -111,7 +118,9 @@
     event.preventDefault();
     let id: number | undefined;
     if (paneSelection) {
-      id = browserState.split!.tabIds[event.key === 'ArrowLeft' ? 0 : 1];
+      const ids = browserState.split!.tabIds;
+      const index = ids.indexOf(tab.id) + (event.key === 'ArrowLeft' ? -1 : 1);
+      id = ids[Math.max(0, Math.min(ids.length - 1, index))];
       await api?.selectTab(id);
     } else id = await api?.cycleTab(event.key === nextKey ? 1 : -1);
     await tick();

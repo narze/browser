@@ -57,6 +57,7 @@ describe("keyboard shortcuts", () => {
       nextSpace: "CmdOrCtrl+Alt+Right",
       previousSpace: "CmdOrCtrl+Alt+Left",
       newSpace: "",
+      toggleCompactMode: "CmdOrCtrl+Shift+S",
     });
   });
 

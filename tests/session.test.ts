@@ -77,7 +77,7 @@ describe("browser session", () => {
     session.dispatch({ type: "toggle-split" });
     expect(session.getState()).toMatchObject({
       activeId: 2,
-      split: { tabIds: [1, 2], ratio: 0.5 },
+      split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
     });
     session.dispatch({ type: "toggle-split" });
     expect(session.getState()).toMatchObject({ activeId: 2, split: null, tabSlots: [[1], [2]] });
@@ -115,9 +115,9 @@ describe("browser session", () => {
     session.dispatch({ type: "toggle-split" });
     expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(2);
     session.dispatch({ type: "resize-split", ratio: 8 });
-    expect(session.getState().split?.ratio).toBe(0.75);
+    expect(session.getState().split?.columns).toEqual([0.75, 0.25]);
     session.dispatch({ type: "resize-split", ratio: -8 });
-    expect(session.getState().split?.ratio).toBe(0.25);
+    expect(session.getState().split?.columns).toEqual([0.25, 0.75]);
     expect(() => session.dispatch({ type: "resize-split", ratio: NaN })).toThrow();
     session.dispatch({ type: "set-split-resizing", resizing: true });
     expect(

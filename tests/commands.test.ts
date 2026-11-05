@@ -13,6 +13,7 @@ const state: BrowserState = {
   split: null,
   splitResizing: false,
   sidebarResizing: false,
+  tabDragging: false,
   settingsOpen: false,
   archiveOpen: false,
   archive: [],
@@ -93,7 +94,7 @@ describe("browser command contract", () => {
     expect(choices.some((command) => command.id === "back")).toBe(false);
     const navigable: BrowserState = {
       ...state,
-      split: { tabIds: [1, 2], ratio: 0.5 },
+      split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
       tabs: [{ ...state.tabs[0], url: "https://example.com/", canGoBack: true }],
     };
     expect(paletteCommands(navigable).find((command) => command.id === "split")?.title).toBe(
@@ -205,5 +206,50 @@ describe("browser command contract", () => {
     expect(paletteCommands(hidden).find((command) => command.id === "toggle-sidebar")?.title).toBe(
       "Show tab sidebar",
     );
+  });
+
+  it("turns compact mode on and off in every tab layout", () => {
+    expect(paletteCommands(state).find((command) => command.id === "compact-mode")).toMatchObject({
+      title: "Turn on compact mode",
+      hint: "⇧⌘S",
+      command: "toggleCompactMode",
+      args: [],
+    });
+    const compact: BrowserState = {
+      ...state,
+      tabLayout: "left",
+      settings: { ...state.settings, compactMode: true },
+    };
+    expect(paletteCommands(compact).find((command) => command.id === "compact-mode")?.title).toBe(
+      "Turn off compact mode",
+    );
+  });
+
+  it("adds split panes and changes the split layout from the palette", () => {
+    const ids = (value: BrowserState) => paletteCommands(value).map((command) => command.id);
+    expect(ids(state)).not.toContain("add-split-pane");
+    const two: BrowserState = {
+      ...state,
+      split: { tabIds: [1, 2], layout: "columns", columns: [0.5, 0.5], rows: [1] },
+    };
+    expect(paletteCommands(two).find((command) => command.id === "add-split-pane")).toMatchObject({
+      title: "Add split pane",
+      command: "addSplitPane",
+      args: [],
+    });
+    expect(paletteCommands(two).find((command) => command.id === "split-rows")).toMatchObject({
+      title: "Arrange panes in rows",
+      command: "setSplitLayout",
+      args: ["rows"],
+    });
+    expect(ids(two)).not.toContain("split-columns");
+    expect(ids(two)).not.toContain("split-grid");
+    const four: BrowserState = {
+      ...state,
+      split: { tabIds: [1, 2, 3, 4], layout: "grid", columns: [0.5, 0.5], rows: [0.5, 0.5] },
+    };
+    expect(ids(four)).not.toContain("add-split-pane");
+    expect(ids(four)).toEqual(expect.arrayContaining(["split-columns", "split-rows"]));
+    expect(ids(four)).not.toContain("split-grid");
   });
 });

@@ -41,7 +41,8 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Tabs and navigation](./tabs-and-navigation.md) covers address and new-tab search entry, history, popups, error pages, and closing tabs.
 - [Tab layout and switching](./tab-layout-and-switching.md) covers top/left/right placement and keyboard tab switching.
 - [Command palette](./command-palette.md) covers opening, tab search, address entry, `>` commands, and dismissal.
-- [Split view](./split-view.md) covers splitting, pane selection, divider resizing, and leaving split view.
+- [Split view](./split-view.md) covers splitting into up to four panes, layouts, pane selection, divider resizing, dragging a tab onto the page, and leaving split view.
+- [Compact mode](./compact-mode.md) covers hiding the toolbar and tabs and showing them from the window edge.
 - [Settings](./settings.md) covers theme, tab placement, search engine, shortcuts toggle, and persistence across restarts.
 - [Tab organization](./tab-organization.md) covers favorites, pinned tabs, folders, drag and keyboard reorder, rename, sleep, the archive, and persistence.
 - [Spaces and link routing](./spaces.md) covers spaces, per-space profiles, moving tabs between spaces, routes, and space delete.

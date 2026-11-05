@@ -78,6 +78,11 @@
         {/each}
       </div>
     </fieldset>
+    <div class="preference-row">
+      <label for="compact-mode"><strong>{settingsSchema.compactMode.label}</strong><span>Hide the toolbar and tabs until you point at the window edge.</span></label>
+      <input id="compact-mode" class="settings-toggle" type="checkbox" checked={settings.compactMode} disabled={busy}
+        onchange={(event) => save({ compactMode: event.currentTarget.checked })} />
+    </div>
   </section>
 
   <section class="settings-section" aria-labelledby="browsing-title">
