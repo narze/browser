@@ -27,6 +27,7 @@ describe("browser process boundary", () => {
     expect(sameSite("https://news.bbc.co.uk/", "https://www.bbc.co.uk/")).toBe(true);
     expect(sameSite("https://example.com/", "https://other.org/")).toBe(false);
     expect(sameSite("https://first.co.uk/", "https://other.co.uk/")).toBe(false);
+    expect(sameSite("https://alice.github.io/", "https://bob.github.io/")).toBe(false);
     expect(sameSite("http://127.0.0.1:8000/", "http://127.0.0.1:9000/")).toBe(true);
     expect(sameSite("http://127.0.0.1/", "http://localhost/")).toBe(false);
     expect(sameSite("https://example.com/", "not a url")).toBe(false);

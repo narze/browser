@@ -22,7 +22,7 @@ const canOpenPopup = (lastOpenedAt, now) => now - lastOpenedAt >= 750;
 function site(url) {
   try {
     const { hostname } = new URL(url);
-    return getDomain(hostname) ?? hostname;
+    return getDomain(hostname, { allowPrivateDomains: true }) ?? hostname;
   } catch {
     return null;
   }
