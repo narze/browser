@@ -28,6 +28,8 @@ export const browserCommands = {
   splitWith: { channel: "browser:split-with", palette: false },
   setSplitResizing: { channel: "browser:set-split-resizing", palette: false },
   setSidebarResizing: { channel: "browser:set-sidebar-resizing", palette: false },
+  capturePages: { channel: "browser:capture-pages", palette: false },
+  setTabDragging: { channel: "browser:set-tab-dragging", palette: false },
   toggleSidebar: { channel: "browser:toggle-sidebar", palette: false },
   toggleCompactMode: { channel: "browser:toggle-compact-mode", palette: false },
   setChromeRevealed: { channel: "browser:chrome-revealed", palette: false },

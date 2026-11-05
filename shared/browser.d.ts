@@ -102,6 +102,8 @@ export interface BrowserState {
   } | null;
   splitResizing: boolean;
   sidebarResizing: boolean;
+  /** A tab is being dragged over the pages, which hide so the chrome can show drop zones. */
+  tabDragging: boolean;
   settings: BrowserSettings;
   settingsOpen: boolean;
   archiveOpen: boolean;
@@ -119,6 +121,11 @@ export interface BrowserState {
   activeId: number;
   platform: string;
 }
+export interface PageSnapshot {
+  id: number;
+  /** A data URL. */
+  image: string;
+}
 export interface BrowserApi {
   reportPageLayout(regions: PageRegion[]): Promise<void>;
   openPalette(mode?: PaletteMode): Promise<void>;
@@ -135,6 +142,9 @@ export interface BrowserApi {
   splitWith(id: number, target: number, edge: SplitEdge): Promise<void>;
   setSplitResizing(resizing: boolean): Promise<void>;
   setSidebarResizing(resizing: boolean): Promise<void>;
+  /** Still images of the shown pages, to stand in for them while a tab drag hides them. */
+  capturePages(): Promise<PageSnapshot[]>;
+  setTabDragging(dragging: boolean): Promise<void>;
   toggleSidebar(): Promise<void>;
   toggleCompactMode(): Promise<void>;
   /** Compact mode: tells the window whether the hidden toolbar and tabs are showing. */

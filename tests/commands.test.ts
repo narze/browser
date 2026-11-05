@@ -13,6 +13,7 @@ const state: BrowserState = {
   split: null,
   splitResizing: false,
   sidebarResizing: false,
+  tabDragging: false,
   settingsOpen: false,
   archiveOpen: false,
   archive: [],

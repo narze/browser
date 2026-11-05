@@ -18,6 +18,7 @@ const { isWebUrl } = require("./policy.cjs");
  * | { type: 'split-with', id: number, target: number, edge: 'left' | 'right' | 'top' | 'bottom' }
  * | { type: 'resize-split', ratio: number, axis?: 'columns' | 'rows', index?: number }
  * | { type: 'set-split-resizing' | 'set-sidebar-resizing', resizing: boolean }
+ * | { type: 'set-tab-dragging', dragging: boolean }
  * | { type: 'show-settings' | 'show-archive', open: boolean }
  * | { type: 'open-palette', mode: 'navigate' | 'commands' }
  * | { type: 'move-tab', id: number, zone: TabZone, folderId?: number | null, index: number }
@@ -103,6 +104,8 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   let split = null;
   let splitResizing = false;
   let sidebarResizing = false;
+  /** A tab drag over the pages hides them, so the chrome can show drop zones. */
+  let tabDragging = false;
   /** @type {'settings' | 'archive' | null} */
   let screen = null;
   /** @type {import('../shared/browser').BrowserState['palette']} */
@@ -360,6 +363,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         id: tab.id,
         visible:
           !screen &&
+          !tabDragging &&
           !!tab.url &&
           !tab.error &&
           (split ? split.tabIds.includes(tab.id) : tab.id === activeId),
@@ -370,6 +374,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       split,
       splitResizing,
       sidebarResizing,
+      tabDragging,
       settingsOpen: screen === "settings",
       archiveOpen: screen === "archive",
       palette,
@@ -394,7 +399,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     }
     activeId = id;
     screen = null;
-    splitResizing = sidebarResizing = false;
+    splitResizing = sidebarResizing = tabDragging = false;
     palette = null;
     return true;
   }
@@ -631,17 +636,21 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         if (typeof command.resizing !== "boolean") throw new Error("Invalid resize state.");
         sidebarResizing = !screen && !palette && command.resizing;
         break;
+      case "set-tab-dragging":
+        if (typeof command.dragging !== "boolean") throw new Error("Invalid drag state.");
+        tabDragging = !screen && !palette && command.dragging;
+        break;
       case "show-settings":
       case "show-archive":
         screen = command.open ? (command.type === "show-settings" ? "settings" : "archive") : null;
-        splitResizing = sidebarResizing = false;
+        splitResizing = sidebarResizing = tabDragging = false;
         palette = null;
         focus();
         break;
       case "open-palette":
         if (!["commands", "navigate"].includes(command.mode))
           throw new Error("Invalid palette mode.");
-        splitResizing = sidebarResizing = false;
+        splitResizing = sidebarResizing = tabDragging = false;
         palette = {
           mode: command.mode,
           query: command.mode === "navigate" ? findTab(activeId)?.url || "" : "",

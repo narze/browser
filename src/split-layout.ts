@@ -1,4 +1,4 @@
-import type { BrowserState, SplitLayout } from "../shared/browser";
+import type { BrowserState, SplitEdge, SplitLayout } from "../shared/browser";
 
 type Split = NonNullable<BrowserState["split"]>;
 
@@ -82,4 +82,32 @@ export function dividerRatio(
   const before = sizes.slice(0, index).reduce((sum, size) => sum + size, 0);
   const start = before * available + index * gap;
   return (position - start - gap / 2) / ((sizes[index] + sizes[index + 1]) * available);
+}
+
+type Rect = { x: number; y: number; width: number; height: number };
+
+/**
+ * Where a tab dropped at a point on a page goes: the nearest edge that the split's
+ * axis allows, and the part of the page that the new pane takes. A full split
+ * replaces the whole pane.
+ */
+export function dropZone(
+  layout: SplitLayout | null,
+  rect: Rect,
+  pointX: number,
+  pointY: number,
+  full: boolean,
+): Rect & { edge: SplitEdge } {
+  if (full) return { edge: "right", ...rect };
+  const x = (pointX - rect.x) / rect.width;
+  const y = (pointY - rect.y) / rect.height;
+  const distances: [SplitEdge, number][] = [];
+  if (layout !== "rows") distances.push(["left", x], ["right", 1 - x]);
+  if (layout !== "columns") distances.push(["top", y], ["bottom", 1 - y]);
+  const [edge] = distances.reduce((nearest, entry) => (entry[1] < nearest[1] ? entry : nearest));
+  const half = { width: rect.width / 2, height: rect.height / 2 };
+  if (edge === "left") return { edge, ...rect, width: half.width };
+  if (edge === "right") return { edge, ...rect, x: rect.x + half.width, width: half.width };
+  if (edge === "top") return { edge, ...rect, height: half.height };
+  return { edge, ...rect, y: rect.y + half.height, height: half.height };
 }

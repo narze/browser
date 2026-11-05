@@ -2020,3 +2020,28 @@ span.folder-toggle {
   height: 28px;
   border-radius: 7px;
 }
+
+/* Tab drag over the pages: still images stand in for the hidden pages, under the drop zone. */
+.page-drop {
+  position: fixed;
+  z-index: 20;
+}
+.page-drop img {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+}
+.page-drop-zone {
+  position: absolute;
+  box-sizing: border-box;
+  border: 2px solid var(--accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  pointer-events: none;
+  transition:
+    left 120ms ease,
+    top 120ms ease,
+    width 120ms ease,
+    height 120ms ease;
+}

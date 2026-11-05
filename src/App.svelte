@@ -3,6 +3,8 @@
   import Icon from './Icon.svelte';
   import Settings from './Settings.svelte';
   import SplitView from './SplitView.svelte';
+  import PageDrop from './PageDrop.svelte';
+  import { tabDrag } from './tab-drag.svelte';
   import TabList from './TabList.svelte';
   import Archive from './Archive.svelte';
   import SpaceSwitcher from './SpaceSwitcher.svelte';
@@ -12,13 +14,13 @@
   import type { BrowserState } from '../shared/browser';
 
   const api = window.browser;
-  let pageRegion: HTMLElement;
+  let pageRegion = $state<HTMLElement>();
   $effect(() => {
     // Rebind observers after Svelte changes which tabs occupy the page regions.
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);
@@ -32,7 +34,7 @@
   let edgeReveal = $state(false);
   let chromeFocused = $state(false);
   let compact = $derived(browserState.settings.compactMode);
-  let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null));
+  let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null || tabDrag.id !== null));
   let chromeHidden = $derived(compact && !revealed);
   $effect(() => { void api?.setChromeRevealed(revealed); });
 
@@ -231,5 +233,6 @@
       </section>
       <footer class="new-page-footer"><span class="status-dot"></span> Ready to explore {#if key('newTab')}<span class="footer-shortcut">New tab <kbd>{key('newTab')}</kbd></span>{/if}</footer>
     {/if}
+    {#if tabDrag.id !== null && api && pageRegion && !browserState.settingsOpen && !browserState.archiveOpen}<PageDrop state={browserState} {api} region={pageRegion} />{/if}
   </main>
 </div>

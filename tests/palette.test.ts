@@ -49,6 +49,7 @@ const state: BrowserState = {
   split: null,
   splitResizing: false,
   sidebarResizing: false,
+  tabDragging: false,
   tabLayout: "top",
   settingsOpen: false,
   archiveOpen: false,

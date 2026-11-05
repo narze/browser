@@ -867,6 +867,22 @@ function setChromeRevealed(revealed) {
 }
 
 // The macOS window buttons would cover the page while the chrome hides.
+/** JPEG images of the shown pages; the chrome shows them while a tab drag hides the pages. */
+async function capturePages() {
+  const shown = sessionState().pages.filter(
+    (page) => page.visible && views.get(page.id)?.getVisible(),
+  );
+  const snapshots = await Promise.all(
+    shown.map(async ({ id }) => {
+      const image = await views.get(id).webContents.capturePage();
+      return image.isEmpty()
+        ? null
+        : { id, image: `data:image/jpeg;base64,${image.toJPEG(85).toString("base64")}` };
+    }),
+  );
+  return snapshots.filter(Boolean);
+}
+
 function updateWindowButtons() {
   if (process.platform === "darwin" && window && !window.isDestroyed())
     window.setWindowButtonVisibility(!settings.compactMode || chromeRevealed);
@@ -899,6 +915,8 @@ function installIpc() {
     },
     setSplitResizing: (resizing) => dispatch({ type: "set-split-resizing", resizing }),
     setSidebarResizing: (resizing) => dispatch({ type: "set-sidebar-resizing", resizing }),
+    capturePages,
+    setTabDragging: (dragging) => dispatch({ type: "set-tab-dragging", dragging }),
     toggleSidebar,
     toggleCompactMode,
     setChromeRevealed,

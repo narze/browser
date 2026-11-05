@@ -145,4 +145,24 @@ describe("split view with more panes", () => {
     expect(() => session.dispatch({ type: "set-split-tab", side: 0, id: 1 })).toThrow();
     expect(session.getState().split?.tabIds).toEqual([own, added]);
   });
+
+  it("hides the native pages while a tab is dragged over them", () => {
+    const session = tabs(2);
+    expect(visible(session)).toEqual([2]);
+    session.dispatch({ type: "set-tab-dragging", dragging: true });
+    expect(session.getState().tabDragging).toBe(true);
+    expect(visible(session)).toEqual([]);
+    session.dispatch({ type: "set-tab-dragging", dragging: false });
+    expect(visible(session)).toEqual([2]);
+    session.dispatch({ type: "set-tab-dragging", dragging: true });
+    session.dispatch({ type: "split-with", id: 1, target: 2, edge: "right" });
+    expect(session.getState()).toMatchObject({ tabDragging: false, split: { tabIds: [2, 1] } });
+    expect(visible(session)).toEqual([1, 2]);
+    session.dispatch({ type: "show-settings", open: true });
+    session.dispatch({ type: "set-tab-dragging", dragging: true });
+    expect(session.getState().tabDragging).toBe(false);
+    expect(() =>
+      session.dispatch({ type: "set-tab-dragging", dragging: "yes" as never }),
+    ).toThrow();
+  });
 });
