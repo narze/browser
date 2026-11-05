@@ -126,7 +126,7 @@ describe("folders (A3)", () => {
     const created = session.dispatch({ type: "create-folder" });
     expect(created.effects).toContainEqual({ type: "edit", kind: "folder", id: 1 });
     expect(session.getState().folders).toEqual([
-      { id: 1, name: "New folder", collapsed: false, spaceId: 1 },
+      { id: 1, name: "New folder", collapsed: false, spaceId: 1, parentId: null },
     ]);
     session.dispatch({ type: "rename-folder", id: 1, name: "  Research  " });
     session.dispatch({ type: "rename-folder", id: 1, name: "   " });
@@ -297,7 +297,9 @@ describe("saved organization", () => {
       ["pinned", "https://c.test/", true, "Mail"],
     ]);
     expect(state.tabs[2].favicon).toBe("0123456789abcdef0123456789abcdef.png");
-    expect(state.folders).toEqual([{ id: 1, name: "Work", collapsed: true, spaceId: 1 }]);
+    expect(state.folders).toEqual([
+      { id: 1, name: "Work", collapsed: true, spaceId: 1, parentId: null },
+    ]);
     expect(state.sections.folders).toEqual([{ id: 1, slots: [[2]] }]);
     expect(state.archive.map((entry) => entry.url)).toEqual(["https://d.test/"]);
     expect(state.activeId).toBe(0);

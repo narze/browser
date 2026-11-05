@@ -207,7 +207,7 @@ describe("saved spaces (B1, B3, B4)", () => {
     session.dispatch({ type: "create-folder", name: "Team", tabId: 3 });
     session.dispatch({ type: "add-route", host: "w.test", spaceId: 2 });
     const saved = JSON.parse(JSON.stringify(session.exportOrganization()));
-    expect(saved.version).toBe(2);
+    expect(saved.version).toBe(3);
     const restored = createBrowserSession({ now: () => 5, saved, newProfile });
     const state = restored.getState();
     expect(state.spaces.map(({ id, name, profile }) => [id, name, profile])).toEqual([
@@ -219,7 +219,9 @@ describe("saved spaces (B1, B3, B4)", () => {
       [1, "https://a.test/"],
       [2, "https://w.test/"],
     ]);
-    expect(state.folders).toEqual([{ id: 1, name: "Team", collapsed: false, spaceId: 2 }]);
+    expect(state.folders).toEqual([
+      { id: 1, name: "Team", collapsed: false, spaceId: 2, parentId: null },
+    ]);
     expect(state.routes).toEqual([{ id: 1, host: "w.test", spaceId: 2 }]);
   });
 

@@ -94,7 +94,7 @@
     const [source, target] = [drag, drop];
     endDrag();
     if (!source || !target) return;
-    if (source.kind === 'folder') void api?.moveFolder(source.id, target.index);
+    if (source.kind === 'folder') void api?.moveFolder(source.id, target.index, null);
     else void api?.moveTab(source.id, target.zone, target.folderId, target.index).catch(() => {});
   }
   const marked = (marker: string) => drop?.marker === marker;
