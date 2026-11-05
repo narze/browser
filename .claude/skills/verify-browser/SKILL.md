@@ -82,17 +82,7 @@ Proof standards:
 
 ## Live view for a human
 
-When the user wants to watch or use the app themselves, for example from another machine through T3 Code, run `node $V live [--port 6090]` on a launched run. It serves `http://localhost:6090/` on loopback only.
-
-- The page streams **only the Electron window**, at 1× by default (an HD checkbox switches to Retina). It only sends a new frame when the window changes. Clicks, drags, wheel, typing, and paste are sent back into the app and routed to the palette, page, or chrome view under the pointer.
-- In T3 Code, open it in the preview sidebar (`http://localhost:6090/` or an environment-port target). For other tailnet machines, run `tailscale serve --bg --https=6090 http://127.0.0.1:6090` and use `https://<mac>.<tailnet>.ts.net:6090/`. Turn it off with `tailscale serve --https=6090 off`.
-- While live runs, macOS `caffeinate` keeps the display awake so Chromium keeps painting. It exits with the run.
-- The viewer's own browser can intercept shortcuts such as Cmd+L, Cmd+T, and Cmd+W. Users should use the app's buttons or palette for those.
-- `Fit` resizes the real window to the viewer's shape, bounded by the app's 640 px minimum width and the Mac's screen. On a phone the window then renders about twice as large. Turning Fit off restores the original size. Fit is a real window resize, so turn it off (or relaunch) before taking evidence that expects the default 1280×850.
-- Dropdowns (`<select>`) open as native macOS menus that frame capture cannot see. The live view intercepts the click, shows the options in the viewer (the device's native picker, or an in-page list), and applies the choice with the same `input`/`change` events a real pick fires.
-- Copy and paste use the app's own edit commands, with the Mac clipboard as the hand-off. Cmd/Ctrl+C, X, and A run copy, cut, and select-all in the focused view; the copied text is written to the viewer device's clipboard. Cmd/Ctrl+V (or the `Paste` key) puts the device's text on the Mac clipboard and runs a real paste. If the browser denies clipboard access, a box shows the copied text, or accepts text to paste. This overwrites the Mac's clipboard.
-- On phones, `⌨ Keyboard` opens the on-screen keyboard and a key row (Esc, Tab, arrows, Enter, Backspace, Select all, Copy, Cut, Paste, ⌘K, ⌘L, Ctrl+Tab). Tap clicks, double-tap selects a word, swipe scrolls, and long-press then move drags (for example, the split divider). The viewer page is `scripts/live.html`, read on every request, so reloading the page picks up edits. Changes to `scripts/live.mjs` need a new run.
-- This is a viewing aid, not proof. Proof still comes from the Drive and Evidence steps.
+When the user wants to watch or use the app themselves (T3 sidebar, phone, another machine), use the `live-browser` skill. `node $V live [--port 6090]` is the low-level hook it calls on a launched run. The viewer is a viewing aid, not proof.
 
 ## Cleanup
 
@@ -105,7 +95,7 @@ Asks the host to close Electron and its servers. If it doesn't respond, `cleanup
 
 ## Helpers
 
-- `scripts/live.mjs` is the live viewer started by `node $V live`.
+- `node $V live` loads the viewer from `.claude/skills/live-browser/scripts/live.mjs`.
 - `scripts/verify.mjs` is the entire harness; `node $V help` prints usage. It needs the repo's `node_modules` (`pnpm install`) and imports `@playwright/test` from there.
 - Shell example for the fixture origin: `O=$(node -e 'console.log(JSON.parse(require("fs").readFileSync(".verify/runs/<run>/session.json")).fixtureOrigin)')`.
 - Tested on macOS (shortcut modifier `meta`). On Linux or Windows, use `--modifiers control` where the app says Cmd/Ctrl. The macOS app menu adds a leading app-name menu, but `File` and `View` paths are the same.
