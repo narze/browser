@@ -5,6 +5,7 @@
   import SplitView from './SplitView.svelte';
   import TabList from './TabList.svelte';
   import Archive from './Archive.svelte';
+  import SpaceSwitcher from './SpaceSwitcher.svelte';
   import { observePageLayout } from './page-layout';
   import { clampSidebarWidth, defaultSettings, settingsSchema } from '../shared/settings.js';
   import { formatAccelerator, resolveShortcuts } from '../shared/shortcuts.js';
@@ -17,7 +18,7 @@
     const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
-  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
+  let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
   let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);
@@ -129,6 +130,7 @@
   {/if}
   <header class="chrome">
     <div class="tab-row">
+      <SpaceSwitcher state={browserState} {api} nextKey={key('nextSpace')} newKey={key('newSpace')} />
       <TabList state={browserState} {api} {vertical} closeShortcut={key('closeTab')} />
       <button class="icon-button new-tab" aria-label="New tab" title={withKey('New tab', 'newTab')} disabled={!api} onclick={() => api?.newTab()}><Icon name="plus" size={18} />{#if vertical}<span>New tab</span>{#if key('newTab')}<kbd>{key('newTab')}</kbd>{/if}{/if}</button>
       <div class="drag-space"></div>
@@ -157,7 +159,7 @@
 
   <main bind:this={pageRegion} data-page-id={!browserState.split || browserState.settingsOpen || browserState.archiveOpen ? browserState.activeId : undefined}>
     {#if browserState.settingsOpen && api}
-      <Settings settings={browserState.settings} platform={browserState.platform} {api} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
+      <Settings settings={browserState.settings} platform={browserState.platform} spaces={browserState.spaces} routes={browserState.routes} activeSpaceId={browserState.activeSpaceId} {api} onclose={() => api.closeSettings()} onsave={(patch) => api.updateSettings(patch)} />
     {:else if browserState.archiveOpen && api}
       <Archive entries={browserState.archive} archiveAfter={browserState.settings.archiveAfter} {api} />
     {:else if browserState.split && api}

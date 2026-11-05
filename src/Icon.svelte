@@ -22,6 +22,7 @@
     folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
     archive: 'M3 5h18v4H3z M5 9v10h14V9 M10 13h4',
     chevron: 'm9 6 6 6-6 6',
+    space: 'm12 3 9 5-9 5-9-5z M3 13l9 5 9-5',
   };
 </script>
 

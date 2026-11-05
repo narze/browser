@@ -638,7 +638,7 @@ kbd {
 .vertical .tabs {
   position: fixed;
   top: calc(var(--chrome-height) + 58px);
-  bottom: 12px;
+  bottom: 52px;
   width: calc(var(--sidebar-width) - 24px);
   max-width: none;
   flex-direction: column;
@@ -1778,6 +1778,202 @@ span.folder-toggle {
 
 /* ⌘S hides the side tab rail; pages take the full width. */
 .sidebar-hidden .tabs,
-.sidebar-hidden .new-tab {
+.sidebar-hidden .new-tab,
+.vertical.sidebar-hidden .spaces {
   display: none;
+}
+
+/* Spaces: one dot per space, before the tabs or at the bottom of the sidebar. */
+.spaces {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  flex-shrink: 0;
+  min-width: 0;
+  -webkit-app-region: no-drag;
+}
+.space-dot[data-color="blue"] {
+  --space: #4f7fd9;
+}
+.space-dot[data-color="purple"] {
+  --space: #8a63d2;
+}
+.space-dot[data-color="pink"] {
+  --space: #cc4f93;
+}
+.space-dot[data-color="red"] {
+  --space: #d0544f;
+}
+.space-dot[data-color="orange"] {
+  --space: #d97a35;
+}
+.space-dot[data-color="yellow"] {
+  --space: #c79a1e;
+}
+.space-dot[data-color="green"] {
+  --space: #3f9f61;
+}
+.space-dot[data-color="teal"] {
+  --space: #2a9a9a;
+}
+.space-dot[data-color="gray"] {
+  --space: #7f8a9c;
+}
+.space-dot {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  background: color-mix(in srgb, var(--space) 18%, transparent);
+  color: var(--space);
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1;
+}
+.space-dot:hover {
+  background: color-mix(in srgb, var(--space) 30%, transparent);
+}
+.space-dot.active {
+  background: var(--space);
+  color: #fff;
+}
+.space-name {
+  min-width: 0;
+  max-width: 120px;
+  margin: 0 2px 0 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.space-add {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--border);
+  border-radius: 50%;
+  padding: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.space-add:hover {
+  border-style: solid;
+  background: var(--hover);
+  color: var(--text);
+}
+.space-name-input {
+  flex: 0 1 140px;
+}
+.tab-row > .spaces {
+  margin-bottom: 0;
+  padding-right: 5px;
+  border-right: 1px solid var(--border);
+}
+.vertical .spaces {
+  position: fixed;
+  bottom: 10px;
+  width: calc(var(--sidebar-width) - 24px);
+  height: 34px;
+  padding: 0 4px;
+  border-right: 0;
+}
+.vertical.left .spaces {
+  left: 12px;
+}
+.vertical.right .spaces {
+  right: 12px;
+}
+.vertical .space-name {
+  flex: 1;
+  max-width: none;
+}
+.vertical .space-name-input {
+  flex: 1;
+}
+
+/* Link routing rules in settings. */
+.routing-intro {
+  margin: -12px 0 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.route-list {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.route-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.route-row + .route-row {
+  border-top: 1px solid var(--chrome);
+}
+.route-row strong {
+  font-weight: 500;
+  color: var(--text);
+}
+.route-row span {
+  flex: 1;
+  color: var(--text-secondary);
+}
+.route-remove {
+  width: 26px;
+  height: 26px;
+}
+.route-form {
+  display: flex;
+  gap: 8px;
+}
+.route-form input,
+.route-form select {
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+.route-form input {
+  flex: 1;
+  min-width: 0;
+}
+.route-form input[aria-invalid="true"] {
+  border-color: var(--error-border);
+}
+.route-form select {
+  max-width: 40%;
+  color: var(--text-secondary);
+}
+.route-form input:focus-visible,
+.route-form select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.route-add {
+  padding: 0 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: 7px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+}
+.route-add:disabled {
+  opacity: 0.45;
 }

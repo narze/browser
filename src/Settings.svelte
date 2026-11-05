@@ -3,10 +3,13 @@
   import Icon from './Icon.svelte';
   import ShortcutSettings from './ShortcutSettings.svelte';
   import { settingsSchema } from '../shared/settings.js';
-  import type { BrowserApi, BrowserSettings } from '../shared/browser';
+  import type { BrowserApi, BrowserSettings, SiteRoute, Space } from '../shared/browser';
 
-  let { settings, platform, api, onclose, onsave }: {
+  let { settings, platform, api, spaces, routes, activeSpaceId, onclose, onsave }: {
     settings: BrowserSettings;
+    spaces: Space[];
+    routes: SiteRoute[];
+    activeSpaceId: number;
     platform: string;
     api: BrowserApi;
     onclose: () => void;
@@ -17,6 +20,18 @@
   let error = $state('');
   let heading: HTMLHeadingElement;
   onMount(() => heading.focus());
+  let routeHost = $state('');
+  // svelte-ignore state_referenced_locally (The form starts with the active space and then keeps the choice.)
+  let routeSpace = $state(activeSpaceId);
+  let routeError = $state('');
+  const spaceName = (id: number) => spaces.find((space) => space.id === id)?.name ?? '';
+
+  async function addRoute(event: SubmitEvent) {
+    event.preventDefault();
+    const result = await api.addRoute(routeHost, routeSpace);
+    routeError = result.error || '';
+    if (!routeError) routeHost = '';
+  }
 
   async function save(patch: Partial<BrowserSettings>) {
     busy = true;
@@ -96,6 +111,28 @@
         {#each settingsSchema.sleepAfter.options as option}<option value={option.value}>{option.label}</option>{/each}
       </select>
     </div>
+  </section>
+  <section class="settings-section" aria-labelledby="routing-title">
+    <h2 id="routing-title">Link routing</h2>
+    <p class="routing-intro">Links to these sites open in a new tab in their space, with that space’s logins. Subdomains are included.</p>
+    {#if routes.length}
+      <ul class="route-list" aria-label="Link routes">
+        {#each routes as route (route.id)}
+          <li class="route-row">
+            <strong>{route.host}</strong><Icon name="arrow" size={14} /><span>{spaceName(route.spaceId)}</span>
+            <button class="icon-button route-remove" aria-label={`Remove route for ${route.host}`} title="Remove" onclick={() => api.removeRoute(route.id)}><Icon name="close" size={14} /></button>
+          </li>
+        {/each}
+      </ul>
+    {/if}
+    <form class="route-form" onsubmit={addRoute}>
+      <input aria-label="Site" placeholder="github.com" bind:value={routeHost} autocomplete="off" spellcheck="false" aria-invalid={!!routeError} />
+      <select aria-label="Space for this site" bind:value={routeSpace}>
+        {#each spaces as space (space.id)}<option value={space.id}>{space.name}</option>{/each}
+      </select>
+      <button class="route-add" disabled={!routeHost.trim()}>Add route</button>
+    </form>
+    {#if routeError}<p class="settings-error" role="alert">{routeError}</p>{/if}
   </section>
   <ShortcutSettings overrides={settings.shortcuts} {platform} {api} {busy} onsave={save} />
   <p class="settings-status" role="status">{message}</p>
