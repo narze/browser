@@ -94,10 +94,10 @@
   }
   function overFolder(event: DragEvent, folder: TabFolder) {
     if (drag?.kind === 'tab') return overContainer(event, 'pinned', folder.id);
-    // A folder cannot move into itself or into a folder inside it.
-    if (drag?.kind !== 'folder' || isInside(browserState.folders, folder.id, drag.id)) return;
-    event.preventDefault();
+    if (drag?.kind !== 'folder') return;
     event.stopPropagation();
+    if (blocked(folder)) return;
+    event.preventDefault();
     // The middle of a folder row drops into it; its edges drop before or after it.
     const box = (event.currentTarget as HTMLElement).getBoundingClientRect();
     const share = vertical ? (event.clientY - box.top) / box.height : (event.clientX - box.left) / box.width;
@@ -112,12 +112,19 @@
       drop = { zone: 'pinned', folderId: folder.parentId, index, marker: `folder-${folder.id}-${isAfter ? 'after' : 'before'}` };
     }
   }
+  /** A folder cannot move into itself or into a folder inside it. No drop there. */
+  function blocked(folder: TabFolder) {
+    if (!drag || !isInside(browserState.folders, folder.id, drag.id)) return false;
+    drop = null;
+    return true;
+  }
   /** Between the rows inside a folder: the end of that folder. */
   function overContents(event: DragEvent, folder: TabFolder) {
     if (drag?.kind === 'tab') return overContainer(event, 'pinned', folder.id);
-    if (drag?.kind !== 'folder' || isInside(browserState.folders, folder.id, drag.id)) return;
-    event.preventDefault();
+    if (drag?.kind !== 'folder') return;
     event.stopPropagation();
+    if (blocked(folder)) return;
+    event.preventDefault();
     const index = children(folder.id).filter((entry) => entry.id !== drag!.id).length;
     drop = { zone: 'pinned', folderId: folder.id, index, marker: `folder-${folder.id}-into` };
   }
