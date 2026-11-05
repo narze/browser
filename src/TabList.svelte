@@ -9,6 +9,7 @@
   let drag = $state<{ kind: 'tab' | 'folder'; id: number } | null>(null);
   let drop = $state<Drop | null>(null);
   let editing = $state<EditTarget | null>(null);
+  let brokenIcons = $state<string[]>([]);
   let tabsById = $derived(new Map(browserState.tabs.map((tab) => [tab.id, tab])));
   let shown = $derived(browserState.split ? browserState.split.tabIds : [browserState.activeId]);
   let hasPinned = $derived(browserState.sections.pinned.length > 0 || browserState.folders.length > 0);
@@ -143,7 +144,7 @@
         onclick={() => api?.selectTab(tab.id)} ondblclick={() => tab.zone !== 'favorites' && startEdit({ kind: 'tab', id: tab.id })}
         onauxclick={(event) => { if (event.button === 1) void api?.closeTab(tab.id); }}>
         {#if tab.loading}<span class="spinner" aria-label="Loading"></span>
-        {:else if tab.favicon}<img class="favicon" src={`favicon://icon/${tab.favicon}`} alt="" width="16" height="16" draggable="false" />
+        {:else if tab.favicon && !brokenIcons.includes(tab.favicon)}<img class="favicon" src={`favicon://icon/${tab.favicon}`} alt="" width="16" height="16" draggable="false" onerror={() => (brokenIcons = [...brokenIcons, tab.favicon!])} />
         {:else}<span class="tab-icon"><Icon name={tab.url ? 'globe' : 'plus'} size={14} /></span>{/if}
         <span class="tab-title">{label(tab)}</span>
       </button>

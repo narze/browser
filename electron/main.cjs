@@ -152,7 +152,9 @@ async function cacheFavicon(url) {
       ? await fetch(url)
       : await session.fromPartition("persist:browsing").fetch(url);
     const type = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
-    const extension = FAVICON_TYPES[type] ?? (/\.ico(\?|$)/i.test(url) ? "ico" : null);
+    // Servers often send .ico files without an image type, but never accept text or HTML.
+    const untyped = !type || type === "application/octet-stream";
+    const extension = FAVICON_TYPES[type] ?? (untyped && /\.ico(\?|$)/i.test(url) ? "ico" : null);
     const bytes = Buffer.from(await response.arrayBuffer());
     if (!response.ok || !extension || !bytes.length || bytes.length > 256 * 1024) return null;
     const name = `${key}.${extension}`;
