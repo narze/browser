@@ -1,3 +1,5 @@
+const { getDomain } = require("tldts");
+
 /** @param {unknown} value */
 function isWebUrl(value) {
   if (typeof value !== "string") return false;
@@ -16,14 +18,11 @@ const isTabId = (value) => typeof value === "number" && Number.isSafeInteger(val
  * @param {number} now */
 const canOpenPopup = (lastOpenedAt, now) => now - lastOpenedAt >= 750;
 
-/** The last two parts of a host name, without "www.": a cheap guess at the site. */
+/** The registrable domain of a URL (bbc.co.uk for news.bbc.co.uk), or its host for IPs and local names. */
 function site(url) {
   try {
-    return new URL(url).hostname
-      .replace(/^www\./, "")
-      .split(".")
-      .slice(-2)
-      .join(".");
+    const { hostname } = new URL(url);
+    return getDomain(hostname) ?? hostname;
   } catch {
     return null;
   }

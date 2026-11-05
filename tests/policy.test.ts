@@ -21,10 +21,14 @@ describe("browser process boundary", () => {
       expect(isTabId(id)).toBe(false);
     }
   });
-  it("compares sites by the last two parts of the host name", () => {
+  it("compares sites by their registrable domain", () => {
     expect(sameSite("https://mail.example.com/a", "https://accounts.example.com/b")).toBe(true);
     expect(sameSite("https://www.example.com/", "http://example.com/x")).toBe(true);
+    expect(sameSite("https://news.bbc.co.uk/", "https://www.bbc.co.uk/")).toBe(true);
     expect(sameSite("https://example.com/", "https://other.org/")).toBe(false);
+    expect(sameSite("https://first.co.uk/", "https://other.co.uk/")).toBe(false);
+    expect(sameSite("http://127.0.0.1:8000/", "http://127.0.0.1:9000/")).toBe(true);
+    expect(sameSite("http://127.0.0.1/", "http://localhost/")).toBe(false);
     expect(sameSite("https://example.com/", "not a url")).toBe(false);
   });
   it("limits popup bursts per source tab", () => {
