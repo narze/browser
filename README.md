@@ -29,6 +29,8 @@ Features:
 - Rename a tab or folder with a double-click, F2, or the context menu. An empty name restores the page title.
 - Today tabs that stay unused move to the **Archive** (after 12 hours by default). Closed Today tabs go there too. Open it from the toolbar or Cmd/Ctrl+Shift+A to filter, restore, or remove entries.
 - Unused background tabs **sleep** (after 1 hour by default) to free memory and keep their back/forward history when they wake. Tabs that play audio stay awake. Set both timers in Settings under **Tabs**.
+- Use **Spaces** for separate sets of tabs, such as Work and Personal. Each space has its own favorites, pinned tabs, folders, and Today tabs, and its own **profile**: cookies, logins, and site data. Switch with the space dots (before the tabs, or at the bottom of the sidebar), Cmd/Ctrl+Alt+Left/Right, or the palette. Click **+** to add a space, double-click a dot or press F2 to rename it, and right-click for its color or to delete it. Deleting a space archives its Today tabs and erases its site data. Move a tab to another space from its context menu or the palette; it reloads with that space's logins.
+- **Link routing** opens new tabs for a site in a specific space, for example github.com in Work. Add routes in Settings under **Link routing**. A route also covers subdomains, and the most specific route wins. Typed addresses stay in the current tab.
 - Change any browser **keyboard shortcut** in Settings under **Keyboard shortcuts**. Search by name or keys, click a shortcut and press new keys, press Delete to remove it, and reset one or all. A shortcut that another action uses is rejected. Browser shortcuts take priority over websites, except Back and Forward, which leave Alt+Left/Right to text fields. The menus, toolbar tips, and palette show the current keys. The definitions live in `shared/shortcuts.js`.
 - Favorites, pinned tabs, folders, and the archive save to `tabs.json` in the app profile and return asleep after a restart. Site icons are cached in the profile.
 
@@ -52,6 +54,7 @@ Default shortcuts (all customizable):
 | Ctrl+Tab / Ctrl+Shift+Tab | Next / previous tab                 |
 | Cmd/Ctrl+Shift+] / [      | Next / previous tab                 |
 | Cmd/Ctrl+1 to 8 / 9       | Select tab by position / last tab   |
+| Cmd/Ctrl+Alt+Right / Left | Next / previous space               |
 | Cmd/Ctrl+Alt+I            | Developer tools for the active page |
 
 Fixed keys: Alt+Shift+Up / Down moves the focused tab, and F2 renames it.
@@ -82,7 +85,7 @@ The command palette uses a separate transparent local `WebContentsView`, with IP
 
 For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
-This is a prototype. Today tabs are kept in memory, while website cookies and storage use Electron's persistent browsing session. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
+This is a prototype. Today tabs are kept in memory, while website cookies and storage use one persistent Electron session for each space. It does not include session restore, bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
 
 Popup links open as ordinary GET tabs, with at most one popup per source tab every 750 ms. Opener-dependent flows and POST popups are not supported. Closing a tab discards its page without an unsaved-changes prompt.
 

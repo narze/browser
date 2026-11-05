@@ -47,6 +47,15 @@ export const browserCommands = {
   removeArchived: { channel: "browser:remove-archived", palette: false },
   clearArchive: { channel: "browser:clear-archive", palette: false },
   editTab: { channel: "browser:edit-tab", palette: false },
+  createSpace: { channel: "browser:create-space", palette: false },
+  switchSpace: { channel: "browser:switch-space", palette: false },
+  cycleSpace: { channel: "browser:cycle-space", palette: false },
+  renameSpace: { channel: "browser:rename-space", palette: false },
+  deleteSpace: { channel: "browser:delete-space", palette: false },
+  showSpaceMenu: { channel: "browser:space-menu", palette: false },
+  moveTabToSpace: { channel: "browser:move-tab-to-space", palette: false },
+  addRoute: { channel: "browser:add-route", palette: false },
+  removeRoute: { channel: "browser:remove-route", palette: false },
 };
 
 export const browserEvents = {
@@ -213,6 +222,15 @@ export function paletteCommands(state) {
       args: [],
     },
     {
+      id: "new-space",
+      title: "New space",
+      detail: "A new set of tabs with its own logins",
+      icon: "space",
+      hint: shortcut("newSpace"),
+      command: "createSpace",
+      args: [],
+    },
+    {
       id: "archive",
       title: "Open archive",
       detail: "Closed and auto-archived tabs",
@@ -232,6 +250,28 @@ export function paletteCommands(state) {
       command: "toggleSidebar",
       args: [],
     });
+  for (const space of state.spaces) {
+    if (space.id === state.activeSpaceId) continue;
+    commands.push({
+      id: `space-${space.id}`,
+      title: `Switch to ${space.name}`,
+      detail: "Space",
+      icon: "space",
+      hint: "",
+      command: "switchSpace",
+      args: [space.id],
+    });
+    if (active?.url)
+      commands.push({
+        id: `move-to-space-${space.id}`,
+        title: `Move tab to ${space.name}`,
+        detail: active.customTitle || active.title,
+        icon: "space",
+        hint: "",
+        command: "moveTabToSpace",
+        args: [active.id, space.id],
+      });
+  }
   for (const { value, label } of settingsSchema.theme.options)
     commands.push({
       id: `theme-${value}`,

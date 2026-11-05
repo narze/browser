@@ -19,7 +19,7 @@
 
   function containerIds(zone: TabZone, folderId: number | null) {
     return browserState.tabs
-      .filter((tab) => tab.zone === zone && (zone !== 'pinned' || tab.folderId === folderId))
+      .filter((tab) => tab.spaceId === browserState.activeSpaceId && tab.zone === zone && (zone !== 'pinned' || tab.folderId === folderId))
       .map((tab) => tab.id);
   }
 
@@ -41,7 +41,7 @@
     if (event.key === 'Enter') { event.preventDefault(); commitEdit((event.currentTarget as HTMLInputElement).value); }
     else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); editing = null; }
   }
-  onMount(() => api?.onEdit((target) => void startEdit(target)));
+  onMount(() => api?.onEdit((target) => { if (target.kind !== 'space') void startEdit(target); }));
 
   // Drag and drop uses native HTML drag events. The main process owns the order.
   function startDrag(event: DragEvent, kind: 'tab' | 'folder', id: number) {

@@ -5,6 +5,7 @@ const {
   ipcMain,
   Menu,
   clipboard,
+  dialog,
   session,
   nativeTheme,
   protocol,
@@ -35,8 +36,9 @@ const {
   paletteCommands,
 } = require("../shared/commands.js");
 
-// Prototype: today tabs are in memory; favorites, pinned tabs, folders, and the
-// archive persist in tabs.json. Remote pages never receive the chrome preload.
+// Prototype: today tabs are in memory; spaces, favorites, pinned tabs, folders,
+// routes, and the archive persist in tabs.json. Remote pages never receive the
+// chrome preload. Each space browses in its own session partition.
 let settingsStore;
 let tabStore;
 let faviconDirectory;
@@ -49,6 +51,8 @@ let settings;
 let window;
 let browserSession;
 const views = new Map();
+// The profile each page view was created with. A view cannot change its partition.
+const viewProfiles = new Map();
 let paletteView;
 let pageRegions = [];
 let commandHandlers;
@@ -76,13 +80,40 @@ function getState() {
   };
 }
 
+const partition = (profile) => `persist:${profile}`;
+const configuredProfiles = new Set();
+// Every space profile denies permission prompts, like the original browsing profile.
+function browsingSession(profile) {
+  const browsing = session.fromPartition(partition(profile));
+  if (!configuredProfiles.has(profile)) {
+    configuredProfiles.add(profile);
+    browsing.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
+    browsing.setPermissionCheckHandler(() => false);
+  }
+  return browsing;
+}
+const profileOf = (state, tab) => state.spaces.find((space) => space.id === tab.spaceId).profile;
+
 // Session transitions are pure; this adapter owns all native view side effects.
 function dispatch(command) {
   const result = browserSession.dispatch(command);
+  // A tab moved to a space with another profile gets a new view in that profile.
+  const moved = [];
+  for (const [id, view] of views) {
+    const tab = result.state.tabs.find((entry) => entry.id === id);
+    if (!tab || tab.asleep || viewProfiles.get(id) === profileOf(result.state, tab)) continue;
+    views.delete(id);
+    viewProfiles.delete(id);
+    window.contentView.removeChildView(view);
+    view.webContents.close({ waitForBeforeUnload: false });
+    if (tab.url) moved.push(tab);
+  }
   for (const tab of result.state.tabs) {
     if (!tab.asleep && !views.has(tab.id)) {
-      const view = createPageView(tab.id);
+      const profile = profileOf(result.state, tab);
+      const view = createPageView(tab.id, profile);
       views.set(tab.id, view);
+      viewProfiles.set(tab.id, profile);
       window.contentView.addChildView(view);
     }
   }
@@ -90,6 +121,7 @@ function dispatch(command) {
     const tab = result.state.tabs.find((entry) => entry.id === id);
     if (tab && !tab.asleep) continue;
     views.delete(id);
+    viewProfiles.delete(id);
     window.contentView.removeChildView(view);
     const navigation = view.webContents.navigationHistory;
     if (tab)
@@ -112,6 +144,11 @@ function dispatch(command) {
   }
   layout();
   publish();
+  for (const tab of moved)
+    void views
+      .get(tab.id)
+      .webContents.loadURL(tab.url)
+      .catch(() => {});
   for (const effect of result.effects) {
     if (effect.type === "load") {
       const contents = views.get(effect.id).webContents;
@@ -120,6 +157,7 @@ function dispatch(command) {
       void contents.loadURL(effect.url || "about:blank").catch(() => {});
     } else if (effect.type === "wake") wake(effect.id, effect.url);
     else if (effect.type === "edit") edit(effect);
+    else if (effect.type === "clear-profile") clearProfile(effect.profile);
     else if (effect.type === "focus") focusActive();
   }
   return result;
@@ -134,6 +172,14 @@ function wake(id, url) {
   if (saved?.entries[saved.index]?.url === url)
     void contents.navigationHistory.restore(saved).catch(() => contents.loadURL(url));
   else void contents.loadURL(url || "about:blank").catch(() => {});
+}
+
+// A deleted space takes its cookies, logins, and cache with it.
+function clearProfile(profile) {
+  const browsing = browsingSession(profile);
+  void Promise.all([browsing.clearStorageData(), browsing.clearCache()]).catch((error) =>
+    console.error("Could not clear the space profile:", error),
+  );
 }
 
 function edit(target) {
@@ -156,13 +202,13 @@ const faviconCache = new Map();
 
 // Icons are fetched with the browsing session and served to the chrome from disk,
 // so favorites keep their icons after a restart without loading the page.
-async function cacheFavicon(url) {
+async function cacheFavicon(url, profile) {
   if (faviconCache.has(url)) return faviconCache.get(url);
   const key = crypto.createHash("sha256").update(url).digest("hex").slice(0, 32);
   try {
     const response = url.startsWith("data:")
       ? await fetch(url)
-      : await session.fromPartition("persist:browsing").fetch(url);
+      : await browsingSession(profile).fetch(url);
     const type = response.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
     // Servers often send .ico files without an image type, but never accept text or HTML.
     const untyped = !type || type === "application/octet-stream";
@@ -359,6 +405,11 @@ function runShortcut(id) {
       return toggleSplit();
     case "toggleSidebar":
       return toggleSidebar();
+    case "nextSpace":
+    case "previousSpace":
+      return dispatch({ type: "cycle-space", direction: id === "nextSpace" ? 1 : -1 });
+    case "newSpace":
+      return dispatch({ type: "create-space" });
     case "settings":
       return showSettings(true);
     case "archive":
@@ -436,6 +487,10 @@ function installMenu() {
           item("newFolder"),
         ],
       },
+      {
+        label: "Spaces",
+        submenu: [item("nextSpace"), item("previousSpace"), item("newSpace")],
+      },
       { role: "windowMenu" },
     ]),
   );
@@ -491,17 +546,17 @@ function load(tab, url) {
   dispatch({ type: "navigate", id: tab.id, url });
 }
 
-function newTab(url = "") {
-  return dispatch({ type: "new-tab", url }).state.activeId;
+function newTab(url = "", spaceId) {
+  return dispatch({ type: "new-tab", url, spaceId }).state.activeId;
 }
 
-function createPageView(id) {
+function createPageView(id, profile) {
   const view = new WebContentsView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,
-      partition: "persist:browsing",
+      session: browsingSession(profile),
     },
   });
   const contents = view.webContents;
@@ -536,7 +591,7 @@ function createPageView(id) {
   contents.on("did-navigate", navigated);
   contents.on("page-favicon-updated", async (_event, favicons) => {
     const source = favicons.find((url) => isWebUrl(url) || url.startsWith("data:image/"));
-    const name = source ? await cacheFavicon(source) : null;
+    const name = source ? await cacheFavicon(source, profile) : null;
     if (name && tab()?.favicon !== name) update({ favicon: name });
   });
   contents.on("did-navigate-in-page", (event, url, isMainFrame) => {
@@ -558,7 +613,8 @@ function createPageView(id) {
     const now = performance.now();
     if (isWebUrl(url) && canOpenPopup(lastPopupAt, now)) {
       lastPopupAt = now;
-      newTab(url);
+      // A popup opens in its opener's space, with its login, unless a route says otherwise.
+      newTab(url, tab()?.spaceId);
     }
     return { action: "deny" };
   });
@@ -637,6 +693,7 @@ function showTabMenu(id) {
   if (!window || !tab) return;
   const shown = state.split ? state.split.tabIds : [state.activeId];
   const template = [{ label: "Rename tab…", click: () => edit({ kind: "tab", id }) }];
+  const otherSpaces = state.spaces.filter((space) => space.id !== tab.spaceId);
   if (tab.url) {
     template.push(
       tab.zone === "favorites"
@@ -659,6 +716,14 @@ function showTabMenu(id) {
         ],
       },
     );
+    if (otherSpaces.length)
+      template.push({
+        label: "Move to space",
+        submenu: otherSpaces.map((space) => ({
+          label: space.name,
+          click: () => dispatch({ type: "move-tab-to-space", id, spaceId: space.id }),
+        })),
+      });
   }
   if (tab.homeUrl && tab.url !== tab.homeUrl)
     template.push({
@@ -687,6 +752,57 @@ function showFolderMenu(id) {
       click: () => dispatch({ type: "delete-folder", id }),
     },
   ]).popup({ window });
+}
+
+const SPACE_COLOR_LABELS = {
+  blue: "Blue",
+  purple: "Purple",
+  pink: "Pink",
+  red: "Red",
+  orange: "Orange",
+  yellow: "Yellow",
+  green: "Green",
+  teal: "Teal",
+  gray: "Gray",
+};
+
+function showSpaceMenu(id) {
+  const state = sessionState();
+  const space = state.spaces.find((entry) => entry.id === id);
+  if (!window || !space) return;
+  Menu.buildFromTemplate([
+    { label: "Rename space…", click: () => edit({ kind: "space", id }) },
+    {
+      label: "Color",
+      submenu: Object.entries(SPACE_COLOR_LABELS).map(([color, label]) => ({
+        label,
+        type: "radio",
+        checked: space.color === color,
+        click: () => dispatch({ type: "set-space-color", id, color }),
+      })),
+    },
+    { type: "separator" },
+    {
+      label: "Delete space…",
+      enabled: state.spaces.length > 1,
+      click: () => confirmDeleteSpace(id),
+    },
+  ]).popup({ window });
+}
+
+// Deleting a space closes its tabs and erases its logins, so ask first.
+function confirmDeleteSpace(id) {
+  const space = sessionState().spaces.find((entry) => entry.id === id);
+  if (!window || !space) return;
+  const answer = dialog.showMessageBoxSync(window, {
+    type: "warning",
+    buttons: ["Delete space", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    message: `Delete the space “${space.name}”?`,
+    detail: "Its tabs close and go to the archive. Its cookies, logins, and site data are deleted.",
+  });
+  if (answer === 0) dispatch({ type: "delete-space", id });
 }
 
 function tick() {
@@ -833,6 +949,40 @@ function installIpc() {
       dispatch({ type: "remove-archived", id });
     },
     clearArchive: () => dispatch({ type: "clear-archive" }),
+    createSpace: () => dispatch({ type: "create-space" }),
+    switchSpace: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid space ID.");
+      dispatch({ type: "switch-space", id });
+    },
+    cycleSpace: (direction) => dispatch({ type: "cycle-space", direction }),
+    renameSpace: (id, name) => {
+      if (!isTabId(id)) throw new Error("Invalid space ID.");
+      dispatch({ type: "rename-space", id, name });
+    },
+    deleteSpace: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid space ID.");
+      confirmDeleteSpace(id);
+    },
+    showSpaceMenu: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid space ID.");
+      showSpaceMenu(id);
+    },
+    moveTabToSpace: (id, spaceId) => {
+      if (!isTabId(id) || !isTabId(spaceId)) throw new Error("Invalid tab or space ID.");
+      dispatch({ type: "move-tab-to-space", id, spaceId });
+    },
+    addRoute: (host, spaceId) => {
+      try {
+        dispatch({ type: "add-route", host, spaceId });
+        return {};
+      } catch (error) {
+        return { error: error.message };
+      }
+    },
+    removeRoute: (id) => {
+      if (!isTabId(id)) throw new Error("Invalid route ID.");
+      dispatch({ type: "remove-route", id });
+    },
     back: () => history("back"),
     forward: () => history("forward"),
     reload,
@@ -925,10 +1075,7 @@ app.whenReady().then(() => {
     };
   nativeTheme.themeSource = settings.theme;
   nativeTheme.on("updated", updateTheme);
-  session
-    .fromPartition("persist:browsing")
-    .setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-  session.fromPartition("persist:browsing").setPermissionCheckHandler(() => false);
+  browsingSession("browsing");
   installIpc();
   installMenu();
   createWindow();

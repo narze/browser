@@ -1,6 +1,31 @@
 export type TabZone = "favorites" | "pinned" | "today";
+export type SpaceColor =
+  | "blue"
+  | "purple"
+  | "pink"
+  | "red"
+  | "orange"
+  | "yellow"
+  | "green"
+  | "teal"
+  | "gray";
+/** A space is a separate set of tabs with its own cookies, logins, and storage. */
+export interface Space {
+  id: number;
+  name: string;
+  color: SpaceColor;
+  /** The Electron session partition is persist:<profile>. */
+  profile: string;
+}
+/** New tabs for this site, and its subdomains, open in the space. */
+export interface SiteRoute {
+  id: number;
+  host: string;
+  spaceId: number;
+}
 export interface BrowserTab {
   id: number;
+  spaceId: number;
   title: string;
   url: string;
   loading: boolean;
@@ -25,6 +50,7 @@ export interface TabFolder {
   id: number;
   name: string;
   collapsed: boolean;
+  spaceId: number;
 }
 export interface ArchiveEntry {
   id: number;
@@ -32,6 +58,7 @@ export interface ArchiveEntry {
   title: string;
   reason: "closed" | "auto";
   archivedAt: number;
+  spaceId: number;
 }
 export interface TabSections {
   favorites: number[][];
@@ -39,7 +66,7 @@ export interface TabSections {
   pinned: number[][];
   today: number[][];
 }
-export type EditTarget = { kind: "tab" | "folder"; id: number };
+export type EditTarget = { kind: "tab" | "folder" | "space"; id: number };
 export interface PageRegion {
   id: number;
   bounds: { x: number; y: number; width: number; height: number };
@@ -70,8 +97,13 @@ export interface BrowserState {
   settingsOpen: boolean;
   archiveOpen: boolean;
   archive: ArchiveEntry[];
+  /** The folders of the active space. */
   folders: TabFolder[];
+  /** The sections and slots of the active space. */
   sections: TabSections;
+  spaces: Space[];
+  activeSpaceId: number;
+  routes: SiteRoute[];
   tabLayout: TabLayout;
   tabs: BrowserTab[];
   tabSlots: number[][];
@@ -123,6 +155,15 @@ export interface BrowserApi {
   restoreArchived(id: number): Promise<void>;
   removeArchived(id: number): Promise<void>;
   clearArchive(): Promise<void>;
+  createSpace(): Promise<void>;
+  switchSpace(id: number): Promise<void>;
+  cycleSpace(direction: number): Promise<void>;
+  renameSpace(id: number, name: string): Promise<void>;
+  deleteSpace(id: number): Promise<void>;
+  showSpaceMenu(id: number): Promise<void>;
+  moveTabToSpace(id: number, spaceId: number): Promise<void>;
+  addRoute(host: string, spaceId: number): Promise<{ error?: string }>;
+  removeRoute(id: number): Promise<void>;
   onEdit(callback: (target: EditTarget) => void): () => void;
   onState(callback: (state: BrowserState) => void): () => void;
   onFocusAddress(callback: () => void): () => void;

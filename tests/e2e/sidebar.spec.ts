@@ -65,6 +65,7 @@ test("the side tab sidebar toggles with its shortcut and gives the page full wid
     await toggleSidebar(app);
     await expect(tab).toBeHidden();
     await expect(chrome.getByRole("separator", { name: "Resize tab sidebar" })).toHaveCount(0);
+    await expect(chrome.getByRole("navigation", { name: "Spaces" })).toBeHidden();
     await expect.poll(async () => (await pageBounds(app!)).x).toBe(0);
 
     await toggleSidebar(app);
