@@ -85,25 +85,37 @@ export function dividerRatio(
 }
 
 type Rect = { x: number; y: number; width: number; height: number };
+export type DropMode = "any" | "columns" | "rows" | "replace";
 
 /**
- * Where a tab dropped at a point on a page goes: the nearest edge that the split's
- * axis allows, and the part of the page that the new pane takes. A full split
- * replaces the whole pane.
+ * How a split can take tab `id` dropped on pane `target`. Columns and rows put it
+ * beside the pane. A three-pane grid has room only in its tall left pane. A full
+ * split, or a tab already in a grid, replaces or swaps with the pane.
+ */
+export function dropMode(split: Split | null, id: number, target: number): DropMode {
+  if (!split) return "any";
+  const inSplit = split.tabIds.includes(id);
+  if (split.layout !== "grid")
+    return !inSplit && split.tabIds.length >= 4 ? "replace" : split.layout;
+  return !inSplit && split.tabIds.length === 3 && split.tabIds[0] === target ? "rows" : "replace";
+}
+
+/**
+ * Where a tab dropped at a point on a page goes: the nearest edge that the mode
+ * allows, and the part of the page that the new pane takes.
  */
 export function dropZone(
-  layout: SplitLayout | null,
+  mode: DropMode,
   rect: Rect,
   pointX: number,
   pointY: number,
-  full: boolean,
 ): Rect & { edge: SplitEdge } {
-  if (full) return { edge: "right", ...rect };
+  if (mode === "replace") return { edge: "right", ...rect };
   const x = (pointX - rect.x) / rect.width;
   const y = (pointY - rect.y) / rect.height;
   const distances: [SplitEdge, number][] = [];
-  if (layout !== "rows") distances.push(["left", x], ["right", 1 - x]);
-  if (layout !== "columns") distances.push(["top", y], ["bottom", 1 - y]);
+  if (mode !== "rows") distances.push(["left", x], ["right", 1 - x]);
+  if (mode !== "columns") distances.push(["top", y], ["bottom", 1 - y]);
   const [edge] = distances.reduce((nearest, entry) => (entry[1] < nearest[1] ? entry : nearest));
   const half = { width: rect.width / 2, height: rect.height / 2 };
   if (edge === "left") return { edge, ...rect, width: half.width };

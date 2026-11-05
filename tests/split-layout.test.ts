@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { dividerRatio, dropZone, paneNames, splitGrid } from "../src/split-layout";
+import { dividerRatio, dropMode, dropZone, paneNames, splitGrid } from "../src/split-layout";
 
 describe("split pane layout", () => {
   it("names panes by their place on the screen", () => {
@@ -56,22 +56,40 @@ describe("split pane layout", () => {
   it("picks the drop edge nearest to the pointer, along the split's axis", () => {
     const rect = { x: 100, y: 50, width: 400, height: 200 };
     // No split: any edge, and the zone is that half of the page.
-    expect(dropZone(null, rect, 120, 150, false)).toEqual({
+    expect(dropZone("any", rect, 120, 150)).toEqual({
       edge: "left",
       x: 100,
       y: 50,
       width: 200,
       height: 200,
     });
-    expect(dropZone(null, rect, 300, 60, false)).toMatchObject({ edge: "top", height: 100 });
-    expect(dropZone(null, rect, 300, 240, false)).toMatchObject({ edge: "bottom", y: 150 });
-    expect(dropZone(null, rect, 490, 60, false)).toMatchObject({ edge: "right", x: 300 });
+    expect(dropZone("any", rect, 300, 60)).toMatchObject({ edge: "top", height: 100 });
+    expect(dropZone("any", rect, 300, 240)).toMatchObject({ edge: "bottom", y: 150 });
+    expect(dropZone("any", rect, 490, 60)).toMatchObject({ edge: "right", x: 300 });
     // Columns take only left or right, rows only top or bottom.
-    expect(dropZone("columns", rect, 300, 55, false)?.edge).toBe("left");
-    expect(dropZone("columns", rect, 301, 55, false)?.edge).toBe("right");
-    expect(dropZone("rows", rect, 105, 200, false)?.edge).toBe("bottom");
-    expect(dropZone("grid", rect, 300, 245, false)?.edge).toBe("bottom");
-    // A full split replaces the whole pane.
-    expect(dropZone("grid", rect, 120, 150, true)).toEqual({ edge: "right", ...rect });
+    expect(dropZone("columns", rect, 300, 55)?.edge).toBe("left");
+    expect(dropZone("columns", rect, 301, 55)?.edge).toBe("right");
+    expect(dropZone("rows", rect, 105, 200)?.edge).toBe("bottom");
+    expect(dropZone("any", rect, 300, 245)?.edge).toBe("bottom");
+    // A replace drop takes the whole pane.
+    expect(dropZone("replace", rect, 120, 150)).toEqual({ edge: "right", ...rect });
+  });
+
+  it("matches each drop target to how the split can take the tab", () => {
+    const split = (tabIds: number[], layout: "columns" | "rows" | "grid") => ({
+      tabIds,
+      layout,
+      columns: [0.5, 0.5],
+      rows: [0.5, 0.5],
+    });
+    expect(dropMode(null, 9, 1)).toBe("any");
+    expect(dropMode(split([1, 2], "columns"), 9, 2)).toBe("columns");
+    expect(dropMode(split([1, 2, 3], "rows"), 1, 3)).toBe("rows");
+    // A three-pane grid has room only in its tall left pane.
+    expect(dropMode(split([1, 2, 3], "grid"), 9, 1)).toBe("rows");
+    expect(dropMode(split([1, 2, 3], "grid"), 9, 2)).toBe("replace");
+    expect(dropMode(split([1, 2, 3], "grid"), 3, 1)).toBe("replace");
+    expect(dropMode(split([1, 2, 3, 4], "columns"), 9, 2)).toBe("replace");
+    expect(dropMode(split([1, 2, 3, 4], "columns"), 4, 2)).toBe("columns");
   });
 });

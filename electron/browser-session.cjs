@@ -602,8 +602,22 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
             before ? [command.id, command.target] : [command.target, command.id],
             command.edge === "left" || command.edge === "right" ? "columns" : "rows",
           );
-        } else if (!split.tabIds.includes(command.id) && split.tabIds.length >= MAX_PANES) {
-          split.tabIds[split.tabIds.indexOf(command.target)] = command.id;
+        } else if (
+          split.layout === "grid" ||
+          (!split.tabIds.includes(command.id) && split.tabIds.length >= MAX_PANES)
+        ) {
+          // Grid cells have fixed places: the tab swaps or replaces, except in the tall
+          // left pane of a three-pane grid, which splits into the two left cells.
+          const ids = split.tabIds;
+          const target = ids.indexOf(command.target);
+          const from = ids.indexOf(command.id);
+          if (from >= 0) [ids[from], ids[target]] = [ids[target], ids[from]];
+          else if (ids.length === 3 && target === 0 && !["left", "right"].includes(command.edge))
+            arrangeSplit(
+              before ? [command.id, ids[1], ids[0], ids[2]] : [ids[0], ids[1], command.id, ids[2]],
+              "grid",
+            );
+          else ids[target] = command.id;
         } else {
           const rest = split.tabIds.filter((entry) => entry !== command.id);
           rest.splice(rest.indexOf(command.target) + (before ? 0 : 1), 0, command.id);

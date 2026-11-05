@@ -22,7 +22,7 @@ test("dragging a tab onto the page splits the view at that edge", async () => {
   try {
     const chrome = await app.firstWindow();
     const address = chrome.getByRole("textbox", { name: "Search or enter address" });
-    for (const path of ["/a", "/b", "/c"]) {
+    for (const path of ["/a", "/b", "/d", "/c"]) {
       if (path !== "/a") await chrome.getByRole("button", { name: "New tab", exact: true }).click();
       await address.fill(`${origin}${path}`);
       await address.press("Enter");
@@ -73,6 +73,35 @@ test("dragging a tab onto the page splits the view at that edge", async () => {
     await expect.poll(async () => (await visiblePaths()).length).toBe(3);
     views = (await visiblePaths()).sort((a, b) => a.x - b.x);
     expect(views.map((view) => view.path)).toEqual(["/c", "/b", "/a"]);
+
+    // A three-pane grid takes a fourth tab in the bottom half of its tall left pane.
+    await chrome
+      .getByRole("group", { name: "Split layout" })
+      .getByRole("button", { name: "Grid" })
+      .click();
+    const left = (await chrome.getByRole("region", { name: "Left pane" }).boundingBox())!;
+    const tabD = (await chrome.getByRole("tab", { name: "Page /d" }).boundingBox())!;
+    await chrome.mouse.move(tabD.x + tabD.width / 2, tabD.y + tabD.height / 2);
+    await chrome.mouse.down();
+    await chrome.mouse.move(left.x + left.width / 2, left.y + left.height - 40, { steps: 8 });
+    await expect(chrome.locator(".page-drop-zone")).toHaveAttribute("data-edge", "bottom");
+    await chrome.mouse.up();
+    const idOf = async (path: string) =>
+      String(
+        (await chrome.evaluate(() => window.browser!.getState())).tabs.find((tab) =>
+          tab.url.endsWith(path),
+        )!.id,
+      );
+    await expect(chrome.getByRole("combobox", { name: "Bottom left pane tab" })).toHaveValue(
+      await idOf("/d"),
+    );
+    await expect(chrome.getByRole("combobox", { name: "Top left pane tab" })).toHaveValue(
+      await idOf("/c"),
+    );
+    await expect(chrome.getByRole("combobox", { name: "Top right pane tab" })).toHaveValue(
+      await idOf("/b"),
+    );
+    await expect.poll(async () => (await visiblePaths()).length).toBe(4);
   } finally {
     await app.close();
     server.closeAllConnections();

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { dropZone } from './split-layout';
+  import { dropMode, dropZone } from './split-layout';
   import { endTabDrag, tabDrag } from './tab-drag.svelte';
   import type { BrowserApi, BrowserState, SplitEdge } from '../shared/browser';
 
@@ -33,8 +33,7 @@
     if (id === null || !target || target.id === id) { zone = null; return; }
     event.preventDefault();
     if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-    const full = !!split && split.tabIds.length >= 4 && !split.tabIds.includes(id);
-    zone = { ...dropZone(split?.layout ?? null, target, x, y, full), target: target.id };
+    zone = { ...dropZone(dropMode(split, id, target.id), target, x, y), target: target.id };
   }
   function drop(event: DragEvent) {
     event.preventDefault();

@@ -165,4 +165,31 @@ describe("split view with more panes", () => {
       session.dispatch({ type: "set-tab-dragging", dragging: "yes" as never }),
     ).toThrow();
   });
+
+  it("drops into a grid where the preview shows", () => {
+    const grid = () => {
+      const session = tabs(5);
+      session.dispatch({ type: "toggle-split" });
+      session.dispatch({ type: "split-with", id: 2, target: 1, edge: "right" });
+      session.dispatch({ type: "set-split-layout", layout: "grid" });
+      expect(session.getState().split?.tabIds).toEqual([5, 1, 2]);
+      return session;
+    };
+    const ids = (session: ReturnType<typeof tabs>) => session.getState().split?.tabIds;
+    // The tall left pane splits into the top-left and bottom-left cells.
+    let session = grid();
+    session.dispatch({ type: "split-with", id: 3, target: 5, edge: "bottom" });
+    expect(ids(session)).toEqual([5, 1, 3, 2]);
+    session = grid();
+    session.dispatch({ type: "split-with", id: 3, target: 5, edge: "top" });
+    expect(ids(session)).toEqual([3, 1, 5, 2]);
+    // A right pane has no room, so the tab replaces it.
+    session = grid();
+    session.dispatch({ type: "split-with", id: 3, target: 2, edge: "top" });
+    expect(ids(session)).toEqual([5, 1, 3]);
+    // A tab that is already in the grid swaps places.
+    session = grid();
+    session.dispatch({ type: "split-with", id: 2, target: 5, edge: "bottom" });
+    expect(ids(session)).toEqual([2, 1, 5]);
+  });
 });
