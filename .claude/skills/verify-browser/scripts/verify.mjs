@@ -453,7 +453,9 @@ async function host(id) {
   async function screenshot(out, which) {
     const capture = await app.evaluate(async ({ BrowserWindow }, quick) => {
       const win = BrowserWindow.getAllWindows().find((entry) =>
-        quick ? entry.webContents.getURL().endsWith("#mini") : !entry.webContents.getURL().includes("#"),
+        quick
+          ? entry.webContents.getURL().endsWith("#mini")
+          : !entry.webContents.getURL().includes("#"),
       );
       if (!win) throw new Error(quick ? "the quick window is not open" : "no main window");
       const [width, height] = win.getContentSize();

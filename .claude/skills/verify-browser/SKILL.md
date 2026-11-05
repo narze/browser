@@ -39,7 +39,7 @@ Checks that the host and Electron pids are alive, that the control port answers,
 
 ## Drive
 
-Commands act on a **target**: `chrome` (default, the browser controls), `palette` (the command palette view, only while open), `page:<url substring>` (a web page in a tab), or `active` (the active tab's page).
+Commands act on a **target**: `chrome` (default, the browser controls), `palette` (the command palette view, only while open), `peek` (the peek frame, only while a peek is open), `quick` (the quick window's controls, only while it is open), `page:<url substring>` (a web page in a tab), or `active` (the active tab's page).
 
 Locators use stable handles from the app's ARIA markup: `--role R --name N` (exact name by default, `--loose` for substring), `--label L`, `--text T`, `--css S`, plus `--nth N` if needed.
 
@@ -61,6 +61,7 @@ Rules that save time:
 - **Shortcuts:** use `shortcut`, not `press`. The app handles shortcuts in Electron's `before-input-event`, which Playwright's `press` does not reach. By default the key goes to the focused webContents, like a real keypress. Pass `--target chrome` when focus is ambiguous, for example right after `menu`.
 - **Customizable shortcuts:** every browser shortcut (see `shared/shortcuts.js`) runs from `before-input-event`, so `shortcut` exercises it. Users can change them in Settings > Keyboard shortcuts; check `state.settings.shortcuts` for overrides. Back and Forward (Alt+Left/Right) have page priority and run only through the native menu accelerator, so use `menu --path "View>Back"` for them.
 - **Wait on state, not sleep:** page loads are asynchronous. After a navigation, wait with `--until "...!loading"` before asserting or screenshotting.
+- **Fixture links:** `$O/links` has `Next` (same tab), `Popup` (`target=_blank`), and `Elsewhere`, a link to `localhost` that counts as another site, for peek checks.
 - **Palette:** the `palette` target only exists after the palette has opened once. Wait for `combobox "Search or enter a command"` on `--target palette` before driving it.
 
 ## Evidence
@@ -69,6 +70,7 @@ Everything goes to `.verify/evidence/<run>/` (gitignored). That directory surviv
 
 - `actions.jsonl` is written automatically: one line per command with arguments, result, and errors. It is the action log for your proof.
 - `node $V screenshot --out <feature>/<step>.png` captures the whole window with the visible page, split, and palette views composited in place. Playwright's own page screenshot shows only the chrome, with an empty page area.
+- `node $V screenshot --window quick --out <feature>/<step>.png` captures the quick window the same way.
 - `node $V snapshot --target T --out <feature>/<step>.aria.txt` saves the accessible tree with its target and URL.
 - `node $V note --text "..."` adds your own observation to the log.
 

@@ -43,6 +43,8 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Command palette](./command-palette.md) covers opening, tab search, address entry, `>` commands, and dismissal.
 - [Split view](./split-view.md) covers splitting into up to four panes, layouts, pane selection, divider resizing, dragging a tab onto the page, and leaving split view.
 - [Compact mode](./compact-mode.md) covers hiding the toolbar and tabs and showing them from the window edge.
+- [Peek](./peek.md) covers Alt+click and pinned-tab links that open above the page, closing a peek, and opening it as a tab.
+- [Quick window](./quick-window.md) covers the small lookup window, links from other apps, and moving its page into a tab.
 - [Settings](./settings.md) covers theme, tab placement, search engine, shortcuts toggle, and persistence across restarts.
 - [Tab organization](./tab-organization.md) covers favorites, pinned tabs, folders, drag and keyboard reorder, rename, sleep, the archive, and persistence.
 - [Spaces and link routing](./spaces.md) covers spaces, per-space profiles, moving tabs between spaces, routes, and space delete.
