@@ -15,6 +15,7 @@ const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createTabStore } = require("./tab-store.cjs");
+const { readLimited } = require("./read-limited.cjs");
 const { durationMs } = require("../shared/settings.js");
 const { createBrowserSession } = require("./browser-session.cjs");
 const { normalizePageLayout } = require("./page-layout.cjs");
@@ -155,8 +156,12 @@ async function cacheFavicon(url) {
     // Servers often send .ico files without an image type, but never accept text or HTML.
     const untyped = !type || type === "application/octet-stream";
     const extension = FAVICON_TYPES[type] ?? (untyped && /\.ico(\?|$)/i.test(url) ? "ico" : null);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    if (!response.ok || !extension || !bytes.length || bytes.length > 256 * 1024) return null;
+    if (!response.ok || !extension) {
+      await response.body?.cancel();
+      return null;
+    }
+    const bytes = await readLimited(response, 256 * 1024);
+    if (!bytes?.length) return null;
     const name = `${key}.${extension}`;
     fs.mkdirSync(faviconDirectory, { recursive: true });
     fs.writeFileSync(path.join(faviconDirectory, name), bytes);
