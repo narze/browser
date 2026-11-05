@@ -215,9 +215,10 @@ describe("saved spaces (B1, B3, B4)", () => {
       [2, "Work", session.getState().spaces[1].profile],
     ]);
     expect(state.activeSpaceId).toBe(2);
-    expect(state.tabs.map((tab) => [tab.spaceId, tab.url])).toEqual([
-      [1, "https://a.test/"],
-      [2, "https://w.test/"],
+    expect(state.tabs.map((tab) => [tab.spaceId, tab.zone, tab.url])).toEqual([
+      [1, "today", "https://b.test/"],
+      [1, "pinned", "https://a.test/"],
+      [2, "pinned", "https://w.test/"],
     ]);
     expect(state.folders).toEqual([
       { id: 1, name: "Team", collapsed: false, spaceId: 2, parentId: null },

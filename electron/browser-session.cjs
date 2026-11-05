@@ -38,7 +38,11 @@ const { isWebUrl } = require("./policy.cjs");
  * | { type: 'add-route', host: string, spaceId: number }} SessionCommand
  * @typedef {{ type: 'load' | 'wake', id: number, url: string } | { type: 'focus' }
  * | { type: 'edit', kind: import('../shared/browser').EditTarget['kind'], id: number }
- * | { type: 'clear-profile', profile: string }} SessionEffect
+ * | { type: 'clear-profile', profile: string }
+ * | { type: 'archive', id: number, archiveId: number }
+ * | { type: 'restore', id: number, url: string, archiveId: number }} SessionEffect
+ * An archive effect names the archive entry of a tab that left; a restore effect
+ * opens that entry again, so the adapter can keep and give back its history.
  */
 
 const ZONES = ["favorites", "pinned", "today"];
@@ -62,6 +66,38 @@ const cleanName = (value) =>
 /** @param {unknown} value */
 const isIndex = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 const randomProfile = () => `space-${crypto.randomBytes(8).toString("hex")}`;
+
+/**
+ * @param {number[]} tabIds @param {SplitLayout} layout
+ * @returns {NonNullable<import('../shared/browser').BrowserState['split']>}
+ */
+function evenSplit(tabIds, layout) {
+  if (tabIds.length < 3 && layout === "grid") layout = "columns";
+  const equal = (/** @type {number} */ count) => Array(count).fill(1 / count);
+  const count = tabIds.length;
+  return {
+    tabIds,
+    layout,
+    columns: equal(layout === "rows" ? 1 : layout === "grid" ? 2 : count),
+    rows: equal(layout === "columns" ? 1 : layout === "grid" ? 2 : count),
+  };
+}
+
+/** A saved split with its layout and track sizes, or equal columns when they are damaged. */
+function savedSplit(/** @type {number[]} */ tabIds, /** @type {any} */ saved) {
+  const layout = SPLIT_LAYOUTS.includes(saved.layout) ? saved.layout : "columns";
+  const split = evenSplit(tabIds, layout);
+  const fits = (/** @type {unknown} */ sizes, /** @type {number[]} */ even) =>
+    Array.isArray(sizes) &&
+    sizes.length === even.length &&
+    sizes.every((size) => typeof size === "number" && size > 0 && size < 1 + 1e-9) &&
+    Math.abs(sizes.reduce((sum, size) => sum + size, 0) - 1) < 1e-6;
+  if (fits(saved.columns, split.columns) && fits(saved.rows, split.rows)) {
+    split.columns = [...saved.columns];
+    split.rows = [...saved.rows];
+  }
+  return split;
+}
 
 /** A route host is a site name without "www.", for example github.com. @param {unknown} value */
 function routeHost(value) {
@@ -192,13 +228,19 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       folder.parentId = parent && parent.spaceId === folder.spaceId ? parent.id : null;
     }
     for (const folder of folders) if (isInside(folder.parentId, folder.id)) folder.parentId = null;
+    /** @type {Map<unknown, number>} */
+    const tabIds = new Map();
     if (Array.isArray(record.tabs))
       for (const saved of record.tabs) {
-        if (!saved || !["favorites", "pinned"].includes(saved.zone) || !isWebUrl(saved.homeUrl))
-          continue;
-        const homeTitle = cleanName(saved.homeTitle) || null;
+        if (!saved || !ZONES.includes(saved.zone)) continue;
+        const today = saved.zone === "today";
+        // Today tabs reopen on their page; saved tabs on their page or else at home.
+        const homeUrl = today ? null : saved.homeUrl;
+        if (!(today ? isWebUrl(saved.url) : isWebUrl(homeUrl))) continue;
+        const url = isWebUrl(saved.url) ? saved.url : homeUrl;
+        const homeTitle = today ? null : cleanName(saved.homeTitle) || null;
         const folderId = (saved.zone === "pinned" && folderIds.get(saved.folderId)) || null;
-        addTab(saved.homeUrl, {
+        const tab = addTab(url, {
           spaceId: folderId
             ? /** @type {import('../shared/browser').TabFolder} */ (
                 folders.find((folder) => folder.id === folderId)
@@ -206,15 +248,41 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
             : spaceOf(saved),
           zone: saved.zone,
           folderId,
-          homeUrl: saved.homeUrl,
+          homeUrl,
           homeTitle,
-          title: homeTitle || cleanName(saved.title) || hostname(saved.homeUrl),
+          title: (url === homeUrl && homeTitle) || cleanName(saved.title) || hostname(url),
           customTitle: cleanName(saved.customTitle) || null,
           favicon:
             typeof saved.favicon === "string" && FAVICON.test(saved.favicon) ? saved.favicon : null,
           asleep: true,
         });
+        if (saved.id !== undefined && !tabIds.has(saved.id)) tabIds.set(saved.id, tab.id);
       }
+    // The tab and split that each space showed. Every pane must be a restored tab of the space.
+    if (Array.isArray(record.spaceViews))
+      for (const view of record.spaceViews) {
+        const spaceId = spaceIds.get(view?.spaceId);
+        const tabId = tabIds.get(view?.activeId);
+        const inSpace = (/** @type {number | undefined} */ id) =>
+          tabs.some((tab) => tab.id === id && tab.spaceId === spaceId);
+        if (!spaceId || !inSpace(tabId) || spaceMemory.has(spaceId)) continue;
+        const ids = Array.isArray(view.split?.tabIds)
+          ? view.split.tabIds.map((/** @type {unknown} */ id) => tabIds.get(id))
+          : [];
+        const valid =
+          ids.length >= 2 &&
+          ids.length <= MAX_PANES &&
+          new Set(ids).size === ids.length &&
+          ids.every(inSpace) &&
+          ids.includes(tabId);
+        spaceMemory.set(spaceId, {
+          activeId: /** @type {number} */ (tabId),
+          split: valid ? savedSplit(ids, view.split) : null,
+        });
+      }
+    const shown = spaceMemory.get(activeSpaceId);
+    spaceMemory.delete(activeSpaceId);
+    if (shown) ({ activeId, split } = shown);
     if (Array.isArray(record.archive))
       archive = record.archive
         .filter((entry) => entry && isWebUrl(entry.url))
@@ -237,23 +305,45 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   }
 
   function exportOrganization() {
+    /** The tab and split each space shows. A split keeps its runtime shape. */
+    const spaceViews = spaces.flatMap((space) => {
+      const view = space.id === activeSpaceId ? { activeId, split } : spaceMemory.get(space.id);
+      return view ? [{ spaceId: space.id, activeId: view.activeId, split: view.split }] : [];
+    });
     return structuredClone({
       version: 3,
       activeSpaceId,
       spaces,
       folders,
+      // Blank tabs are not saved.
       tabs: tabs
-        .filter((tab) => tab.zone !== "today" && tab.homeUrl)
-        .map(({ spaceId, zone, folderId, homeUrl, homeTitle, title, customTitle, favicon }) => ({
-          spaceId,
-          zone,
-          folderId,
-          homeUrl,
-          homeTitle,
-          title,
-          customTitle,
-          favicon,
-        })),
+        .filter((tab) => (tab.zone === "today" ? isWebUrl(tab.url) : tab.homeUrl))
+        .map(
+          ({
+            id,
+            spaceId,
+            zone,
+            folderId,
+            url,
+            homeUrl,
+            homeTitle,
+            title,
+            customTitle,
+            favicon,
+          }) => ({
+            id,
+            spaceId,
+            zone,
+            folderId,
+            url,
+            homeUrl,
+            homeTitle,
+            title,
+            customTitle,
+            favicon,
+          }),
+        ),
+      spaceViews,
       archive: archive.map(({ url, title, reason, archivedAt, spaceId }) => ({
         url,
         title,
@@ -329,15 +419,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
 
   /** Equal track sizes for the panes. A grid has two columns and two rows. */
   function arrangeSplit(/** @type {number[]} */ tabIds, /** @type {SplitLayout} */ layout) {
-    if (tabIds.length < 3 && layout === "grid") layout = "columns";
-    const equal = (/** @type {number} */ count) => Array(count).fill(1 / count);
-    const count = tabIds.length;
-    split = {
-      tabIds,
-      layout,
-      columns: equal(layout === "rows" ? 1 : layout === "grid" ? 2 : count),
-      rows: equal(layout === "columns" ? 1 : layout === "grid" ? 2 : count),
-    };
+    split = evenSplit(tabIds, layout);
   }
 
   /** Takes a tab out of the split; one remaining pane ends the split. */
@@ -459,6 +541,7 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
   /** @param {import('../shared/browser').BrowserTab} tab @param {'closed' | 'auto'} reason */
   function archiveTab(tab, reason) {
     if (!tab.url) return;
+    effects.push({ type: "archive", id: tab.id, archiveId: nextArchiveId });
     archive.unshift({
       id: nextArchiveId++,
       url: tab.url,
@@ -895,12 +978,16 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
         const entry = archive.find((item) => item.id === command.id);
         if (!entry) throw new Error("That page is no longer in the archive.");
         archive = archive.filter((item) => item !== entry);
-        select(
-          createTab(
-            entry.url,
-            spaces.some((space) => space.id === entry.spaceId) ? entry.spaceId : activeSpaceId,
-          ),
-        );
+        // A restored history may not report its title again, so start with the saved one.
+        const tab = addTab(entry.url, {
+          title: entry.title,
+          loading: true,
+          spaceId: spaces.some((space) => space.id === entry.spaceId)
+            ? entry.spaceId
+            : activeSpaceId,
+        });
+        effects.push({ type: "restore", id: tab.id, url: entry.url, archiveId: entry.id });
+        select(tab.id);
         focus();
         break;
       }
