@@ -21,7 +21,7 @@ describe("session restore (D6)", () => {
     session.dispatch({ type: "resize-split", ratio: 0.3 });
     session.dispatch({ type: "rename-tab", id: 1, title: "Mine" });
     const saved = save(session);
-    expect(saved.version).toBe(3);
+    expect(saved.version).toBe(4);
 
     const restored = createBrowserSession({ now: () => 9_000, saved, newProfile });
     const state = restored.getState();
@@ -110,7 +110,7 @@ describe("session restore (D6)", () => {
     const restore = (spaceViews: unknown) =>
       createBrowserSession({
         saved: {
-          version: 3,
+          version: 4,
           activeSpaceId: 1,
           spaces: [space, work],
           tabs: [

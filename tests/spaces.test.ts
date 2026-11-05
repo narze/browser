@@ -207,7 +207,7 @@ describe("saved spaces (B1, B3, B4)", () => {
     session.dispatch({ type: "create-folder", name: "Team", tabId: 3 });
     session.dispatch({ type: "add-route", host: "w.test", spaceId: 2 });
     const saved = JSON.parse(JSON.stringify(session.exportOrganization()));
-    expect(saved.version).toBe(3);
+    expect(saved.version).toBe(4);
     const restored = createBrowserSession({ now: () => 5, saved, newProfile });
     const state = restored.getState();
     expect(state.spaces.map(({ id, name, profile }) => [id, name, profile])).toEqual([

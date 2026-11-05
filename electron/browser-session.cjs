@@ -311,7 +311,8 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
       return view ? [{ spaceId: space.id, activeId: view.activeId, split: view.split }] : [];
     });
     return structuredClone({
-      version: 3,
+      // 2: spaces. 3: folder parents. 4: today tabs and spaceViews.
+      version: 4,
       activeSpaceId,
       spaces,
       folders,

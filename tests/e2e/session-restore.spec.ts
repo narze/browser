@@ -78,7 +78,7 @@ test("a restart reopens the same tabs, splits, and spaces (D6)", async () => {
     await chrome.screenshot({ path: test.info().outputPath("before-restart.png") });
 
     const saved = JSON.parse(await readFile(join(profile, "tabs.json"), "utf8"));
-    expect(saved.version).toBe(3);
+    expect(saved.version).toBe(4);
     await app.close();
     app = await launch();
     chrome = await app.firstWindow();
