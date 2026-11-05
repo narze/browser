@@ -110,7 +110,7 @@ describe("browser session", () => {
     expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(1);
   });
 
-  it("clamps ratios and hides native pages during resize and settings", () => {
+  it("clamps ratios, keeps native pages visible during resize, and hides them for settings", () => {
     const session = threeTabs();
     session.dispatch({ type: "toggle-split" });
     expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(2);
@@ -120,38 +120,49 @@ describe("browser session", () => {
     expect(session.getState().split?.ratio).toBe(0.25);
     expect(() => session.dispatch({ type: "resize-split", ratio: NaN })).toThrow();
     session.dispatch({ type: "set-split-resizing", resizing: true });
-    expect(session.getState().pages.every((page) => !page.visible)).toBe(true);
+    expect(
+      session
+        .getState()
+        .pages.filter((page) => page.visible)
+        .map((page) => page.id),
+    ).toEqual([1, 3]);
     session.dispatch({ type: "show-settings", open: true });
     expect(session.getState().splitResizing).toBe(false);
+    expect(session.getState().pages.every((page) => !page.visible)).toBe(true);
     session.dispatch({ type: "set-split-resizing", resizing: true });
     expect(session.getState().splitResizing).toBe(false);
     session.dispatch({ type: "show-settings", open: false });
     expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(2);
   });
 
-  it("hides native pages while the sidebar resizes and clears on settings, palette, or selection", () => {
-    const session = threeTabs();
-    session.dispatch({ type: "set-sidebar-resizing", resizing: true });
-    expect(session.getState().sidebarResizing).toBe(true);
-    expect(session.getState().pages.every((page) => !page.visible)).toBe(true);
-    session.dispatch({ type: "set-sidebar-resizing", resizing: false });
-    expect(session.getState().pages.filter((page) => page.visible)).toHaveLength(1);
-    expect(() =>
-      session.dispatch({ type: "set-sidebar-resizing", resizing: "yes" as never }),
-    ).toThrow();
-    for (const command of [
-      { type: "show-settings", open: false },
-      { type: "open-palette", mode: "commands" },
-      { type: "select-tab", id: 1 },
-    ] as const) {
+  it.each([false, true])(
+    "keeps native pages visible while the sidebar resizes (split: %s) and clears resize state",
+    (split) => {
+      const session = threeTabs();
+      if (split) session.dispatch({ type: "toggle-split" });
+      const pages = session.getState().pages;
       session.dispatch({ type: "set-sidebar-resizing", resizing: true });
-      session.dispatch(command);
+      expect(session.getState().sidebarResizing).toBe(true);
+      expect(session.getState().pages).toEqual(pages);
+      session.dispatch({ type: "set-sidebar-resizing", resizing: false });
+      expect(session.getState().pages).toEqual(pages);
+      expect(() =>
+        session.dispatch({ type: "set-sidebar-resizing", resizing: "yes" as never }),
+      ).toThrow();
+      for (const command of [
+        { type: "show-settings", open: false },
+        { type: "open-palette", mode: "commands" },
+        { type: "select-tab", id: 1 },
+      ] as const) {
+        session.dispatch({ type: "set-sidebar-resizing", resizing: true });
+        session.dispatch(command);
+        expect(session.getState().sidebarResizing).toBe(false);
+      }
+      session.dispatch({ type: "open-palette", mode: "commands" });
+      session.dispatch({ type: "set-sidebar-resizing", resizing: true });
       expect(session.getState().sidebarResizing).toBe(false);
-    }
-    session.dispatch({ type: "open-palette", mode: "commands" });
-    session.dispatch({ type: "set-sidebar-resizing", resizing: true });
-    expect(session.getState().sidebarResizing).toBe(false);
-  });
+    },
+  );
 
   it("tracks page focus only for visible split panes", () => {
     const session = threeTabs();
