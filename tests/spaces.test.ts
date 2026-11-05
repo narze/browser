@@ -159,6 +159,10 @@ describe("link routing (B4)", () => {
     session.dispatch({ type: "switch-space", id: 1 });
     session.dispatch({ type: "new-tab", url: "https://notgithub.com/" });
     expect(session.getState()).toMatchObject({ activeSpaceId: 1, activeId: 5 });
+
+    // A popup from a page in another space opens in the opener's space.
+    session.dispatch({ type: "new-tab", url: "https://popup.test/", spaceId: 2 });
+    expect(session.getState()).toMatchObject({ activeSpaceId: 2, activeId: 6 });
   });
 
   it("uses the most specific rule and replaces a rule for the same site", () => {

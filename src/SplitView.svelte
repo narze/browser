@@ -55,7 +55,7 @@
       <header class="pane-toolbar">
         <button class="pane-focus" aria-label={side === 0 ? 'Focus left pane' : 'Focus right pane'} aria-pressed={browserState.activeId === tab.id} onclick={() => api.selectTab(tab.id)}><span></span>{side === 0 ? 'Left' : 'Right'}</button>
         <select aria-label={side === 0 ? 'Left pane tab' : 'Right pane tab'} value={tab.id} onchange={(event) => api.setSplitTab(side, Number(event.currentTarget.value))}>
-          {#each browserState.tabs as option}<option value={option.id}>{option.title}</option>{/each}
+          {#each browserState.tabs.filter((tab) => tab.spaceId === browserState.activeSpaceId) as option}<option value={option.id}>{option.title}</option>{/each}
         </select>
       </header>
       <div class="pane-content" data-page-id={tab.id}>

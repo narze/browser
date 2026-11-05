@@ -110,6 +110,13 @@ test("spaces keep separate tabs and logins, and routes open links in their space
       "true",
     );
 
+    // Reorder counts only the tabs of the active space.
+    const workTabs = async () => (await state()).sections.today.flat();
+    const [first, second] = await workTabs();
+    await chrome.getByRole("tab", { name: "/opened as work" }).focus();
+    await chrome.keyboard.press("Alt+Shift+ArrowUp");
+    await expect.poll(workTabs).toEqual([second, first]);
+
     // B3: a tab moved to another space reloads with that space's login.
     await chrome.getByRole("button", { name: "Command palette", exact: true }).click();
     await expect

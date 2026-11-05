@@ -19,7 +19,7 @@
 
   function containerIds(zone: TabZone, folderId: number | null) {
     return browserState.tabs
-      .filter((tab) => tab.zone === zone && (zone !== 'pinned' || tab.folderId === folderId))
+      .filter((tab) => tab.spaceId === browserState.activeSpaceId && tab.zone === zone && (zone !== 'pinned' || tab.folderId === folderId))
       .map((tab) => tab.id);
   }
 

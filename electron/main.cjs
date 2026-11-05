@@ -546,8 +546,8 @@ function load(tab, url) {
   dispatch({ type: "navigate", id: tab.id, url });
 }
 
-function newTab(url = "") {
-  return dispatch({ type: "new-tab", url }).state.activeId;
+function newTab(url = "", spaceId) {
+  return dispatch({ type: "new-tab", url, spaceId }).state.activeId;
 }
 
 function createPageView(id, profile) {
@@ -613,7 +613,8 @@ function createPageView(id, profile) {
     const now = performance.now();
     if (isWebUrl(url) && canOpenPopup(lastPopupAt, now)) {
       lastPopupAt = now;
-      newTab(url);
+      // A popup opens in its opener's space, with its login, unless a route says otherwise.
+      newTab(url, tab()?.spaceId);
     }
     return { action: "deny" };
   });

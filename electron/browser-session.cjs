@@ -3,7 +3,7 @@ const { isWebUrl } = require("./policy.cjs");
 
 /**
  * @typedef {import('../shared/browser').TabZone} TabZone
- * @typedef {{ type: 'new-tab', url?: string }
+ * @typedef {{ type: 'new-tab', url?: string, spaceId?: number }
  * | { type: 'select-tab' | 'close-tab' | 'focus-tab' | 'reset-tab' | 'sleep-tab', id: number }
  * | { type: 'select-position', position: number }
  * | { type: 'cycle-tab', direction: number }
@@ -470,7 +470,10 @@ function createBrowserSession({ now = Date.now, saved, newProfile = randomProfil
     const focus = () => effects.push({ type: "focus" });
     switch (command.type) {
       case "new-tab": {
-        const spaceId = (command.url && routeFor(command.url)) || activeSpaceId;
+        const opener = spaces.some((space) => space.id === command.spaceId)
+          ? /** @type {number} */ (command.spaceId)
+          : activeSpaceId;
+        const spaceId = (command.url && routeFor(command.url)) || opener;
         select(createTab(command.url, spaceId));
         focus();
         break;
