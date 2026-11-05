@@ -120,6 +120,21 @@ test("media controls in the sidebar and auto picture in picture (D5)", async () 
     // A negative check: give a picture-in-picture request time to happen.
     await chrome.waitForTimeout(1000);
     expect(await inPictureInPicture()).toBe(false);
+
+    // Icon tiles (favorites, and pinned tabs in the top bar) show the button as a badge.
+    const muteVideo = chrome.getByRole("button", { name: "Mute tab: Video" });
+    const videoId = (await state()).tabs.find((entry) => entry.title === "Video")!.id;
+    await chrome.evaluate((id) => window.browser!.moveTab(id, "favorites", null, 0), videoId);
+    await expect(muteVideo).toBeVisible();
+    await muteVideo.click();
+    await expect(muteVideo).toHaveAttribute("aria-pressed", "true");
+    await chrome.screenshot({ path: test.info().outputPath("favorite-muted.png") });
+    await chrome.evaluate(() => window.browser!.setTabLayout("top"));
+    await chrome.evaluate((id) => window.browser!.moveTab(id, "pinned", null, 0), videoId);
+    await expect(muteVideo).toBeVisible();
+    await muteVideo.click();
+    await expect(muteVideo).toHaveAttribute("aria-pressed", "false");
+    await chrome.screenshot({ path: test.info().outputPath("pinned-top.png") });
   } finally {
     await app.close();
     server.close();

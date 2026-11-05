@@ -2134,8 +2134,25 @@ span.folder-toggle {
 .tab-audio[aria-pressed="true"] {
   color: var(--accent);
 }
+/* On icon tiles, the button is a small badge in the top right corner. */
 .favorites .tab-audio,
 .tabs:not([aria-orientation="vertical"]) .pinned .tab-audio {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--border);
+}
+.favorites .tab-audio svg,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab-audio svg {
+  width: 10px;
+  height: 10px;
+}
+.favorites .tab.editing .tab-audio,
+.tabs:not([aria-orientation="vertical"]) .pinned .tab.editing .tab-audio {
   display: none;
 }
 .split-tab-group .tab-audio {
