@@ -1,11 +1,17 @@
 # Glossary
 
-| Term            | Meaning                                                                                         |
-| --------------- | ----------------------------------------------------------------------------------------------- |
-| Browser session | The open tabs, selected tab, split panes, and temporary browser screens for the current window. |
-| Tab             | One page with its own navigation history and page state.                                        |
-| Tab slot        | One entry in the tab strip or rail. A split pair shares one slot containing two tab segments.   |
-| Split           | Two tabs displayed side by side, with a focused pane and an adjustable divider.                 |
-| Pane            | The left or right page area in a split.                                                         |
-| Chrome          | The browser's local controls surrounding web pages.                                             |
-| Tab layout      | The placement of the tab strip or rail: top, left, or right.                                    |
+| Term            | Meaning                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| Browser session | The open tabs, selected tab, split panes, and temporary browser screens for the current window.               |
+| Tab             | One page with its own navigation history and page state.                                                      |
+| Tab slot        | One entry in the tab strip or rail. A split pair shares one slot containing two tab segments.                 |
+| Split           | Two tabs displayed side by side, with a focused pane and an adjustable divider.                               |
+| Pane            | The left or right page area in a split.                                                                       |
+| Chrome          | The browser's local controls surrounding web pages.                                                           |
+| Tab layout      | The placement of the tab strip or rail: top, left, or right.                                                  |
+| Favorites       | Tabs shown as an icon grid at the top of the tab list. They persist and reset to their home page when closed. |
+| Pinned tab      | A saved tab with a home page. Closing it puts it to sleep and returns it to its home page.                    |
+| Folder          | A named, collapsible group of pinned tabs.                                                                    |
+| Today           | Ordinary tabs below the pinned tabs. They do not persist and move to the archive when unused.                 |
+| Archive         | A list of closed or expired Today tabs that a user can filter, restore, or remove.                            |
+| Sleeping tab    | A tab whose page view is unloaded to free memory. It reloads, with its history, when selected.                |
