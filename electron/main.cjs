@@ -642,9 +642,10 @@ function moveQuickWindowToTab() {
 // Links from other apps open in the quick window.
 const linksIn = (argv) => argv.filter((value) => isWebUrl(value));
 const waitingLinks = [];
+let initialized = false;
 function openLink(url) {
   if (!isWebUrl(url)) return;
-  if (!app.isReady()) waitingLinks.push(url);
+  if (!initialized) waitingLinks.push(url);
   else openQuickWindow(url);
 }
 
@@ -1823,6 +1824,7 @@ if (!primaryInstance) app.quit();
 app.on("second-instance", (_event, argv) => {
   const links = linksIn(argv.slice(1));
   if (links.length) links.forEach(openLink);
+  else if (!initialized) return;
   else if (!window) createWindow();
   else window.focus();
 });
@@ -1871,6 +1873,7 @@ app.whenReady().then(async () => {
   installIpc();
   installMenu();
   createWindow();
+  initialized = true;
   for (const url of [...linksIn(process.argv.slice(1)), ...waitingLinks.splice(0)])
     openQuickWindow(url);
   app.on("activate", () => {
