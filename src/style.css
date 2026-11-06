@@ -691,6 +691,28 @@ kbd {
   color: var(--muted);
   padding: 2px 4px;
 }
+/* Side tabs leave the top row with only the window buttons, so the toolbar takes that row. */
+.vertical {
+  --chrome-height: 46px;
+}
+.vertical .tab-row {
+  height: 0;
+  padding: 0;
+}
+.vertical .tab-row > .drag-space,
+.vertical .tab-row > .window-name {
+  display: none;
+}
+.vertical .toolbar {
+  height: 100%;
+  -webkit-app-region: drag;
+}
+.vertical .toolbar .address-bar {
+  -webkit-app-region: no-drag;
+}
+.mac.vertical .toolbar {
+  padding-left: 90px;
+}
 .vertical.left main {
   margin-left: var(--sidebar-width);
 }
