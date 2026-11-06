@@ -1651,6 +1651,10 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "favicon", privileges: { standard: true, secure: true } },
 ]);
 app.setName("Browser");
+// End-to-end tests set BROWSER_BACKGROUND=1. The app then shows its windows but can
+// never become the active app, so a local test run does not take focus.
+if (process.env.BROWSER_BACKGROUND === "1" && process.platform === "darwin")
+  app.setActivationPolicy("prohibited");
 const profileDirectory = app.commandLine.getSwitchValue("user-data-dir");
 if (profileDirectory) app.setPath("userData", path.resolve(profileDirectory));
 // One app per profile: a second launch hands its links to the first and quits.

@@ -83,6 +83,8 @@ pnpm dev:ui     # Interface only in Vite+; browsing requires Electron
 pnpm fmt        # Format supported files through Vite+
 ```
 
+On macOS, `pnpm test:e2e` runs the app in the background, so it does not take focus while you work. The windows still open, but the app cannot become active. To watch the tests with focus, run `BROWSER_BACKGROUND=0 pnpm test:e2e`.
+
 To use the browser as a normal macOS app, run `pnpm package` and open `release/mac-arm64/Browser.app` (`mac` on Intel), or drag it to Applications. It uses the same profile as `pnpm start` (`~/Library/Application Support/Browser`), so your tabs and spaces carry over. The app has an ad-hoc signature, so it runs on the Mac that built it; other Macs need a Developer ID signature. Its Info.plist lists http and https, so you can pick it as the default web browser in System Settings. On the first launch, macOS can ask for access to "Browser Safe Storage" in the keychain, because `pnpm start` made that item; choose Always Allow. `electron-builder.yml` holds the packaging setup. The app icon comes from `build/icon.svg`; after you change it, run `pnpm exec electron scripts/render-icon.cjs` to update `build/icon.png`.
 
 The local Vite+ CLI is available with `pnpm exec vp`. Global Vite+ installation is optional. Vite+ supplies Vite and Vitest through the pinned overrides in `pnpm-workspace.yaml`.
