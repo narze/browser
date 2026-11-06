@@ -6,3 +6,4 @@ playwright-report/
 .vite/
 .vite-plus/
 .verify/
+release/

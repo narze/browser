@@ -1,0 +1,10 @@
+<!-- macOS app icon: assets/icon.svg on the 1024px macOS icon grid (824px tile). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#ea580c" filter="url(#shadow)"/>
+  <text x="512" y="512" dy="0.35em" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, sans-serif" font-size="412" font-weight="600" fill="#ffffff">B</text>
+</svg>
