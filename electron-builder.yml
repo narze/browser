@@ -17,6 +17,9 @@ mac:
   identity: "-"
   # The hardened runtime needs a Developer ID signature; ad-hoc apps fail to launch with it.
   hardenedRuntime: false
+  extendInfo:
+    NSMicrophoneUsageDescription: Browser uses your microphone when you allow a website to access it.
+    NSCameraUsageDescription: Browser uses your camera when you allow a website to access it.
 protocols:
   - name: Web page
     schemes: [http, https]

@@ -21,6 +21,8 @@ test("the packaged Browser.app is signed, can open web links, and browses", asyn
   expect(existsSync(bundle), `${bundle} must exist`).toBe(true);
   expect(plist("CFBundleName")).toBe("Browser");
   expect(plist("CFBundleIconFile")).toBe("icon.icns");
+  expect(plist("NSMicrophoneUsageDescription")).toContain("microphone");
+  expect(plist("NSCameraUsageDescription")).toContain("camera");
   expect(existsSync(join(bundle, "Contents/Resources/icon.icns"))).toBe(true);
   // http and https make the app a choice for the default web browser.
   expect(plist("CFBundleURLTypes.0.CFBundleURLSchemes.0")).toBe("http");
