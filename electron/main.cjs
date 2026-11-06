@@ -9,6 +9,7 @@ const {
   session,
   nativeTheme,
   protocol,
+  systemPreferences,
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
@@ -19,7 +20,8 @@ const { createSettingsStore } = require("./settings.cjs");
 const { createExtensionManager } = require("./extensions.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
-const { installMediaPermissions } = require("./permissions.cjs");
+const { installSitePermissions } = require("./permissions.cjs");
+const { askSystemAccess } = require("./system-access.cjs");
 const { durationMs } = require("../shared/settings.js");
 const {
   shortcutActions,
@@ -128,22 +130,43 @@ function mediaState() {
   });
 }
 
+// An optional macOS-only module; without it, location stays up to Chromium.
+function locationPermissions() {
+  try {
+    return require("node-mac-permissions");
+  } catch {
+    return null;
+  }
+}
+
 const partition = (profile) => `persist:${profile}`;
 const configuredProfiles = new Set();
-// Each space gets its own site consent; unrelated permissions remain denied.
+// Each space gets its own site consent; other permissions remain denied.
 function browsingSession(profile) {
   const browsing = session.fromPartition(partition(profile));
   if (!configuredProfiles.has(profile)) {
     configuredProfiles.add(profile);
-    installMediaPermissions(browsing, {
+    browsing.registerPreloadScript({
+      type: "frame",
+      filePath: path.join(__dirname, "site-preload.cjs"),
+    });
+    installSitePermissions(browsing, {
       prompt: async (contents, origin, types) => {
         const devices = types
+          .filter((type) => type === "audio" || type === "video")
           .map((type) => (type === "audio" ? "microphone" : "camera"))
           .join(" and ");
+        const action = devices
+          ? `use your ${devices}`
+          : {
+              geolocation: "know your location",
+              notifications: "show notifications",
+              "clipboard-read": "see text and images you copy",
+            }[types[0]];
         const options = {
           type: "question",
-          title: "Camera and microphone access",
-          message: `Allow ${origin} to use your ${devices}?`,
+          title: "Site permission",
+          message: `Allow ${origin} to ${action}?`,
           detail:
             "Access lasts until you quit Browser, in this space's profile. Your system may also ask for permission.",
           buttons: ["Deny", "Allow for this session"],
@@ -156,7 +179,17 @@ function browsingSession(profile) {
         const result = await (parent && !parent.isDestroyed()
           ? dialog.showMessageBox(parent, options)
           : dialog.showMessageBox(options));
-        return result.response === 1;
+        if (result.response !== 1) return false;
+        if (process.platform !== "darwin") return true;
+        return askSystemAccess(types, {
+          // Fake test devices need no system access.
+          systemPreferences: app.commandLine.hasSwitch("use-fake-device-for-media-stream")
+            ? null
+            : systemPreferences,
+          // Electron.app in development has no location usage description, so
+          // macOS cannot ask for it there.
+          locationPermissions: app.isPackaged ? locationPermissions() : null,
+        });
       },
     });
   }
@@ -1812,6 +1845,10 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "favicon", privileges: { standard: true, secure: true } },
 ]);
 app.setName("Browser");
+// Electron never answers clicks on the <usermedia> and <geolocation> permission
+// elements. Without them, sites such as Google Meet fall back to a button that calls
+// getUserMedia, which shows this browser's permission dialog.
+app.commandLine.appendSwitch("disable-blink-features", "UserMediaElement,GeolocationElement");
 // End-to-end tests set BROWSER_BACKGROUND=1. The app then shows its windows but can
 // never become the active app, so a local test run does not take focus.
 if (process.env.BROWSER_BACKGROUND === "1" && process.platform === "darwin")

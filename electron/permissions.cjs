@@ -12,7 +12,15 @@ function secureOrigin(value) {
   return null;
 }
 
-function installMediaPermissions(browsing, { prompt }) {
+// Permissions a site gets only after the user allows it in a dialog. Media is
+// asked for per device: "audio" and "video".
+const asked = new Set(["geolocation", "notifications", "clipboard-read"]);
+const devices = new Set(["audio", "video"]);
+// Chrome allows clipboard writes without a dialog. Blink still requires the page
+// to have focus and a recent user action.
+const alwaysAllowed = new Set(["clipboard-sanitized-write"]);
+
+function installSitePermissions(browsing, { prompt }) {
   const grants = new Map();
   // Restrict requests to the top-level site's origin, including same-origin frames.
   const originFor = (contents, url) => {
@@ -21,18 +29,28 @@ function installMediaPermissions(browsing, { prompt }) {
     return origin && origin === secureOrigin(contents.getURL()) ? origin : null;
   };
   browsing.setPermissionCheckHandler((contents, permission, requestingOrigin, details) => {
-    if (permission !== "media") return false;
+    if (alwaysAllowed.has(permission)) return true;
+    const kind = permission === "media" ? details.mediaType : permission;
+    if (!(permission === "media" ? devices.has(kind) : asked.has(kind))) return false;
     const origin = originFor(contents, details.requestingUrl ?? requestingOrigin);
-    return !!origin && !!grants.get(origin)?.has(details.mediaType);
+    return !!origin && !!grants.get(origin)?.has(kind);
   });
   browsing.setPermissionRequestHandler((contents, permission, callback, details) => {
+    if (alwaysAllowed.has(permission)) {
+      callback(true);
+      return;
+    }
     const origin = originFor(contents, details.requestingUrl);
-    const types = details.mediaTypes;
+    const types =
+      permission === "media"
+        ? details.mediaTypes
+        : asked.has(permission)
+          ? [permission]
+          : undefined;
     if (
-      permission !== "media" ||
       !origin ||
       !types?.length ||
-      !types.every((type) => type === "audio" || type === "video")
+      (permission === "media" && !types.every((type) => devices.has(type)))
     ) {
       callback(false);
       return;
@@ -57,9 +75,9 @@ function installMediaPermissions(browsing, { prompt }) {
         allowed = await prompt(contents, origin, types);
         allowed = allowed && valid && originFor(contents, details.requestingUrl) === origin;
         if (allowed) {
-          const devices = grants.get(origin) ?? new Set();
-          types.forEach((type) => devices.add(type));
-          grants.set(origin, devices);
+          const kinds = grants.get(origin) ?? new Set();
+          types.forEach((type) => kinds.add(type));
+          grants.set(origin, kinds);
         }
       } catch {
         allowed = false;
@@ -72,4 +90,4 @@ function installMediaPermissions(browsing, { prompt }) {
   });
 }
 
-module.exports = { installMediaPermissions };
+module.exports = { installSitePermissions };

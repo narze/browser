@@ -20,6 +20,8 @@ mac:
   extendInfo:
     NSMicrophoneUsageDescription: Browser uses your microphone when you allow a website to access it.
     NSCameraUsageDescription: Browser uses your camera when you allow a website to access it.
+    NSLocationWhenInUseUsageDescription: Browser uses your location when you allow a website to access it.
+    NSLocationUsageDescription: Browser uses your location when you allow a website to access it.
 protocols:
   - name: Web page
     schemes: [http, https]
