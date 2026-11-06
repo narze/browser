@@ -73,6 +73,7 @@ const state: BrowserState = {
     shortcuts: {},
     sidebarVisible: true,
     compactMode: false,
+    compactTabs: false,
     autoPictureInPicture: true,
   },
 };

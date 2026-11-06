@@ -63,6 +63,7 @@ describe("browser preferences", () => {
       shortcuts: {},
       sidebarVisible: true,
       compactMode: false,
+      compactTabs: false,
       autoPictureInPicture: true,
     });
   });
@@ -105,6 +106,7 @@ describe("browser preferences", () => {
       shortcuts: {},
       sidebarVisible: true,
       compactMode: false,
+      compactTabs: false,
       autoPictureInPicture: true,
     });
     writeFileSync(
@@ -122,6 +124,7 @@ describe("browser preferences", () => {
       shortcuts: {},
       sidebarVisible: true,
       compactMode: false,
+      compactTabs: false,
       autoPictureInPicture: true,
     });
   });

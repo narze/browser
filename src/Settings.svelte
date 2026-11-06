@@ -83,6 +83,13 @@
       <input id="compact-mode" class="settings-toggle" type="checkbox" checked={settings.compactMode} disabled={busy}
         onchange={(event) => save({ compactMode: event.currentTarget.checked })} />
     </div>
+    {#if settings.compactMode}
+      <div class="preference-row">
+        <label for="compact-tabs"><strong>{settingsSchema.compactTabs.label}</strong><span>Hide only the toolbar, and keep your tabs on screen.</span></label>
+        <input id="compact-tabs" class="settings-toggle" type="checkbox" checked={settings.compactTabs} disabled={busy}
+          onchange={(event) => save({ compactTabs: event.currentTarget.checked })} />
+      </div>
+    {/if}
   </section>
 
   <section class="settings-section" aria-labelledby="browsing-title">

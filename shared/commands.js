@@ -321,7 +321,20 @@ export function paletteCommands(state) {
       args: [],
     },
   );
-  if (state.tabLayout !== "top")
+  // Compact mode can keep the tabs while it hides the toolbar, in every tab layout.
+  if (state.settings.compactMode)
+    commands.push({
+      id: "toggle-sidebar",
+      title: state.settings.compactTabs ? "Hide tabs" : "Show tabs",
+      detail: state.settings.compactTabs
+        ? "Hide them with the toolbar until you point at the window edge"
+        : "Keep your tabs on screen; only the toolbar hides",
+      icon: "split",
+      hint: shortcut("toggleSidebar"),
+      command: "toggleSidebar",
+      args: [],
+    });
+  else if (state.tabLayout !== "top")
     commands.push({
       id: "toggle-sidebar",
       title: state.settings.sidebarVisible ? "Hide tab sidebar" : "Show tab sidebar",

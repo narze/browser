@@ -109,9 +109,28 @@ input:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* How much of the toolbar and the tabs shows, from 0 to 1; they animate between the two. */
+@property --toolbar-reveal {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+@property --tabs-reveal {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
 .browser {
-  --chrome-height: 100px;
+  --reveal-duration: 200ms;
+  /* The tab row (46px) and the toolbar (54px), as much of each as shows. */
+  --chrome-height: calc(46px * var(--tabs-reveal) + 54px * var(--toolbar-reveal));
   --sidebar-width: 220px;
+  /* The room the side tabs take from the pages, and how far they have slid out of view. */
+  --sidebar-space: calc(var(--sidebar-width) * var(--tabs-reveal));
+  --sidebar-shift: calc(var(--sidebar-width) * (var(--tabs-reveal) - 1));
+  transition:
+    --toolbar-reveal var(--reveal-duration) cubic-bezier(0.2, 0, 0, 1),
+    --tabs-reveal var(--reveal-duration) cubic-bezier(0.2, 0, 0, 1);
   --pane-toolbar-height: 36px;
   --split-divider-width: 8px;
   height: 100vh;
@@ -123,9 +142,22 @@ input:focus-visible {
   flex: 0 0 var(--chrome-height);
   height: var(--chrome-height);
   background: var(--chrome);
-  border-bottom: 1px solid var(--border);
+  border-bottom: calc(1px * max(var(--tabs-reveal), var(--toolbar-reveal))) solid var(--border);
   position: relative;
   z-index: 2;
+  transition: visibility var(--reveal-duration);
+}
+/* Top tabs slide up past the window edge; the toolbar slides up under them, so nothing
+   reaches below the chrome while it moves. */
+.browser:not(.vertical) .tab-row {
+  position: relative;
+  z-index: 1;
+  margin-top: calc(-46px * (1 - var(--tabs-reveal)));
+  background: var(--chrome);
+}
+.toolbar {
+  margin-top: calc(-54px * (1 - var(--toolbar-reveal)));
+  transition: visibility var(--reveal-duration);
 }
 .tab-row {
   height: 46px;
@@ -569,6 +601,9 @@ kbd {
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .browser {
+    --reveal-duration: 0s;
+  }
   *,
   *::before,
   *::after {
@@ -641,7 +676,7 @@ kbd {
 }
 .vertical .tabs {
   position: fixed;
-  top: calc(var(--chrome-height) + 58px);
+  top: calc(var(--chrome-height) + var(--sidebar-top, 12px) + 46px);
   bottom: 52px;
   width: calc(var(--sidebar-width) - 24px);
   max-width: none;
@@ -676,7 +711,7 @@ kbd {
 }
 .vertical .new-tab {
   position: fixed;
-  top: calc(var(--chrome-height) + 12px);
+  top: calc(var(--chrome-height) + var(--sidebar-top, 12px));
   width: calc(var(--sidebar-width) - 24px);
   height: 34px;
   display: flex;
@@ -693,7 +728,10 @@ kbd {
 }
 /* Side tabs leave the top row with only the window buttons, so the toolbar takes that row. */
 .vertical {
-  --chrome-height: 46px;
+  --chrome-height: calc(46px * var(--toolbar-reveal));
+}
+.vertical .chrome {
+  border-bottom-width: calc(1px * var(--toolbar-reveal));
 }
 .vertical .tab-row {
   height: 0;
@@ -704,7 +742,8 @@ kbd {
   display: none;
 }
 .vertical .toolbar {
-  height: 100%;
+  height: 46px;
+  margin-top: calc(-46px * (1 - var(--toolbar-reveal)));
   -webkit-app-region: drag;
 }
 .vertical .toolbar .address-bar {
@@ -714,10 +753,18 @@ kbd {
   padding-left: 90px;
 }
 .vertical.left main {
-  margin-left: var(--sidebar-width);
+  margin-left: var(--sidebar-space);
 }
 .vertical.right main {
-  margin-right: var(--sidebar-width);
+  margin-right: var(--sidebar-space);
+}
+/* Side tabs slide out past their window edge. */
+.vertical :is(.tabs, .new-tab, .spaces, .media-card, .tab-rail, .sidebar-resizer) {
+  translate: var(--sidebar-shift) 0;
+  transition: visibility var(--reveal-duration);
+}
+.vertical.right :is(.tabs, .new-tab, .spaces, .media-card, .tab-rail, .sidebar-resizer) {
+  translate: calc(-1 * var(--sidebar-shift)) 0;
 }
 .vertical main {
   min-height: 0;
@@ -1866,13 +1913,6 @@ span.folder-toggle {
   font-size: 12px;
 }
 
-/* ⌘S hides the side tab rail; pages take the full width. */
-.sidebar-hidden .tabs,
-.sidebar-hidden .new-tab,
-.vertical.sidebar-hidden .spaces {
-  display: none;
-}
-
 /* Spaces: one dot per space, before the tabs or at the bottom of the sidebar. */
 .spaces {
   display: flex;
@@ -2068,9 +2108,32 @@ span.folder-toggle {
   opacity: 0.45;
 }
 
-/* Compact mode: pages use the whole window until the pointer reaches the chrome's edge. */
-.chrome-hidden .chrome {
-  display: none;
+/* Compact mode and ⌘S: the toolbar and tabs slide away, and the pages follow them frame by
+   frame (the chrome reports each page region as it changes). Visibility switches off at the
+   end of a hide and on at the start of a show, so hidden controls leave the tab order. */
+.toolbar-hidden {
+  --toolbar-reveal: 0;
+}
+.tabs-hidden {
+  --tabs-reveal: 0;
+}
+.toolbar-hidden .toolbar,
+.chrome-hidden .chrome,
+.sidebar-hidden :is(.tabs, .new-tab, .spaces, .media-card, .tab-rail) {
+  visibility: hidden;
+}
+/* Left tabs hold the macOS window buttons above the new-tab button, like Arc. */
+.mac.left {
+  --sidebar-top: calc(12px + 32px * (1 - var(--toolbar-reveal)));
+}
+.mac.left.toolbar-hidden:not(.tabs-hidden) .tab-row > .drag-space {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 40px;
+  -webkit-app-region: drag;
 }
 
 /* Split layout controls appear in the toolbar while a split is open. */

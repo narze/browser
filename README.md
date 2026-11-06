@@ -25,7 +25,7 @@ Features:
 - Click **Split tabs** in the toolbar to show two tabs side by side. The pair shares one tab slot, with a clickable segment for each page in left-to-right pane order. In a vertical tab rail, Left/Right arrow keys switch between the segments. Choose tabs from each pane's dropdown, click a page to control it with the address bar, and drag the divider to resize (or focus it and use Left/Right arrow keys). With one tab open, splitting creates a new tab for the second pane. Selecting a third tab replaces the focused pane. **Exit split view** keeps the focused page visible; closing either split tab expands the remaining page. Each space remembers its split, and splits come back after a restart.
 - Split into **up to four panes**. While split, the toolbar shows **Columns**, **Rows**, and **Grid** (three or four panes) and **Add split pane**. Each divider resizes the two panes next to it. A pane's **x** button takes its tab out of the split and keeps the tab open.
 - **Drag a tab onto the page** to split with it. The half of the page under the pointer shows where the tab goes. Columns take a tab at the left or right of a pane, rows at the top or bottom. In a three-pane grid, the tall left pane takes a tab in its top or bottom half. Elsewhere in a grid, and with four panes, the tab replaces the pane under the pointer, or swaps places with it when it is already in the split.
-- **Compact mode** (Cmd/Ctrl+Shift+S, the View menu, the palette, or Settings) hides the toolbar and tabs so the page uses the whole window. Move the pointer to the top edge (or to the side of the tab sidebar) to show them again. They hide when the pointer moves back onto the page.
+- **Compact mode** (Cmd/Ctrl+Shift+S, the View menu, the palette, or Settings) hides the toolbar and tabs so the page uses the whole window. Move the pointer to the top edge (or to the side of the tab sidebar) to show them again. They hide when the pointer moves back onto the page. Press Cmd/Ctrl+S in compact mode to keep the tabs on screen and hide only the toolbar, like Zen's compact mode; press it again to hide them too.
 - **Peek** at a link without leaving the page: Alt+click it. The link opens in a card above the current page, which stays visible behind it. In a pinned tab or a favorite, a click on a link to another site also opens a peek, so the tab stays on its page. Press Escape or click outside the card to close it, or click **Open as tab** to keep the page, as it is, in a new tab.
 - Open a **quick window** (Cmd/Ctrl+Alt+N, the File menu, or the palette) for a fast lookup in a small, separate window. Links that other apps open in the browser also show there. Click **Open in browser** to move the page, as it is, into the main window as a tab. Cmd/Ctrl+W closes the quick window.
 
@@ -56,7 +56,7 @@ Default shortcuts (all customizable):
 | Cmd/Ctrl+D                | Pin or unpin tab                    |
 | Cmd/Ctrl+Shift+D          | Add to or remove from favorites     |
 | Ctrl+Shift+=              | Split view                          |
-| Cmd/Ctrl+S                | Show or hide tab sidebar            |
+| Cmd/Ctrl+S                | Show or hide tabs                   |
 | Cmd/Ctrl+Shift+S          | Compact mode                        |
 | Cmd/Ctrl+,                | Settings                            |
 | Cmd/Ctrl+Shift+A          | Archive                             |
