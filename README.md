@@ -99,7 +99,9 @@ The command palette uses a separate transparent local `WebContentsView`, with IP
 
 For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
-This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, browser extensions, or an installer (`pnpm package` builds a `.app`, not a DMG). Camera, microphone, and other permission requests are denied.
+This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, browser extensions, or an installer (`pnpm package` builds a `.app`, not a DMG). HTTPS sites (and localhost) can ask to use the camera and microphone through an Allow/Deny dialog. Grants apply to the requesting origin and devices within that space's profile until you quit the app. Cross-origin frames and other permission requests, including screen sharing, remain denied.
+
+On macOS, also allow the app in **System Settings → Privacy & Security → Microphone / Camera** if the system has previously blocked it, then restart Browser. When running through `pnpm start` or `pnpm dev`, the app may appear as Electron in system settings.
 
 Popup links open as ordinary GET tabs, with at most one popup per source tab every 750 ms. Opener-dependent flows and POST popups are not supported. Closing a tab discards its page without an unsaved-changes prompt.
 

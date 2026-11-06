@@ -18,6 +18,7 @@ const { isWebUrl, isTabId, canOpenPopup, sameSite } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
+const { installMediaPermissions } = require("./permissions.cjs");
 const { durationMs } = require("../shared/settings.js");
 const {
   shortcutActions,
@@ -126,13 +127,35 @@ function mediaState() {
 
 const partition = (profile) => `persist:${profile}`;
 const configuredProfiles = new Set();
-// Every space profile denies permission prompts, like the original browsing profile.
+// Each space gets its own site consent; unrelated permissions remain denied.
 function browsingSession(profile) {
   const browsing = session.fromPartition(partition(profile));
   if (!configuredProfiles.has(profile)) {
     configuredProfiles.add(profile);
-    browsing.setPermissionRequestHandler((_contents, _permission, callback) => callback(false));
-    browsing.setPermissionCheckHandler(() => false);
+    installMediaPermissions(browsing, {
+      prompt: async (contents, origin, types) => {
+        const devices = types
+          .map((type) => (type === "audio" ? "microphone" : "camera"))
+          .join(" and ");
+        const options = {
+          type: "question",
+          title: "Camera and microphone access",
+          message: `Allow ${origin} to use your ${devices}?`,
+          detail:
+            "Access lasts until you quit Browser, in this space's profile. Your system may also ask for permission.",
+          buttons: ["Deny", "Allow for this session"],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+        };
+        const host = [...views].find(([, view]) => view.webContents === contents);
+        const parent = host && viewHosts.get(host[0]);
+        const result = await (parent && !parent.isDestroyed()
+          ? dialog.showMessageBox(parent, options)
+          : dialog.showMessageBox(options));
+        return result.response === 1;
+      },
+    });
   }
   return browsing;
 }
