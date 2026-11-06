@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vite-plus/test";
-import { reportMediaPrompt } from "../electron/site-preload.cjs";
+import { reportPermissionPrompt } from "../electron/site-preload.cjs";
 
 // A stand-in for the page's Permissions API, where Electron reports "denied" until a grant.
 function page(states: Record<string, string>, secure = true) {
@@ -15,22 +15,51 @@ function page(states: Record<string, string>, secure = true) {
       return new PermissionStatus(descriptor.name);
     }
   }
-  const scope = { Permissions, PermissionStatus, isSecureContext: secure };
+  class Notification {
+    static get permission() {
+      return states.notifications;
+    }
+  }
+  const scope = { Permissions, PermissionStatus, Notification, isSecureContext: secure };
   // The preload runs the patch as page code, from its source text.
-  new Function("globalThis", `(${reportMediaPrompt.toString()})()`)(scope);
-  return { permissions: new Permissions(), Permissions };
+  new Function("globalThis", `(${reportPermissionPrompt.toString()})()`)(scope);
+  return { permissions: new Permissions(), Permissions, Notification };
 }
 
-describe("camera and microphone permission state in pages", () => {
+describe("site permission state in pages", () => {
   it("reports prompt, not denied, before the site asks", async () => {
-    const states = { camera: "denied", microphone: "denied", notifications: "denied" };
+    const states: Record<string, string> = {
+      camera: "denied",
+      microphone: "denied",
+      midi: "denied",
+    };
     const { permissions } = page(states);
     const camera = await permissions.query({ name: "camera" });
     expect(camera.state).toBe("prompt");
     expect((await permissions.query({ name: "microphone" })).state).toBe("prompt");
-    expect((await permissions.query({ name: "notifications" })).state).toBe("denied");
+    expect((await permissions.query({ name: "midi" })).state).toBe("denied");
     states.camera = "granted";
     expect(camera.state).toBe("granted");
+  });
+
+  it.each(["geolocation", "notifications", "clipboard-read"])(
+    "reports prompt for %s before the site asks",
+    async (name) => {
+      const states: Record<string, string> = { [name]: "denied" };
+      const { permissions } = page(states);
+      const status = await permissions.query({ name });
+      expect(status.state).toBe("prompt");
+      states[name] = "granted";
+      expect(status.state).toBe("granted");
+    },
+  );
+
+  it("reports default, not denied, for Notification.permission before the site asks", () => {
+    const states: Record<string, string> = { notifications: "denied" };
+    const { Notification } = page(states);
+    expect(Notification.permission).toBe("default");
+    states.notifications = "granted";
+    expect(Notification.permission).toBe("granted");
   });
 
   it("keeps the native behavior for insecure pages and wrong receivers", async () => {
