@@ -21,7 +21,7 @@
     "tldts": "^7.4.19"
   },
   "devDependencies": {
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@sveltejs/vite-plugin-svelte": "^7.3.1",
     "@types/node": "^26.0.0",
     "electron": "^45.2.1",
