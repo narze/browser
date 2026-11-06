@@ -9,6 +9,7 @@ const {
   session,
   nativeTheme,
   protocol,
+  systemPreferences,
 } = require("electron");
 const path = require("node:path");
 const fs = require("node:fs");
@@ -135,6 +136,10 @@ function browsingSession(profile) {
   const browsing = session.fromPartition(partition(profile));
   if (!configuredProfiles.has(profile)) {
     configuredProfiles.add(profile);
+    browsing.registerPreloadScript({
+      type: "frame",
+      filePath: path.join(__dirname, "site-preload.cjs"),
+    });
     installMediaPermissions(browsing, {
       prompt: async (contents, origin, types) => {
         const devices = types
@@ -156,7 +161,19 @@ function browsingSession(profile) {
         const result = await (parent && !parent.isDestroyed()
           ? dialog.showMessageBox(parent, options)
           : dialog.showMessageBox(options));
-        return result.response === 1;
+        if (result.response !== 1) return false;
+        // macOS keeps its own consent for the app. Ask for it here, so capture does
+        // not fail silently. Fake test devices need no system access.
+        if (
+          process.platform !== "darwin" ||
+          app.commandLine.hasSwitch("use-fake-device-for-media-stream")
+        )
+          return true;
+        for (const type of types) {
+          const device = type === "audio" ? "microphone" : "camera";
+          if (!(await systemPreferences.askForMediaAccess(device))) return false;
+        }
+        return true;
       },
     });
   }
