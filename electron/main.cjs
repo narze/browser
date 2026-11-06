@@ -1829,6 +1829,10 @@ protocol.registerSchemesAsPrivileged([
   { scheme: "favicon", privileges: { standard: true, secure: true } },
 ]);
 app.setName("Browser");
+// Electron never answers clicks on the <usermedia> and <geolocation> permission
+// elements. Without them, sites such as Google Meet fall back to a button that calls
+// getUserMedia, which shows this browser's permission dialog.
+app.commandLine.appendSwitch("disable-blink-features", "UserMediaElement,GeolocationElement");
 // End-to-end tests set BROWSER_BACKGROUND=1. The app then shows its windows but can
 // never become the active app, so a local test run does not take focus.
 if (process.env.BROWSER_BACKGROUND === "1" && process.platform === "darwin")
