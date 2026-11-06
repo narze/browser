@@ -62,6 +62,11 @@ test("camera capture and microphone consent use the site permission dialog", asy
             .executeJavaScript(code, true),
         { url: origin, code },
       );
+    // Electron never answers clicks on <usermedia> or <geolocation>. Without them,
+    // sites such as Google Meet fall back to a button that calls getUserMedia.
+    expect(await run("[typeof HTMLUserMediaElement, typeof HTMLGeolocationElement].join()")).toBe(
+      "undefined,undefined",
+    );
     // Sites such as Google Meet only call getUserMedia when the state is "prompt".
     expect(await run("navigator.permissions.query({name:'camera'}).then(p => p.state)")).toBe(
       "prompt",
