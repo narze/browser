@@ -210,6 +210,7 @@
       {/if}
       <button class="icon-button" class:settings-active={!!browserState.split} aria-label={browserState.split ? 'Exit split view' : 'Split tabs'} aria-pressed={!!browserState.split} title={browserState.split ? 'Exit split view' : 'Split tabs'} disabled={!api} onclick={() => api?.toggleSplit()}><Icon name="split" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.archiveOpen} aria-label="Archive" aria-pressed={browserState.archiveOpen} title={withKey('Archive', 'archive')} disabled={!api} onclick={() => browserState.archiveOpen ? api?.closeArchive() : api?.openArchive()}><Icon name="archive" size={18} /></button>
+      <button class="icon-button" aria-label="Extensions" aria-haspopup="menu" title="Extensions" disabled={!api} onclick={() => api?.showExtensionsMenu()}><Icon name="extension" size={18} /></button>
       <button class="icon-button" class:settings-active={browserState.settingsOpen} aria-label="Settings" aria-pressed={browserState.settingsOpen} title={withKey('Settings', 'settings')} disabled={!api} onclick={() => api?.openSettings()}><Icon name="settings" size={18} /></button>
     </div>
     {#if current?.loading}<div class="loading-bar"></div>{/if}

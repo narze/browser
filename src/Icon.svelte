@@ -5,6 +5,7 @@
     command: 'M9 7V5a2 2 0 1 0-2 2h10a2 2 0 1 0-2-2v14a2 2 0 1 0 2-2H7a2 2 0 1 0 2 2V7',
     split: 'M4 4h16v16H4z M12 4v16',
     settings: 'M4 7h16 M4 17h16 M8 4v6 M16 14v6',
+    extension: 'M9 4H4v5a3 3 0 1 1 0 6v5h5a3 3 0 1 1 6 0h5v-5a3 3 0 1 0 0-6V4h-5a3 3 0 1 0-6 0z',
     back: 'm14 6-6 6 6 6',
     forward: 'm10 6 6 6-6 6',
     reload: 'M20 7v5h-5 M20 12a8 8 0 1 0-2.3 5.7 M20 7l-2.3-2.3',

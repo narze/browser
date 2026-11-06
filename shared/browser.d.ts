@@ -144,7 +144,29 @@ export interface PageSnapshot {
   /** A data URL. */
   image: string;
 }
+export interface BrowserExtension {
+  id: string;
+  name: string;
+  version: string;
+  path: string;
+  enabled: boolean;
+  loaded: boolean;
+  error: string | null;
+  hasPopup: boolean;
+  hasOptions: boolean;
+}
 export interface BrowserApi {
+  getExtensions(spaceId: number): Promise<BrowserExtension[]>;
+  loadExtension(spaceId: number): Promise<{ error?: string }>;
+  setExtensionEnabled(spaceId: number, id: string, enabled: boolean): Promise<{ error?: string }>;
+  reloadExtension(spaceId: number, id: string): Promise<{ error?: string }>;
+  removeExtension(spaceId: number, id: string): Promise<{ error?: string }>;
+  openExtensionPage(
+    spaceId: number,
+    id: string,
+    kind: "popup" | "options",
+  ): Promise<{ error?: string }>;
+  showExtensionsMenu(): Promise<void>;
   reportPageLayout(regions: PageRegion[]): Promise<void>;
   openPalette(mode?: PaletteMode): Promise<void>;
   closePalette(): Promise<void>;

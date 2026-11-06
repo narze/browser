@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
   import ShortcutSettings from './ShortcutSettings.svelte';
+  import ExtensionSettings from './ExtensionSettings.svelte';
   import { settingsSchema } from '../shared/settings.js';
   import type { BrowserApi, BrowserSettings, SiteRoute, Space } from '../shared/browser';
 
@@ -151,6 +152,7 @@
     </form>
     {#if routeError}<p class="settings-error" role="alert">{routeError}</p>{/if}
   </section>
+  <ExtensionSettings {api} {spaces} {activeSpaceId} />
   <ShortcutSettings overrides={settings.shortcuts} {platform} {api} {busy} onsave={save} />
   <p class="settings-status" role="status">{message}</p>
   {#if error}<p class="settings-error" role="alert">{error}</p>{/if}

@@ -8,6 +8,13 @@ import { formatAccelerator, resolveShortcuts } from "./shortcuts.js";
  * @satisfies {Record<Exclude<keyof import('./browser').BrowserApi, 'onState' | 'onFocusAddress' | 'onEdit' | 'onPageEdge' | 'onToast'>, { channel: string, palette: boolean, views?: readonly ('peek' | 'mini')[] }>}
  */
 export const browserCommands = {
+  getExtensions: { channel: "browser:extensions", palette: false },
+  loadExtension: { channel: "browser:extension-load", palette: false },
+  setExtensionEnabled: { channel: "browser:extension-enable", palette: false },
+  reloadExtension: { channel: "browser:extension-reload", palette: false },
+  removeExtension: { channel: "browser:extension-remove", palette: false },
+  openExtensionPage: { channel: "browser:extension-page", palette: false },
+  showExtensionsMenu: { channel: "browser:extensions-menu", palette: false },
   getState: { channel: "browser:state", palette: true, views: ["peek", "mini"] },
   openPalette: { channel: "browser:palette-open", palette: false },
   closePalette: { channel: "browser:palette-close", palette: true },
