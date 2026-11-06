@@ -18,19 +18,18 @@
   let pageRegion = $state<HTMLElement>();
   $effect(() => {
     // Rebind observers after Svelte changes which tabs occupy the page regions.
-    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden].join(':');
+    const layoutKey = [browserState.activeId, browserState.split?.tabIds.join(','), browserState.settingsOpen, browserState.archiveOpen, browserState.tabLayout, chromeHidden, toolbarHidden, sidebarHidden].join(':');
     if (api && pageRegion && browserState.activeId > 0 && layoutKey) return observePageLayout(pageRegion, api.reportPageLayout);
   });
   let browserState = $state<BrowserState>({ palette: null, resolvedTheme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light', media: [], tabs: [], tabSlots: [], activeId: 0, platform: '', tabLayout: defaultSettings.tabLayout, split: null, splitResizing: false, sidebarResizing: false, tabDragging: false, peek: null, mini: null, settingsOpen: false, archiveOpen: false, archive: [], folders: [], spaces: [], activeSpaceId: 0, routes: [], sections: { favorites: [], folders: [], pinned: [], today: [] }, settings: { ...defaultSettings } });
   $effect(() => { document.documentElement.dataset.theme = browserState.resolvedTheme; });
   let vertical = $derived(browserState.tabLayout !== 'top');
-  let sidebarHidden = $derived(vertical && !browserState.settings.sidebarVisible);
   // Local width while dragging; persisted to settings once on release.
   let dragWidth = $state<number | null>(null);
   let sidebarDragging = false;
   let sidebarWidth = $derived(dragWidth ?? browserState.settings.sidebarWidth);
-  // Compact mode hides the toolbar and tabs. They show while the pointer came from
-  // their window edge and has not moved onto the page yet, or while they have focus.
+  // Compact mode hides the toolbar, and the tabs unless ⌘S keeps them. They show while the
+  // pointer came from their window edge and has not moved onto the page yet, or while they have focus.
   const EDGE = 4;
   let edgeReveal = $state(false);
   let chromeFocused = $state(false);
@@ -44,7 +43,10 @@
     toastTimer = setTimeout(() => (toast = ''), 1600);
   }
   let revealed = $derived(compact && (edgeReveal || chromeFocused || dragWidth !== null || tabDrag.id !== null || !!toast));
-  let chromeHidden = $derived(compact && !revealed);
+  let toolbarHidden = $derived(compact && !revealed);
+  let tabsShown = $derived(compact ? revealed || browserState.settings.compactTabs : !vertical || browserState.settings.sidebarVisible);
+  let sidebarHidden = $derived(vertical && !tabsShown);
+  let chromeHidden = $derived(toolbarHidden && !tabsShown);
   $effect(() => { void api?.setChromeRevealed(revealed); });
 
   let address = $state('');
@@ -91,7 +93,9 @@
   function pointerMove(event: PointerEvent) {
     if (!compact) return;
     const { tabLayout } = browserState;
-    const atEdge = event.clientY < EDGE || (tabLayout === 'left' && event.clientX < EDGE) || (tabLayout === 'right' && event.clientX >= window.innerWidth - EDGE);
+    // Kept side tabs sit on their edge, so only the top edge reveals the toolbar then.
+    const sideEdge = !browserState.settings.compactTabs && ((tabLayout === 'left' && event.clientX < EDGE) || (tabLayout === 'right' && event.clientX >= window.innerWidth - EDGE));
+    const atEdge = event.clientY < EDGE || sideEdge;
     if (atEdge) edgeReveal = true;
     else if ((event.target as Element).closest?.('main')) edgeReveal = false;
   }
@@ -162,9 +166,9 @@
 
 <svelte:window onkeydown={keydown} onpointermove={pointerMove} onfocusin={trackFocus} onfocusout={trackFocus} onblur={trackFocus} />
 
-<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} class:chrome-hidden={chromeHidden} class:has-media={!!mediaTab} style:--sidebar-width={sidebarHidden || chromeHidden ? '0px' : vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
-  {#if vertical && !sidebarHidden && !chromeHidden}
-    <div class="tab-rail" aria-hidden="true"></div>
+<div class="browser" class:mac={browserState.platform === 'darwin'} class:vertical class:left={browserState.tabLayout === 'left'} class:right={browserState.tabLayout === 'right'} class:sidebar-resizing={dragWidth !== null} class:sidebar-hidden={sidebarHidden} class:chrome-hidden={chromeHidden} class:toolbar-hidden={toolbarHidden} class:tabs-hidden={!tabsShown} class:has-media={!!mediaTab} style:--sidebar-width={vertical ? `min(${sidebarWidth}px, 50vw)` : undefined}>
+  {#if vertical}<div class="tab-rail" aria-hidden="true"></div>{/if}
+  {#if vertical && !sidebarHidden}
     <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions (This adjustable separator supports keyboard resizing.) -->
     <div class="sidebar-resizer" role="separator" aria-label="Resize tab sidebar" aria-orientation="vertical" title="Drag to resize · double-click to reset"
       aria-valuemin={settingsSchema.sidebarWidth.min} aria-valuemax={settingsSchema.sidebarWidth.max} aria-valuenow={sidebarWidth} tabindex="0"

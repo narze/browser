@@ -1294,7 +1294,9 @@ function tick() {
 }
 
 // The sidebar only exists for side tab layouts; top tabs ignore the toggle.
+// Compact mode hides the tabs in every layout, so there it keeps them shown, or not.
 function toggleSidebar() {
+  if (settings.compactMode) return updateSettings({ compactTabs: !settings.compactTabs });
   if (settings.tabLayout === "top") return;
   dispatch({ type: "set-sidebar-resizing", resizing: false });
   updateSettings({ sidebarVisible: !settings.sidebarVisible });
@@ -1315,10 +1317,12 @@ function pagePointer(view, input) {
   const x = bounds.x + input.x;
   const y = bounds.y + input.y;
   const width = window.getContentSize()[0];
-  const atEdge =
-    y < EDGE ||
-    (settings.tabLayout === "left" && x < EDGE) ||
-    (settings.tabLayout === "right" && x >= width - EDGE);
+  // Kept side tabs sit on their edge, so only the top edge reveals the toolbar then.
+  const sideEdge =
+    !settings.compactTabs &&
+    ((settings.tabLayout === "left" && x < EDGE) ||
+      (settings.tabLayout === "right" && x >= width - EDGE));
+  const atEdge = y < EDGE || sideEdge;
   if (atEdge === pointerAtEdge) return;
   pointerAtEdge = atEdge;
   window.webContents.send(browserEvents.onPageEdge, atEdge);
@@ -1349,9 +1353,11 @@ async function capturePages() {
   return snapshots.filter(Boolean);
 }
 
+// Kept tabs on the top or left leave room for them; on the right they would cover the page.
 function updateWindowButtons() {
+  const tabsHoldButtons = settings.compactTabs && settings.tabLayout !== "right";
   if (process.platform === "darwin" && window && !window.isDestroyed())
-    window.setWindowButtonVisibility(!settings.compactMode || chromeRevealed);
+    window.setWindowButtonVisibility(!settings.compactMode || chromeRevealed || tabsHoldButtons);
 }
 
 function installIpc() {

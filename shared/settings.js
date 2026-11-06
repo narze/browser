@@ -53,6 +53,8 @@ export const settingsSchema = /** @type {const} */ ({
   },
   sidebarVisible: { label: "Show tab sidebar", default: true },
   compactMode: { label: "Compact mode", default: false },
+  /** Compact mode keeps the tabs on screen and hides only the toolbar. */
+  compactTabs: { label: "Keep tabs in compact mode", default: false },
   autoPictureInPicture: { label: "Picture in picture", default: true },
   showShortcuts: { label: "New-tab shortcuts", default: true },
   /** Changed keyboard shortcuts by action id; see shared/shortcuts.js. */

@@ -277,6 +277,26 @@ describe("browser command contract", () => {
     );
   });
 
+  it("shows or hides the tabs in compact mode, even with tabs on top", () => {
+    const compact: BrowserState = { ...state, settings: { ...state.settings, compactMode: true } };
+    expect(
+      paletteCommands(compact).find((command) => command.id === "toggle-sidebar"),
+    ).toMatchObject({
+      title: "Show tabs",
+      hint: "⌘S",
+      command: "toggleSidebar",
+      args: [],
+    });
+    const kept: BrowserState = {
+      ...compact,
+      tabLayout: "left",
+      settings: { ...compact.settings, compactTabs: true, sidebarVisible: false },
+    };
+    expect(paletteCommands(kept).find((command) => command.id === "toggle-sidebar")?.title).toBe(
+      "Hide tabs",
+    );
+  });
+
   it("adds split panes and changes the split layout from the palette", () => {
     const ids = (value: BrowserState) => paletteCommands(value).map((command) => command.id);
     expect(ids(state)).not.toContain("add-split-pane");
