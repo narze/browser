@@ -16,6 +16,7 @@ const crypto = require("node:crypto");
 const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup, sameSite } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
+const { createExtensionManager } = require("./extensions.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
 const { installMediaPermissions } = require("./permissions.cjs");
@@ -42,6 +43,8 @@ const {
 // tabs.json and return asleep after a restart. Remote pages never receive the
 // chrome preload. Each space browses in its own session partition.
 let settingsStore;
+let extensions;
+const extensionWindows = new Map();
 let tabStore;
 let faviconDirectory;
 // Sleeping tabs keep their back/forward list here, outside the session state.
@@ -383,9 +386,11 @@ function copyUrl() {
 // A deleted space takes its cookies, logins, and cache with it.
 function clearProfile(profile) {
   const browsing = browsingSession(profile);
-  void Promise.all([browsing.clearStorageData(), browsing.clearCache()]).catch((error) =>
-    console.error("Could not clear the space profile:", error),
-  );
+  closeExtensionWindows(profile);
+  void extensions
+    .clearProfile(profile)
+    .then(() => Promise.all([browsing.clearStorageData(), browsing.clearCache()]))
+    .catch((error) => console.error("Could not clear the space profile:", error));
 }
 
 function edit(target) {
@@ -637,9 +642,10 @@ function moveQuickWindowToTab() {
 // Links from other apps open in the quick window.
 const linksIn = (argv) => argv.filter((value) => isWebUrl(value));
 const waitingLinks = [];
+let initialized = false;
 function openLink(url) {
   if (!isWebUrl(url)) return;
-  if (!app.isReady()) waitingLinks.push(url);
+  if (!initialized) waitingLinks.push(url);
   else openQuickWindow(url);
 }
 
@@ -1100,6 +1106,121 @@ function showSettings(open) {
   dispatch({ type: "show-settings", open });
 }
 
+function extensionProfile(spaceId) {
+  const space = sessionState().spaces.find((entry) => entry.id === spaceId);
+  if (!isTabId(spaceId) || !space) throw new Error("Space not found.");
+  return space.profile;
+}
+
+function closeExtensionWindows(profile, id) {
+  for (const [host, entry] of extensionWindows) {
+    if (entry.profile === profile && (!id || entry.id === id)) host.destroy();
+  }
+}
+
+// Extension pages use the browsing profile and never receive the app preload.
+// Keep them out of browser tabs, whose navigation policy only permits web URLs.
+async function openExtensionPage(spaceId, id, kind) {
+  if (!["popup", "options"].includes(kind)) throw new Error("Invalid extension page.");
+  const profile = extensionProfile(spaceId);
+  const url = extensions.resource(profile, id, kind);
+  closeExtensionWindows(profile, id);
+  const host = new BrowserWindow({
+    parent: window,
+    width: kind === "popup" ? 420 : 800,
+    height: kind === "popup" ? 560 : 650,
+    show: false,
+    title: kind === "popup" ? "Extension" : "Extension options",
+    autoHideMenuBar: true,
+    webPreferences: {
+      session: browsingSession(profile),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+  extensionWindows.set(host, { profile, id });
+  host.on("closed", () => extensionWindows.delete(host));
+  const ownResource = (target) => {
+    try {
+      const parsed = new URL(target);
+      return parsed.protocol === "chrome-extension:" && parsed.hostname === id;
+    } catch {
+      return false;
+    }
+  };
+  const openWebLink = (target) => {
+    if (isWebUrl(target) && sessionState().spaces.some((space) => space.id === spaceId))
+      newTab(target, spaceId);
+  };
+  for (const event of ["will-navigate", "will-redirect"]) {
+    host.webContents.on(event, (event, target) => {
+      if (ownResource(target)) return;
+      event.preventDefault();
+      openWebLink(target);
+    });
+  }
+  host.webContents.setWindowOpenHandler(({ url: target }) => {
+    openWebLink(target);
+    return { action: "deny" };
+  });
+  host.webContents.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown" && input.key === "Escape" && kind === "popup") {
+      event.preventDefault();
+      host.close();
+    }
+  });
+  try {
+    await host.loadURL(url);
+    if (!host.isDestroyed()) host.show();
+  } catch (error) {
+    if (!host.isDestroyed()) host.destroy();
+    throw error;
+  }
+}
+
+async function extensionResult(operation) {
+  try {
+    await operation();
+    return {};
+  } catch (error) {
+    return { error: error.message };
+  }
+}
+
+function showExtensionsMenu() {
+  const spaceId = sessionState().activeSpaceId;
+  const installed = extensions.list(extensionProfile(spaceId));
+  const open = (id, kind) =>
+    void extensionResult(() => openExtensionPage(spaceId, id, kind)).then((result) => {
+      if (result.error && window && !window.isDestroyed())
+        window.webContents.send(browserEvents.onToast, result.error);
+    });
+  Menu.buildFromTemplate([
+    ...installed.map((extension) => ({
+      label:
+        extension.name +
+        (!extension.enabled ? " (disabled)" : extension.error ? " (failed to load)" : ""),
+      submenu: [
+        {
+          label: "Open popup",
+          enabled: extension.hasPopup,
+          click: () => open(extension.id, "popup"),
+        },
+        {
+          label: "Options",
+          enabled: extension.hasOptions,
+          click: () => open(extension.id, "options"),
+        },
+      ],
+    })),
+    ...(installed.length
+      ? [{ type: "separator" }]
+      : [{ label: "No extensions in this space", enabled: false }]),
+    { label: "Manage extensions…", click: () => showSettings(true) },
+  ]).popup({ window });
+}
+
 function updateTheme() {
   for (const target of [window, miniWindow])
     if (target && !target.isDestroyed())
@@ -1362,6 +1483,39 @@ function updateWindowButtons() {
 
 function installIpc() {
   const handlers = {
+    getExtensions: (spaceId) => extensions.list(extensionProfile(spaceId)),
+    loadExtension: (spaceId) =>
+      extensionResult(async () => {
+        extensionProfile(spaceId);
+        const { canceled, filePaths } = await dialog.showOpenDialog(window, {
+          title: "Load unpacked Chrome extension",
+          properties: ["openDirectory"],
+          buttonLabel: "Load extension",
+        });
+        if (canceled || !filePaths.length) return;
+        await extensions.install(extensionProfile(spaceId), filePaths[0]);
+      }),
+    setExtensionEnabled: (spaceId, id, enabled) =>
+      extensionResult(async () => {
+        const profile = extensionProfile(spaceId);
+        await extensions.setEnabled(profile, id, enabled);
+        if (!enabled) closeExtensionWindows(profile, id);
+      }),
+    reloadExtension: (spaceId, id) =>
+      extensionResult(async () => {
+        const profile = extensionProfile(spaceId);
+        closeExtensionWindows(profile, id);
+        await extensions.reload(profile, id);
+      }),
+    removeExtension: (spaceId, id) =>
+      extensionResult(async () => {
+        const profile = extensionProfile(spaceId);
+        await extensions.remove(profile, id);
+        closeExtensionWindows(profile, id);
+      }),
+    openExtensionPage: (spaceId, id, kind) =>
+      extensionResult(() => openExtensionPage(spaceId, id, kind)),
+    showExtensionsMenu,
     reportPageLayout: (regions) => {
       pageRegions = normalizePageLayout(regions, ...window.getContentSize());
       layout();
@@ -1614,6 +1768,7 @@ function createWindow() {
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.on("resize", layout);
   window.on("closed", () => {
+    for (const host of extensionWindows.keys()) host.destroy();
     if (paletteView && !paletteView.webContents.isDestroyed())
       paletteView.webContents.close({ waitForBeforeUnload: false });
     paletteView = null;
@@ -1669,6 +1824,7 @@ if (!primaryInstance) app.quit();
 app.on("second-instance", (_event, argv) => {
   const links = linksIn(argv.slice(1));
   if (links.length) links.forEach(openLink);
+  else if (!initialized) return;
   else if (!window) createWindow();
   else window.focus();
 });
@@ -1676,11 +1832,21 @@ app.on("open-url", (event, url) => {
   event.preventDefault();
   openLink(url);
 });
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   if (!primaryInstance) return;
   settingsStore = createSettingsStore(path.join(app.getPath("userData"), "settings.json"));
   settings = settingsStore.get();
   tabStore = createTabStore(path.join(app.getPath("userData"), "tabs.json"));
+  extensions = createExtensionManager(
+    path.join(app.getPath("userData"), "extensions.json"),
+    browsingSession,
+  );
+  // Load before restoring pages so content scripts run on their first navigation.
+  await extensions.restore(
+    newSession()
+      .getState()
+      .spaces.map((space) => space.profile),
+  );
   faviconDirectory = path.join(app.getPath("userData"), "favicons");
   protocol.handle("favicon", serveFavicon);
   setInterval(tick, 60_000);
@@ -1707,6 +1873,7 @@ app.whenReady().then(() => {
   installIpc();
   installMenu();
   createWindow();
+  initialized = true;
   for (const url of [...linksIn(process.argv.slice(1)), ...waitingLinks.splice(0)])
     openQuickWindow(url);
   app.on("activate", () => {

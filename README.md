@@ -41,6 +41,10 @@ Features:
 - A tab that plays sound shows a **mute** button. In side tabs, a **media card** above the space dots shows a playing or paused tab that is not on screen, with Play/Pause and Mute. When you leave a tab with a playing video, the video moves to **picture in picture**. Turn this off in Settings under Tabs.
 - **Session restore**: spaces, all tabs, folders, the archive, and the shown tab and split of each space save to `tabs.json` in the app profile. After a restart they come back asleep, and the shown pages load. Pinned tabs keep their home page. Blank tabs and back/forward history are not saved. Site icons are cached in the profile.
 
+- Load **unpacked Chrome extensions** in Settings under **Extensions**. Choose a space, click **Load unpacked**, and select the folder containing `manifest.json`. Enable, disable, reload, or remove extensions there. The puzzle button in the toolbar opens their popups and options. Extensions and extension storage are separate for each space, and enabled extensions load before restored pages on startup. Keep the source folder on disk; removing an extension leaves that folder intact. Reload web pages after changing an extension, since scripts already injected into a document remain until it reloads.
+
+Extension compatibility follows [Electron's supported Chrome APIs](https://www.electronjs.org/docs/latest/api/extensions/), including content scripts, runtime messaging, local storage, and supported background scripts/service workers. Some Chrome APIs, including full browser action and tab/window management APIs, are unavailable. The browser opens manifest-declared popups and options in separate sandboxed windows; dynamic action icons, badges, popup overrides, and actions without a popup are not implemented. Chrome Web Store installation, packed `.crx` files, automatic updates, and Chrome account sync are not supported. Only load extensions you trust: their declared permissions can let them read and change web pages. File access stays disabled and extensions never receive the browser's privileged preload.
+
 Default shortcuts (all customizable):
 
 | Shortcut                  | Action                              |
@@ -101,7 +105,7 @@ The command palette uses a separate transparent local `WebContentsView`, with IP
 
 For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
-This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, browser extensions, or an installer (`pnpm package` builds a `.app`, not a DMG). HTTPS sites (and localhost) can ask to use the camera and microphone through an Allow/Deny dialog. Grants apply to the requesting origin and devices within that space's profile until you quit the app. Cross-origin frames and other permission requests, including screen sharing, remain denied.
+This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, or an installer (`pnpm package` builds a `.app`, not a DMG). HTTPS sites (and localhost) can ask to use the camera and microphone through an Allow/Deny dialog. Grants apply to the requesting origin and devices within that space's profile until you quit the app. Cross-origin frames and other permission requests, including screen sharing, remain denied.
 
 On macOS, also allow the app in **System Settings → Privacy & Security → Microphone / Camera** if the system has previously blocked it, then restart Browser. When running through `pnpm start` or `pnpm dev`, the app may appear as Electron in system settings.
 

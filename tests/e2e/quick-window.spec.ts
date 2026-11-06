@@ -1,10 +1,67 @@
 import { test, expect, _electron as electron, type ElectronApplication } from "@playwright/test";
 import { spawn } from "node:child_process";
 import { createServer } from "node:http";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import electronPath from "electron";
+
+test("links and second launches wait for extension restoration before opening windows", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "browser-startup-e2e-"));
+  const bootstrap = join(directory, "startup.cjs");
+  const url = "http://127.0.0.1:1/during-startup";
+  // Deliver OS events inside the asynchronous restore boundary, before any UI exists.
+  await writeFile(
+    bootstrap,
+    `
+    const { app, BrowserWindow } = require('electron');
+    const extensions = require(${JSON.stringify(join(process.cwd(), "electron/extensions.cjs"))});
+    const create = extensions.createExtensionManager;
+    extensions.createExtensionManager = (...args) => {
+      const manager = create(...args);
+      const restore = manager.restore;
+      manager.restore = async (...args) => {
+        app.emit('second-instance', {}, ['electron', '.']);
+        app.emit('open-url', { preventDefault() {} }, ${JSON.stringify(url)});
+        globalThis.startupWindowCount = BrowserWindow.getAllWindows().length;
+        return restore(...args);
+      };
+      return manager;
+    };
+    require(${JSON.stringify(join(process.cwd(), "electron/main.cjs"))});
+  `,
+  );
+  const env = Object.fromEntries(
+    Object.entries(process.env).filter(
+      (entry): entry is [string, string] =>
+        entry[1] !== undefined &&
+        !["ELECTRON_RUN_AS_NODE", "ELECTRON_RENDERER_URL"].includes(entry[0]),
+    ),
+  );
+  let app: ElectronApplication | undefined;
+  try {
+    app = await electron.launch({
+      args: [bootstrap, `--user-data-dir=${join(directory, "profile")}`],
+      env,
+    });
+    await expect.poll(() => app!.evaluate(() => (globalThis as any).startupWindowCount)).toBe(0);
+    await expect
+      .poll(() =>
+        app!.windows().some((page) => page.url().startsWith("file:") && !page.url().includes("#")),
+      )
+      .toBe(true);
+    const chrome = app
+      .windows()
+      .find((page) => page.url().startsWith("file:") && !page.url().includes("#"))!;
+    await expect
+      .poll(async () => (await chrome.evaluate(() => window.browser!.getState())).mini?.url)
+      .toBe(url);
+    expect(await windowCount(app)).toBe(2);
+  } finally {
+    await app?.close();
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 const primary = process.platform === "darwin" ? "meta" : "control";
 
