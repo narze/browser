@@ -62,6 +62,10 @@ test("camera capture and microphone consent use the site permission dialog", asy
             .executeJavaScript(code, true),
         { url: origin, code },
       );
+    // Sites such as Google Meet only call getUserMedia when the state is "prompt".
+    expect(await run("navigator.permissions.query({name:'camera'}).then(p => p.state)")).toBe(
+      "prompt",
+    );
     await run("document.querySelector('button').click()");
     await expect
       .poll(() => run("document.querySelector('output').textContent"), { timeout: 20000 })
@@ -81,7 +85,7 @@ test("camera capture and microphone consent use the site permission dialog", asy
     expect(JSON.stringify(prompts[0])).not.toContain("your microphone");
     expect(JSON.stringify(prompts[0])).toContain("camera");
     expect(await run("navigator.permissions.query({name:'microphone'}).then(p => p.state)")).toBe(
-      "denied",
+      "prompt",
     );
     expect(await run("navigator.permissions.query({name:'camera'}).then(p => p.state)")).toBe(
       "granted",

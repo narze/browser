@@ -72,6 +72,38 @@ test("the packaged Browser.app is signed, can open web links, and browses", asyn
     await address.fill(`http://127.0.0.1:${port}`);
     await address.press("Enter");
     await expect(chrome.getByRole("tab", { name: "Packaged page" })).toBeVisible();
+    // The site preload loads from app.asar, so sites see "prompt", not "denied".
+    // The page is in its space's browser context, which Playwright does not attach to.
+    const cdp = await browser.newBrowserCDPSession();
+    const site = async () =>
+      (await cdp.send("Target.getTargets")).targetInfos.find((target) =>
+        target.url.startsWith(`http://127.0.0.1:${port}`),
+      );
+    await expect.poll(site).toBeTruthy();
+    // Talk to the page's own DevTools endpoint on the same debug port.
+    const socket = new WebSocket(
+      `${new URL(endpoint).origin}/devtools/page/${(await site())!.targetId}`,
+    );
+    await new Promise((resolve, reject) => {
+      socket.onopen = resolve;
+      socket.onerror = reject;
+    });
+    const reply = new Promise<string>((resolve) => {
+      socket.onmessage = (event) => resolve(JSON.parse(event.data).result.result.value);
+    });
+    socket.send(
+      JSON.stringify({
+        id: 1,
+        method: "Runtime.evaluate",
+        params: {
+          expression: "navigator.permissions.query({name: 'camera'}).then((p) => p.state)",
+          awaitPromise: true,
+          returnByValue: true,
+        },
+      }),
+    );
+    expect(await reply).toBe("prompt");
+    socket.close();
     await browser.close();
   } finally {
     if (app.exitCode === null && app.signalCode === null) {
