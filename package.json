@@ -32,10 +32,14 @@
     "vite": "npm:@voidzero-dev/vite-plus-core@1.4.0",
     "vite-plus": "1.4.0"
   },
+  "optionalDependencies": {
+    "node-mac-permissions": "github:codebytere/node-mac-permissions#f52b2cfcf6e05f2e6798ca06b8008db79ffa835a"
+  },
   "packageManager": "pnpm@10.17.0",
   "pnpm": {
     "onlyBuiltDependencies": [
-      "electron"
+      "electron",
+      "node-mac-permissions"
     ]
   }
 }

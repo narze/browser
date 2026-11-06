@@ -21,6 +21,7 @@ const { createExtensionManager } = require("./extensions.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
 const { installSitePermissions } = require("./permissions.cjs");
+const { askSystemAccess } = require("./system-access.cjs");
 const { durationMs } = require("../shared/settings.js");
 const {
   shortcutActions,
@@ -129,6 +130,15 @@ function mediaState() {
   });
 }
 
+// An optional macOS-only module; without it, location stays up to Chromium.
+function locationPermissions() {
+  try {
+    return require("node-mac-permissions");
+  } catch {
+    return null;
+  }
+}
+
 const partition = (profile) => `persist:${profile}`;
 const configuredProfiles = new Set();
 // Each space gets its own site consent; other permissions remain denied.
@@ -170,20 +180,16 @@ function browsingSession(profile) {
           ? dialog.showMessageBox(parent, options)
           : dialog.showMessageBox(options));
         if (result.response !== 1) return false;
-        // macOS keeps its own consent for the app's camera and microphone. Ask for
-        // it here, so capture does not fail silently. Fake test devices need no
-        // system access.
-        if (
-          !devices ||
-          process.platform !== "darwin" ||
-          app.commandLine.hasSwitch("use-fake-device-for-media-stream")
-        )
-          return true;
-        for (const type of types) {
-          const device = type === "audio" ? "microphone" : "camera";
-          if (!(await systemPreferences.askForMediaAccess(device))) return false;
-        }
-        return true;
+        if (process.platform !== "darwin") return true;
+        return askSystemAccess(types, {
+          // Fake test devices need no system access.
+          systemPreferences: app.commandLine.hasSwitch("use-fake-device-for-media-stream")
+            ? null
+            : systemPreferences,
+          // Electron.app in development has no location usage description, so
+          // macOS cannot ask for it there.
+          locationPermissions: app.isPackaged ? locationPermissions() : null,
+        });
       },
     });
   }
