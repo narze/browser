@@ -77,9 +77,13 @@ pnpm test        # Session, layout, settings, command, navigation, and policy te
 pnpm test:e2e    # Build, then test the real Electron app through Playwright
 pnpm build      # Build the Svelte interface and sandboxed preload into dist/
 pnpm start      # Open Electron using the built interface
+pnpm package    # Build release/mac-<arch>/Browser.app (macOS)
+pnpm test:package # Build the app, then launch the packaged Browser.app in a test
 pnpm dev:ui     # Interface only in Vite+; browsing requires Electron
 pnpm fmt        # Format supported files through Vite+
 ```
+
+To use the browser as a normal macOS app, run `pnpm package` and open `release/mac-arm64/Browser.app` (`mac` on Intel), or drag it to Applications. It uses the same profile as `pnpm start` (`~/Library/Application Support/Browser`), so your tabs and spaces carry over. The app has an ad-hoc signature, so it runs on the Mac that built it; other Macs need a Developer ID signature. Its Info.plist lists http and https, so you can pick it as the default web browser in System Settings. On the first launch, macOS can ask for access to "Browser Safe Storage" in the keychain, because `pnpm start` made that item; choose Always Allow. `electron-builder.yml` holds the packaging setup. The app icon comes from `build/icon.svg`; after you change it, run `pnpm exec electron scripts/render-icon.cjs` to update `build/icon.png`.
 
 The local Vite+ CLI is available with `pnpm exec vp`. Global Vite+ installation is optional. Vite+ supplies Vite and Vitest through the pinned overrides in `pnpm-workspace.yaml`.
 
@@ -95,7 +99,7 @@ The command palette uses a separate transparent local `WebContentsView`, with IP
 
 For a manual check, run `pnpm dev`, open three tabs, and split two of them. Try numbered shortcuts, a full cycle with Ctrl+Tab, and arrow navigation in the tab strip. Change tab placement, resize the window, and drag the divider; pages should stay aligned without reloading. Change a theme or search preference in Settings or the command palette, then restart to check persistence.
 
-This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, browser extensions, or an installer. Camera, microphone, and other permission requests are denied.
+This is a prototype. Website cookies and storage use one persistent Electron session for each space. It does not include bookmarks, a downloads interface, browser extensions, or an installer (`pnpm package` builds a `.app`, not a DMG). Camera, microphone, and other permission requests are denied.
 
 Popup links open as ordinary GET tabs, with at most one popup per source tab every 750 ms. Opener-dependent flows and POST popups are not supported. Closing a tab discards its page without an unsaved-changes prompt.
 
