@@ -20,7 +20,7 @@ const { createSettingsStore } = require("./settings.cjs");
 const { createExtensionManager } = require("./extensions.cjs");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
-const { installMediaPermissions } = require("./permissions.cjs");
+const { installSitePermissions } = require("./permissions.cjs");
 const { durationMs } = require("../shared/settings.js");
 const {
   shortcutActions,
@@ -131,7 +131,7 @@ function mediaState() {
 
 const partition = (profile) => `persist:${profile}`;
 const configuredProfiles = new Set();
-// Each space gets its own site consent; unrelated permissions remain denied.
+// Each space gets its own site consent; other permissions remain denied.
 function browsingSession(profile) {
   const browsing = session.fromPartition(partition(profile));
   if (!configuredProfiles.has(profile)) {
@@ -140,15 +140,23 @@ function browsingSession(profile) {
       type: "frame",
       filePath: path.join(__dirname, "site-preload.cjs"),
     });
-    installMediaPermissions(browsing, {
+    installSitePermissions(browsing, {
       prompt: async (contents, origin, types) => {
         const devices = types
+          .filter((type) => type === "audio" || type === "video")
           .map((type) => (type === "audio" ? "microphone" : "camera"))
           .join(" and ");
+        const action = devices
+          ? `use your ${devices}`
+          : {
+              geolocation: "know your location",
+              notifications: "show notifications",
+              "clipboard-read": "see text and images you copy",
+            }[types[0]];
         const options = {
           type: "question",
-          title: "Camera and microphone access",
-          message: `Allow ${origin} to use your ${devices}?`,
+          title: "Site permission",
+          message: `Allow ${origin} to ${action}?`,
           detail:
             "Access lasts until you quit Browser, in this space's profile. Your system may also ask for permission.",
           buttons: ["Deny", "Allow for this session"],
@@ -162,9 +170,11 @@ function browsingSession(profile) {
           ? dialog.showMessageBox(parent, options)
           : dialog.showMessageBox(options));
         if (result.response !== 1) return false;
-        // macOS keeps its own consent for the app. Ask for it here, so capture does
-        // not fail silently. Fake test devices need no system access.
+        // macOS keeps its own consent for the app's camera and microphone. Ask for
+        // it here, so capture does not fail silently. Fake test devices need no
+        // system access.
         if (
+          !devices ||
           process.platform !== "darwin" ||
           app.commandLine.hasSwitch("use-fake-device-for-media-stream")
         )
