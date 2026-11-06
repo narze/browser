@@ -23,6 +23,18 @@ test("the packaged Browser.app is signed, can open web links, and browses", asyn
   expect(plist("CFBundleIconFile")).toBe("icon.icns");
   expect(plist("NSMicrophoneUsageDescription")).toContain("microphone");
   expect(plist("NSCameraUsageDescription")).toContain("camera");
+  // Without it, macOS never asks for location access, and location requests time out.
+  expect(plist("NSLocationWhenInUseUsageDescription")).toContain("location");
+  expect(plist("NSLocationUsageDescription")).toContain("location");
+  // The app asks macOS for location access with this native module.
+  expect(
+    existsSync(
+      join(
+        bundle,
+        "Contents/Resources/app.asar.unpacked/node_modules/node-mac-permissions/build/Release/permissions.node",
+      ),
+    ),
+  ).toBe(true);
   expect(existsSync(join(bundle, "Contents/Resources/icon.icns"))).toBe(true);
   // http and https make the app a choice for the default web browser.
   expect(plist("CFBundleURLTypes.0.CFBundleURLSchemes.0")).toBe("http");
