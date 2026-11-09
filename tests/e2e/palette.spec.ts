@@ -28,6 +28,10 @@ test("palette overlays live split pages, navigates, switches tabs, and runs comm
   });
   try {
     const chrome = await app.firstWindow();
+    // Hosted macOS runners may constrain the window to their smaller display.
+    await app.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()[0].setContentSize(1024, 674),
+    );
     const address = chrome.getByRole("textbox", { name: "Search or enter address" });
     await address.fill(`${origin}/one`);
     await address.press("Enter");
@@ -72,14 +76,23 @@ test("palette overlays live split pages, navigates, switches tabs, and runs comm
         (element: HTMLInputElement) => element.selectionEnd! - element.selectionStart!,
       ),
     ).toBe(`${origin}/two`.length);
-    const stack = await app.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].contentView.children.map((view) => ({
-        visible: view.getVisible(),
-        bounds: view.getBounds(),
-      })),
-    );
+    const { stack, contentSize } = await app.evaluate(({ BrowserWindow }) => {
+      const host = BrowserWindow.getAllWindows()[0];
+      return {
+        contentSize: host.getContentSize(),
+        stack: host.contentView.children.map((view) => ({
+          visible: view.getVisible(),
+          bounds: view.getBounds(),
+        })),
+      };
+    });
     expect(stack.filter((view) => view.visible)).toHaveLength(3);
-    expect(stack.at(-1)!.bounds).toEqual({ x: 0, y: 0, width: 1280, height: 850 });
+    expect(stack.at(-1)!.bounds).toEqual({
+      x: 0,
+      y: 0,
+      width: contentSize[0],
+      height: contentSize[1],
+    });
     await input.press("Escape");
     await expect
       .poll(() => chrome.evaluate(async () => (await window.browser!.getState()).palette))
