@@ -116,6 +116,45 @@ test("the packaged Browser.app is signed, can open web links, and browses", asyn
     );
     expect(await reply).toBe("prompt");
     socket.close();
+    if (process.env.BROWSER_LIVE_STORE === "1") {
+      // Check that the dependency's preload also runs from the packaged ASAR.
+      const storeUrl =
+        "https://chromewebstore.google.com/detail/dark-reader/eimadpbcbfnmbkopoojfekhnkhdbieeh";
+      await chrome.evaluate((url) => window.browser!.navigate(url), storeUrl);
+      const store = async () =>
+        (await cdp.send("Target.getTargets")).targetInfos.find((target) =>
+          target.url.startsWith(storeUrl),
+        );
+      await expect.poll(store).toBeTruthy();
+      const storeSocket = new WebSocket(
+        `${new URL(endpoint).origin}/devtools/page/${(await store())!.targetId}`,
+      );
+      try {
+        await new Promise((resolve, reject) => {
+          storeSocket.onopen = resolve;
+          storeSocket.onerror = reject;
+        });
+        const storeReady = () =>
+          new Promise<boolean>((resolve) => {
+            storeSocket.onmessage = (event) =>
+              resolve(JSON.parse(event.data).result?.result?.value ?? false);
+            storeSocket.send(
+              JSON.stringify({
+                id: 1,
+                method: "Runtime.evaluate",
+                params: {
+                  expression:
+                    "typeof chrome.webstorePrivate?.beginInstallWithManifest3 === 'function' && [...document.querySelectorAll('button')].some(b => /Add to (Chrome|Browser)/.test(b.innerText) && !b.disabled)",
+                  returnByValue: true,
+                },
+              }),
+            );
+          });
+        await expect.poll(storeReady, { timeout: 30_000 }).toBe(true);
+      } finally {
+        storeSocket.close();
+      }
+    }
     await browser.close();
   } finally {
     if (app.exitCode === null && app.signalCode === null) {

@@ -18,6 +18,8 @@ const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup, sameSite } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createExtensionManager } = require("./extensions.cjs");
+const { createWebStore } = require("./web-store.cjs");
+const { downloadExtension } = require("electron-chrome-web-store");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
 const { installSitePermissions } = require("./permissions.cjs");
@@ -46,6 +48,7 @@ const {
 // chrome preload. Each space browses in its own session partition.
 let settingsStore;
 let extensions;
+let webStore;
 const extensionWindows = new Map();
 let tabStore;
 let faviconDirectory;
@@ -150,6 +153,7 @@ function browsingSession(profile) {
       type: "frame",
       filePath: path.join(__dirname, "site-preload.cjs"),
     });
+    webStore.addSession(profile, browsing);
     installSitePermissions(browsing, {
       prompt: async (contents, origin, types) => {
         const devices = types
@@ -1878,6 +1882,42 @@ app.whenReady().then(async () => {
     path.join(app.getPath("userData"), "extensions.json"),
     browsingSession,
   );
+  webStore = createWebStore({
+    ipcMain,
+    manager: extensions,
+    extensionsPath: path.join(app.getPath("userData"), "store-extensions"),
+    preloadPath: require.resolve("electron-chrome-web-store/preload"),
+    downloadExtension,
+    chromeVersion: process.versions.chrome,
+    closeWindows: closeExtensionWindows,
+    prompt: async ({ kind, profile, name, permissions, event }) => {
+      const space = sessionState().spaces.find((entry) => entry.profile === profile);
+      if (!space || event.sender.isDestroyed()) return false;
+      const removing = kind === "remove";
+      const options = {
+        type: "question",
+        title: removing ? "Remove extension" : "Install Chrome extension",
+        message: `${removing ? "Remove" : "Install"} ${name} ${removing ? "from" : "in"} ${space.name}?`,
+        detail: removing
+          ? "You can install this extension again from Chrome Web Store."
+          : `Permissions:\n${permissions.length ? permissions.join("\n") : "No additional permissions"}\n\nOnly install extensions you trust. Some Chrome APIs are unavailable in this browser.`,
+        buttons: ["Cancel", removing ? "Remove extension" : "Add extension"],
+        defaultId: 0,
+        cancelId: 0,
+        noLink: true,
+      };
+      const page = [...views].find(([, view]) => view.webContents === event.sender);
+      const parent = page && viewHosts.get(page[0]);
+      const result = await (parent && !parent.isDestroyed()
+        ? dialog.showMessageBox(parent, options)
+        : dialog.showMessageBox(options));
+      return (
+        result.response === 1 &&
+        !event.sender.isDestroyed() &&
+        sessionState().spaces.some((entry) => entry.profile === profile)
+      );
+    },
+  });
   // Load before restoring pages so content scripts run on their first navigation.
   await extensions.restore(
     newSession()

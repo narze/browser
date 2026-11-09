@@ -33,17 +33,28 @@
       error = 'Could not update extensions. Please try again.';
     } finally { busy = false; }
   }
+
+  async function browseStore() {
+    await run(async () => {
+      await api.switchSpace(spaceId);
+      await api.newTab();
+      const result = await api.navigate('https://chromewebstore.google.com/');
+      if (!result.error) await api.closeSettings();
+      return result;
+    });
+  }
 </script>
 
 <section class="settings-section" aria-labelledby="extensions-title" aria-busy={busy || loading}>
   <h2 id="extensions-title">Extensions</h2>
-  <p class="extension-intro">Load an unpacked Chrome extension folder containing <code>manifest.json</code>. Extensions and their data stay in the space you choose.</p>
+  <p class="extension-intro">Install from Chrome Web Store or load an unpacked folder containing <code>manifest.json</code>. Extensions and their data stay in the space you choose.</p>
   <p class="extension-intro">Only load extensions you trust. They can read and change the sites their permissions allow.</p>
   <div class="extension-controls">
     <label for="extension-space">Space</label>
     <select id="extension-space" bind:value={spaceId} disabled={busy}>
       {#each spaces as space (space.id)}<option value={space.id}>{space.name}</option>{/each}
     </select>
+    <button class="route-add" disabled={busy || loading} onclick={browseStore}>Chrome Web Store</button>
     <button class="route-add" disabled={busy || loading} onclick={() => run(() => api.loadExtension(spaceId))}>Load unpacked</button>
   </div>
   {#if loading}
@@ -75,7 +86,7 @@
     </ul>
   {/if}
   {#if error}<p class="settings-error" role="alert">{error}</p>{/if}
-  <p class="extension-intro">Supports Electron-compatible Chrome extensions. Some Chrome APIs are unavailable. Chrome Web Store installation, packed .crx files, automatic updates, and Chrome account sync are not supported. Keep loaded folders on disk; reload pages after changing an extension.</p>
+  <p class="extension-intro">Supports Electron-compatible Manifest V3 store extensions. Some Chrome APIs are unavailable. Themes, Chrome apps, local .crx files, automatic updates, and Chrome account sync are not supported. Keep unpacked folders on disk; reload pages after changing an extension.</p>
 </section>
 
 <style>

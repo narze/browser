@@ -48,6 +48,38 @@ function fixture() {
 }
 
 describe("extension profiles", () => {
+  it("registers store downloads with the expected ID and restores them in their space", async () => {
+    const f = fixture();
+    const manager = f.manager();
+    await manager.installFromStore("browsing", id, async () => f.folder);
+    expect(manager.list("browsing")[0]).toMatchObject({ id, enabled: true, loaded: true });
+    await expect(
+      manager.installFromStore("browsing", id, async () => {
+        throw new Error("must not download twice");
+      }),
+    ).rejects.toThrow("already installed");
+    await expect(
+      manager.installFromStore(otherProfile, otherId, async () => f.folder),
+    ).rejects.toThrow("ID");
+    expect(manager.list(otherProfile)).toEqual([]);
+    expect(f.getSession(otherProfile).extensions.getExtension(id)).toBeNull();
+    f.sessions.clear();
+    const restored = f.manager();
+    await restored.restore(["browsing", otherProfile]);
+    expect(restored.list("browsing")[0]).toMatchObject({ id, loaded: true });
+    expect(restored.list(otherProfile)).toEqual([]);
+  });
+
+  it("does not register cancelled downloads or accept invalid store IDs", async () => {
+    const f = fixture();
+    const manager = f.manager();
+    expect(await manager.installFromStore("browsing", id, async () => null)).toBe(false);
+    await expect(
+      manager.installFromStore("browsing", "../bad", async () => f.folder),
+    ).rejects.toThrow("ID");
+    expect(manager.list("browsing")).toEqual([]);
+  });
+
   it("keeps installations and resources scoped to their space, including removal", async () => {
     const f = fixture();
     const manager = f.manager();
