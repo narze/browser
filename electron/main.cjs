@@ -18,6 +18,7 @@ const { resolveAddress } = require("./navigation.cjs");
 const { isWebUrl, isTabId, canOpenPopup, sameSite } = require("./policy.cjs");
 const { createSettingsStore } = require("./settings.cjs");
 const { createExtensionManager } = require("./extensions.cjs");
+const { createExtensionSupport } = require("./extension-apis.cjs");
 const { createWebStore } = require("./web-store.cjs");
 const { downloadExtension } = require("electron-chrome-web-store");
 const { createTabStore } = require("./tab-store.cjs");
@@ -49,6 +50,8 @@ const {
 let settingsStore;
 let extensions;
 let webStore;
+let extensionSupport;
+const extensionProfiles = new Map();
 const extensionWindows = new Map();
 let tabStore;
 let faviconDirectory;
@@ -149,6 +152,7 @@ function browsingSession(profile) {
   const browsing = session.fromPartition(partition(profile));
   if (!configuredProfiles.has(profile)) {
     configuredProfiles.add(profile);
+    extensionProfiles.set(profile, extensionSupport.configure(profile, browsing));
     browsing.registerPreloadScript({
       type: "frame",
       filePath: path.join(__dirname, "site-preload.cjs"),
@@ -206,6 +210,7 @@ const hostFor = (state, id) => (state.mini?.id === id ? miniWindow : window);
 function attach(id, view, host) {
   host.contentView.addChildView(view);
   viewHosts.set(id, host);
+  extensionProfiles.get(viewProfiles.get(id))?.addTab(view.webContents, host);
 }
 function detach(id, view) {
   const host = viewHosts.get(id);
@@ -305,6 +310,8 @@ function dispatch(command) {
   }
   layout();
   publish();
+  const selected = views.get(result.state.activeId)?.webContents;
+  if (selected) extensionProfiles.get(viewProfiles.get(result.state.activeId))?.selectTab(selected);
   followMedia(shownBefore, shownTabs(result.state));
   for (const tab of moved)
     void views
@@ -989,6 +996,10 @@ function createPageView(id, profile) {
     },
   });
   const contents = view.webContents;
+  // Background tabs may never have appeared in a DOM layout report. Keep a
+  // usable viewport for extension automation; visible tabs receive exact bounds.
+  const [initialWidth, initialHeight] = window.getContentSize();
+  view.setBounds({ x: 0, y: 0, width: initialWidth, height: initialHeight });
   const tab = () => pageTabs(sessionState()).find((entry) => entry.id === id);
   // The link under the pointer, so a click on it can open in a peek.
   let hovered = "";
@@ -1162,6 +1173,12 @@ async function openExtensionPage(spaceId, id, kind) {
   const profile = extensionProfile(spaceId);
   const url = extensions.resource(profile, id, kind);
   closeExtensionWindows(profile, id);
+  await createExtensionWindow(profile, id, url, kind);
+}
+
+async function createExtensionWindow(profile, id, url, kind = "options", dimensions = {}) {
+  const spaceId = sessionState().spaces.find((space) => space.profile === profile)?.id;
+  if (!spaceId) throw new Error("Space no longer exists.");
   const host = new BrowserWindow({
     parent: window,
     width: kind === "popup" ? 420 : 800,
@@ -1169,6 +1186,7 @@ async function openExtensionPage(spaceId, id, kind) {
     show: false,
     title: kind === "popup" ? "Extension" : "Extension options",
     autoHideMenuBar: true,
+    ...dimensions,
     webPreferences: {
       session: browsingSession(profile),
       nodeIntegration: false,
@@ -1214,6 +1232,7 @@ async function openExtensionPage(spaceId, id, kind) {
     if (!host.isDestroyed()) host.destroy();
     throw error;
   }
+  return host;
 }
 
 async function extensionResult(operation) {
@@ -1239,6 +1258,15 @@ function showExtensionsMenu() {
         extension.name +
         (!extension.enabled ? " (disabled)" : extension.error ? " (failed to load)" : ""),
       submenu: [
+        {
+          label: "Run action on current tab",
+          enabled: extension.enabled && extension.loaded && !!activeView(),
+          click: () => {
+            const contents = activeView()?.webContents;
+            if (contents)
+              extensionProfiles.get(extensionProfile(spaceId))?.activate(extension.id, contents);
+          },
+        },
         {
           label: "Open popup",
           enabled: extension.hasPopup,
@@ -1882,6 +1910,94 @@ app.whenReady().then(async () => {
     path.join(app.getPath("userData"), "extensions.json"),
     browsingSession,
   );
+  const tabIdForContents = (contents) =>
+    [...views].find(([, view]) => view.webContents === contents)?.[0];
+  extensionSupport = createExtensionSupport({
+    ipcMain,
+    adapter: {
+      mainWindow: () => window,
+      tabs: (profile) =>
+        [...views]
+          .filter(([id]) => viewProfiles.get(id) === profile)
+          .map(([, view]) => view.webContents),
+      windowFor: (contents) => viewHosts.get(tabIdForContents(contents)),
+      selectTab: (contents) => {
+        const id = tabIdForContents(contents);
+        if (id && sessionState().activeId !== id) selectTab(id);
+      },
+      removeTab: (contents) => {
+        const id = tabIdForContents(contents);
+        if (id) closeTab(id);
+      },
+      createTab: async (profile, details) => {
+        const url = details.url ?? "about:blank";
+        if (url.startsWith("chrome-extension://")) {
+          const parsed = new URL(url);
+          if (!browsingSession(profile).extensions.getExtension(parsed.hostname))
+            throw new Error("Unknown extension.");
+          const host = await createExtensionWindow(profile, parsed.hostname, url);
+          return [host.webContents, host];
+        }
+        if (url !== "about:blank" && !isWebUrl(url))
+          throw new Error("Only web pages can be opened.");
+        const space = sessionState().spaces.find((space) => space.profile === profile);
+        if (!space) throw new Error("Space no longer exists.");
+        const previous = sessionState().activeId;
+        // Extension-created tabs belong to the caller's profile. User link
+        // routes must not move them into another space's cookies or logins.
+        const id = newTab("", space.id);
+        if (url !== "about:blank")
+          load(
+            sessionState().tabs.find((tab) => tab.id === id),
+            url,
+          );
+        const contents = views.get(id).webContents;
+        // The app's empty New Tab has no document. CDP Page.enable needs a real
+        // renderer even when an agent asks to start from about:blank.
+        if (url === "about:blank") await contents.loadURL("about:blank");
+        if (details.active === false && previous !== id) selectTab(previous);
+        return [contents, viewHosts.get(id)];
+      },
+      createWindow: async (profile, details) => {
+        const url = Array.isArray(details.url) ? details.url[0] : details.url;
+        const parsed = new URL(url);
+        if (
+          parsed.protocol !== "chrome-extension:" ||
+          !browsingSession(profile).extensions.getExtension(parsed.hostname)
+        )
+          throw new Error("Only extension windows are supported.");
+        return createExtensionWindow(profile, parsed.hostname, url, "options", {
+          width: details.width ?? 800,
+          height: details.height ?? 650,
+        });
+      },
+      assignTabDetails: (details, contents) => {
+        const id = tabIdForContents(contents);
+        const tab = sessionState().tabs.find((tab) => tab.id === id);
+        if (tab) {
+          details.pinned = tab.zone !== "today";
+          details.index = sessionState()
+            .tabs.filter((entry) => entry.spaceId === tab.spaceId)
+            .findIndex((entry) => entry.id === id);
+          details.active = sessionState().activeId === id;
+        }
+      },
+      moveTabs: async (_profile, contents, details) => {
+        for (const [offset, page] of contents.entries()) {
+          const id = tabIdForContents(page);
+          const tab = sessionState().tabs.find((tab) => tab.id === id);
+          if (tab)
+            dispatch({
+              type: "move-tab",
+              id,
+              zone: tab.zone,
+              folderId: tab.folderId,
+              index: Math.max(0, details.index + offset),
+            });
+        }
+      },
+    },
+  });
   webStore = createWebStore({
     ipcMain,
     manager: extensions,

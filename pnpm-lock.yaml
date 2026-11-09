@@ -12,6 +12,9 @@ importers:
 
   .:
     dependencies:
+      electron-chrome-extensions:
+        specifier: 4.10.0
+        version: 4.10.0
       electron-chrome-web-store:
         specifier: 0.13.0
         version: 0.13.0
@@ -1041,6 +1044,9 @@ packages:
     resolution: {integrity: sha512-ASgIuQnOq4RuD8jMhS9hI0LS3EMRT1I/M5R6utqifB/BHN80IcCjBdt+DED+NmNPvmBgEtrlExXZitNdA7kXOg==}
     engines: {node: '>=14.0.0'}
     hasBin: true
+
+  electron-chrome-extensions@4.10.0:
+    resolution: {integrity: sha512-yGOGqDN38Xn8hP1jGSWUNoQJSmgZvDltZn8ZVFo8GcQQD1DI4NtA/Fv/BzYzUhpevX8C+4aZI3LC/lqzN+/RFQ==}
 
   electron-chrome-web-store@0.13.0:
     resolution: {integrity: sha512-2haYZKPo+Hnkcffxae1QxTu9usYDz0KGl1vUlgTSLYgfuILPVymMoGKDk4RUFG0CJLVS40VLnY+FifT7UxUJFw==}
@@ -2996,6 +3002,12 @@ snapshots:
       yargs: 17.7.3
     transitivePeerDependencies:
       - electron-builder-squirrel-windows
+      - supports-color
+
+  electron-chrome-extensions@4.10.0:
+    dependencies:
+      debug: 4.4.3
+    transitivePeerDependencies:
       - supports-color
 
   electron-chrome-web-store@0.13.0:

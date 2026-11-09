@@ -73,6 +73,28 @@ function createExtensionManager(file, getSession) {
     return result;
   };
   const api = (profile) => getSession(profile).extensions;
+  async function nativeLoad(profile, directory) {
+    const native = api(profile);
+    // Loading and initialization are separate Electron events. Wait until the
+    // browser state is ready before restoring/reloading pages with this extension.
+    const readyIds = new Set();
+    let finish;
+    const ready = new Promise((resolve) => (finish = resolve));
+    let expected;
+    const listener = (_event, extension) => {
+      readyIds.add(extension.id);
+      if (extension.id === expected) finish();
+    };
+    native.on?.("extension-ready", listener);
+    try {
+      const extension = await native.loadExtension(directory, { allowFileAccess: false });
+      expected = extension.id;
+      if (native.on && !readyIds.has(expected)) await ready;
+      return extension;
+    } finally {
+      native.off?.("extension-ready", listener);
+    }
+  }
   async function unload(profile, id) {
     api(profile).removeExtension(id);
     // Wait for the old worker registration to be removed before loading again.
@@ -88,9 +110,7 @@ function createExtensionManager(file, getSession) {
   };
   async function load(record) {
     try {
-      const extension = await api(record.profile).loadExtension(record.path, {
-        allowFileAccess: false,
-      });
+      const extension = await nativeLoad(record.profile, record.path);
       if (extension.id !== record.id) {
         await unload(record.profile, extension.id);
         throw new Error("The extension ID changed. Remove it and load the folder again.");
@@ -106,7 +126,7 @@ function createExtensionManager(file, getSession) {
     directory = await fs.promises.realpath(directory);
     if (records.some((r) => r.profile === profile && r.path === directory))
       throw new Error("This extension is already installed in this space.");
-    const extension = await api(profile).loadExtension(directory, { allowFileAccess: false });
+    const extension = await nativeLoad(profile, directory);
     if (expectedId && extension.id !== expectedId) {
       await unload(profile, extension.id);
       throw new Error("The downloaded extension ID does not match the store listing.");

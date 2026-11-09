@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 import { createExtensionManager, extensionResource } from "../electron/extensions.cjs";
 
 const directories: string[] = [];
@@ -48,6 +49,26 @@ function fixture() {
 }
 
 describe("extension profiles", () => {
+  it("does not finish installation before Electron initializes extension browser state", async () => {
+    const f = fixture();
+    const session = f.getSession("browsing");
+    const native = session.extensions;
+    const events = Object.assign(new EventEmitter(), native);
+    let ready: (() => void) | undefined;
+    events.loadExtension = async (folder, options) => {
+      const extension = await native.loadExtension(folder, options);
+      ready = () => events.emit("extension-ready", {}, extension);
+      return extension;
+    };
+    const manager = createExtensionManager(f.file, () => ({ ...session, extensions: events }));
+    const installing = manager.install("browsing", f.folder);
+    await expect.poll(() => typeof ready).toBe("function");
+    expect(manager.list("browsing")).toEqual([]);
+    ready!();
+    await installing;
+    expect(manager.list("browsing")[0].loaded).toBe(true);
+    expect(events.listenerCount("extension-ready")).toBe(0);
+  });
   it("registers store downloads with the expected ID and restores them in their space", async () => {
     const f = fixture();
     const manager = f.manager();

@@ -18,6 +18,7 @@
     "test:e2e": "pnpm build && playwright test"
   },
   "dependencies": {
+    "electron-chrome-extensions": "4.10.0",
     "electron-chrome-web-store": "0.13.0",
     "tldts": "^7.4.19"
   },
