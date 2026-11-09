@@ -6,6 +6,18 @@ import { createServer } from "node:http";
 import { spawn, execFile } from "node:child_process";
 import { promisify } from "node:util";
 
+async function stopChild(child) {
+  if (!child || child.exitCode !== null || child.signalCode !== null) return;
+  await new Promise((resolve) => {
+    const timer = setTimeout(() => child.kill("SIGKILL"), 2000);
+    child.once("exit", () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    child.kill();
+  });
+}
+
 // Live integration: requires the browse CLI and a store-installed browse extension.
 // All relay, browser, pairing, and agent session data lives in temporary folders.
 test("Browse pairs, clicks a real page through its CLI, and cleans up its tab", async () => {
@@ -145,8 +157,8 @@ test("Browse pairs, clicks a real page through its CLI, and cleans up its tab", 
       .toBe(0);
   } finally {
     await app?.close();
-    pair?.kill();
-    relay.kill();
+    await stopChild(pair);
+    await stopChild(relay);
     await new Promise((r) => fixture.close(r));
     await rm(root, { recursive: true, force: true });
   }

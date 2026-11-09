@@ -23,6 +23,7 @@ const { createWebStore } = require("./web-store.cjs");
 const { downloadExtension } = require("electron-chrome-web-store");
 const { createTabStore } = require("./tab-store.cjs");
 const { readLimited } = require("./read-limited.cjs");
+const { pageContextMenu } = require("./context-menu.cjs");
 const { installSitePermissions } = require("./permissions.cjs");
 const { askSystemAccess } = require("./system-access.cjs");
 const { durationMs } = require("../shared/settings.js");
@@ -1000,6 +1001,16 @@ function createPageView(id, profile) {
   // usable viewport for extension automation; visible tabs receive exact bounds.
   const [initialWidth, initialHeight] = window.getContentSize();
   view.setBounds({ x: 0, y: 0, width: initialWidth, height: initialHeight });
+  contents.on("context-menu", (_event, params) => {
+    const host = viewHosts.get(id);
+    if (!host || host.isDestroyed()) return;
+    Menu.buildFromTemplate(
+      pageContextMenu(contents, params, {
+        copyText: (text) => clipboard.writeText(text),
+        openTab: (url) => newTab(url, tab()?.spaceId),
+      }),
+    ).popup({ window: host });
+  });
   const tab = () => pageTabs(sessionState()).find((entry) => entry.id === id);
   // The link under the pointer, so a click on it can open in a peek.
   let hovered = "";
