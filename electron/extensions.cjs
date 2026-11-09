@@ -75,24 +75,56 @@ function createExtensionManager(file, getSession) {
   const api = (profile) => getSession(profile).extensions;
   async function nativeLoad(profile, directory) {
     const native = api(profile);
+    const workers = getSession(profile).serviceWorkers;
     // Loading and initialization are separate Electron events. Wait until the
     // browser state is ready before restoring/reloading pages with this extension.
     const readyIds = new Set();
     let finish;
     const ready = new Promise((resolve) => (finish = resolve));
     let expected;
+    let expectedScope;
+    let finishRegistration;
+    let registrationTimer;
+    const registeredScopes = new Set();
+    const registration = new Promise((resolve) => (finishRegistration = resolve));
+    const registered = (_event, details) => {
+      registeredScopes.add(details.scope);
+      if (details.scope === expectedScope) finishRegistration();
+    };
     const listener = (_event, extension) => {
       readyIds.add(extension.id);
       if (extension.id === expected) finish();
     };
     native.on?.("extension-ready", listener);
+    workers?.on("registration-completed", registered);
     try {
       const extension = await native.loadExtension(directory, { allowFileAccess: false });
       expected = extension.id;
       if (native.on && !readyIds.has(expected)) await ready;
+      // extension-ready permits the worker to start; it does not wait for its
+      // registration. A quick subsequent unload can otherwise race that setup.
+      if (workers && extension.manifest?.background?.service_worker) {
+        expectedScope = `chrome-extension://${expected}/`;
+        if (!registeredScopes.has(expectedScope))
+          await Promise.race([
+            registration,
+            new Promise((_resolve, reject) => {
+              registrationTimer = setTimeout(
+                () => reject(new Error("The extension's background worker did not register.")),
+                10_000,
+              );
+            }),
+          ]);
+        await workers.startWorkerForScope(expectedScope);
+      }
       return extension;
+    } catch (error) {
+      if (expected) await unload(profile, expected);
+      throw error;
     } finally {
+      clearTimeout(registrationTimer);
       native.off?.("extension-ready", listener);
+      workers?.off("registration-completed", registered);
     }
   }
   async function unload(profile, id) {
