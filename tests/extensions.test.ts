@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from "vite-plus/test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { EventEmitter } from "node:events";
 import { createExtensionManager, extensionResource } from "../electron/extensions.cjs";
 
 const directories: string[] = [];
@@ -48,6 +49,130 @@ function fixture() {
 }
 
 describe("extension profiles", () => {
+  it("unloads an install whose worker cannot start", async () => {
+    const f = fixture();
+    const session = f.getSession("browsing");
+    const native = session.extensions;
+    const workers = Object.assign(new EventEmitter(), {
+      startWorkerForScope: async () => {
+        throw new Error("Worker failed to start");
+      },
+    });
+    const manager = createExtensionManager(f.file, () => ({
+      ...session,
+      serviceWorkers: workers,
+      extensions: {
+        ...native,
+        loadExtension: async (folder: string, options: { allowFileAccess: boolean }) => {
+          const extension = await native.loadExtension(folder, options);
+          workers.emit("registration-completed", {}, { scope: `chrome-extension://${id}/` });
+          return {
+            ...extension,
+            manifest: { ...extension.manifest, background: { service_worker: "background.js" } },
+          };
+        },
+      },
+    }));
+    await expect(manager.install("browsing", f.folder)).rejects.toThrow("Worker failed to start");
+    expect(manager.list("browsing")).toEqual([]);
+    expect(native.getExtension(id)).toBeNull();
+    expect(workers.listenerCount("registration-completed")).toBe(0);
+  });
+  it("waits for worker registration and startup before completing an install", async () => {
+    const f = fixture();
+    const session = f.getSession("browsing");
+    const native = session.extensions;
+    let loaded = false;
+    let started = false;
+    let finishStartup: () => void = () => {};
+    const workers = Object.assign(new EventEmitter(), {
+      startWorkerForScope: async (scope: string) => {
+        expect(scope).toBe(`chrome-extension://${id}/`);
+        started = true;
+        await new Promise<void>((resolve) => {
+          finishStartup = resolve;
+        });
+      },
+    });
+    const manager = createExtensionManager(f.file, () => ({
+      ...session,
+      serviceWorkers: workers,
+      extensions: {
+        ...native,
+        loadExtension: async (folder: string, options: { allowFileAccess: boolean }) => {
+          const extension = await native.loadExtension(folder, options);
+          loaded = true;
+          return {
+            ...extension,
+            manifest: { ...extension.manifest, background: { service_worker: "background.js" } },
+          };
+        },
+      },
+    }));
+    const installing = manager.install("browsing", f.folder);
+    await expect.poll(() => loaded).toBe(true);
+    expect(started).toBe(false);
+    expect(manager.list("browsing")).toEqual([]);
+    workers.emit("registration-completed", {}, { scope: `chrome-extension://${id}/` });
+    await expect.poll(() => started).toBe(true);
+    expect(manager.list("browsing")).toEqual([]);
+    finishStartup();
+    await installing;
+    expect(manager.list("browsing")[0].loaded).toBe(true);
+    expect(workers.listenerCount("registration-completed")).toBe(0);
+  });
+  it("does not finish installation before Electron initializes extension browser state", async () => {
+    const f = fixture();
+    const session = f.getSession("browsing");
+    const native = session.extensions;
+    const events = Object.assign(new EventEmitter(), native);
+    let ready: (() => void) | undefined;
+    events.loadExtension = async (folder, options) => {
+      const extension = await native.loadExtension(folder, options);
+      ready = () => events.emit("extension-ready", {}, extension);
+      return extension;
+    };
+    const manager = createExtensionManager(f.file, () => ({ ...session, extensions: events }));
+    const installing = manager.install("browsing", f.folder);
+    await expect.poll(() => typeof ready).toBe("function");
+    expect(manager.list("browsing")).toEqual([]);
+    ready!();
+    await installing;
+    expect(manager.list("browsing")[0].loaded).toBe(true);
+    expect(events.listenerCount("extension-ready")).toBe(0);
+  });
+  it("registers store downloads with the expected ID and restores them in their space", async () => {
+    const f = fixture();
+    const manager = f.manager();
+    await manager.installFromStore("browsing", id, async () => f.folder);
+    expect(manager.list("browsing")[0]).toMatchObject({ id, enabled: true, loaded: true });
+    await expect(
+      manager.installFromStore("browsing", id, async () => {
+        throw new Error("must not download twice");
+      }),
+    ).rejects.toThrow("already installed");
+    await expect(
+      manager.installFromStore(otherProfile, otherId, async () => f.folder),
+    ).rejects.toThrow("ID");
+    expect(manager.list(otherProfile)).toEqual([]);
+    expect(f.getSession(otherProfile).extensions.getExtension(id)).toBeNull();
+    f.sessions.clear();
+    const restored = f.manager();
+    await restored.restore(["browsing", otherProfile]);
+    expect(restored.list("browsing")[0]).toMatchObject({ id, loaded: true });
+    expect(restored.list(otherProfile)).toEqual([]);
+  });
+
+  it("does not register cancelled downloads or accept invalid store IDs", async () => {
+    const f = fixture();
+    const manager = f.manager();
+    expect(await manager.installFromStore("browsing", id, async () => null)).toBe(false);
+    await expect(
+      manager.installFromStore("browsing", "../bad", async () => f.folder),
+    ).rejects.toThrow("ID");
+    expect(manager.list("browsing")).toEqual([]);
+  });
+
   it("keeps installations and resources scoped to their space, including removal", async () => {
     const f = fixture();
     const manager = f.manager();

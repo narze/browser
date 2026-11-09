@@ -73,6 +73,60 @@ function createExtensionManager(file, getSession) {
     return result;
   };
   const api = (profile) => getSession(profile).extensions;
+  async function nativeLoad(profile, directory) {
+    const native = api(profile);
+    const workers = getSession(profile).serviceWorkers;
+    // Loading and initialization are separate Electron events. Wait until the
+    // browser state is ready before restoring/reloading pages with this extension.
+    const readyIds = new Set();
+    let finish;
+    const ready = new Promise((resolve) => (finish = resolve));
+    let expected;
+    let expectedScope;
+    let finishRegistration;
+    let registrationTimer;
+    const registeredScopes = new Set();
+    const registration = new Promise((resolve) => (finishRegistration = resolve));
+    const registered = (_event, details) => {
+      registeredScopes.add(details.scope);
+      if (details.scope === expectedScope) finishRegistration();
+    };
+    const listener = (_event, extension) => {
+      readyIds.add(extension.id);
+      if (extension.id === expected) finish();
+    };
+    native.on?.("extension-ready", listener);
+    workers?.on("registration-completed", registered);
+    try {
+      const extension = await native.loadExtension(directory, { allowFileAccess: false });
+      expected = extension.id;
+      if (native.on && !readyIds.has(expected)) await ready;
+      // extension-ready permits the worker to start; it does not wait for its
+      // registration. A quick subsequent unload can otherwise race that setup.
+      if (workers && extension.manifest?.background?.service_worker) {
+        expectedScope = `chrome-extension://${expected}/`;
+        if (!registeredScopes.has(expectedScope))
+          await Promise.race([
+            registration,
+            new Promise((_resolve, reject) => {
+              registrationTimer = setTimeout(
+                () => reject(new Error("The extension's background worker did not register.")),
+                10_000,
+              );
+            }),
+          ]);
+        await workers.startWorkerForScope(expectedScope);
+      }
+      return extension;
+    } catch (error) {
+      if (expected) await unload(profile, expected);
+      throw error;
+    } finally {
+      clearTimeout(registrationTimer);
+      native.off?.("extension-ready", listener);
+      workers?.off("registration-completed", registered);
+    }
+  }
   async function unload(profile, id) {
     api(profile).removeExtension(id);
     // Wait for the old worker registration to be removed before loading again.
@@ -88,9 +142,7 @@ function createExtensionManager(file, getSession) {
   };
   async function load(record) {
     try {
-      const extension = await api(record.profile).loadExtension(record.path, {
-        allowFileAccess: false,
-      });
+      const extension = await nativeLoad(record.profile, record.path);
       if (extension.id !== record.id) {
         await unload(record.profile, extension.id);
         throw new Error("The extension ID changed. Remove it and load the folder again.");
@@ -99,6 +151,38 @@ function createExtensionManager(file, getSession) {
       return extension;
     } catch (error) {
       errors.set(key(record.profile, record.id), error.message);
+      throw error;
+    }
+  }
+  async function install(profile, directory, expectedId) {
+    directory = await fs.promises.realpath(directory);
+    if (records.some((r) => r.profile === profile && r.path === directory))
+      throw new Error("This extension is already installed in this space.");
+    const extension = await nativeLoad(profile, directory);
+    if (expectedId && extension.id !== expectedId) {
+      await unload(profile, extension.id);
+      throw new Error("The downloaded extension ID does not match the store listing.");
+    }
+    const duplicate = records.find((r) => r.profile === profile && r.id === extension.id);
+    if (duplicate) {
+      await unload(profile, extension.id);
+      if (duplicate.enabled) await load(duplicate);
+      throw new Error("This extension is already installed in this space.");
+    }
+    try {
+      save([
+        ...records,
+        {
+          profile,
+          id: extension.id,
+          path: directory,
+          enabled: true,
+          name: extension.name,
+          version: extension.version,
+        },
+      ]);
+    } catch (error) {
+      await unload(profile, extension.id);
       throw error;
     }
   }
@@ -142,33 +226,18 @@ function createExtensionManager(file, getSession) {
         });
     },
     install(profile, directory) {
+      return run(() => install(profile, directory));
+    },
+    installFromStore(profile, id, downloadAndConfirm) {
       return run(async () => {
-        directory = await fs.promises.realpath(directory);
-        if (records.some((r) => r.profile === profile && r.path === directory))
+        if (typeof id !== "string" || !/^[a-p]{32}$/.test(id))
+          throw new Error("Invalid extension ID.");
+        if (records.some((r) => r.profile === profile && r.id === id))
           throw new Error("This extension is already installed in this space.");
-        const extension = await api(profile).loadExtension(directory, { allowFileAccess: false });
-        const duplicate = records.find((r) => r.profile === profile && r.id === extension.id);
-        if (duplicate) {
-          await unload(profile, extension.id);
-          if (duplicate.enabled) await load(duplicate);
-          throw new Error("This extension is already installed in this space.");
-        }
-        try {
-          save([
-            ...records,
-            {
-              profile,
-              id: extension.id,
-              path: directory,
-              enabled: true,
-              name: extension.name,
-              version: extension.version,
-            },
-          ]);
-        } catch (error) {
-          await unload(profile, extension.id);
-          throw error;
-        }
+        const directory = await downloadAndConfirm();
+        if (!directory) return false;
+        await install(profile, directory, id);
+        return true;
       });
     },
     setEnabled(profile, id, enabled) {

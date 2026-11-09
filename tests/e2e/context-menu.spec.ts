@@ -10,7 +10,7 @@ test("website right clicks show native menus and act on the clicked page", async
     response.end(`<title>Context menu fixture</title>
       <p id="plain">Page text</p><a id="link" href="/next">Next page</a>
       <input id="edit" value="Editable text">
-      <img id="image" alt="Test image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3XcAAAAASUVORK5CYII=">
+      <img id="image" alt="Test image" style="width:32px;height:32px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a3XcAAAAASUVORK5CYII=">
       <p id="custom" oncontextmenu="event.preventDefault(); this.textContent = 'Custom menu'">Custom</p>`);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -29,18 +29,17 @@ test("website right clicks show native menus and act on the clicked page", async
     await chrome.getByRole("textbox", { name: "Search or enter address" }).fill(origin);
     await chrome.getByRole("textbox", { name: "Search or enter address" }).press("Enter");
     await expect(chrome.getByRole("tab", { name: "Context menu fixture" })).toBeVisible();
-    // Observe real native menu popups, keeping the Menu for invoking its actions.
+    // Capture popup requests on real Menu instances. Opening an OS menu can
+    // block sendInputEvent in a background app before the test can dismiss it.
     await app.evaluate(({ Menu, webContents }) => {
       for (const page of webContents.getAllWebContents()) {
         page.on("context-menu", () => {
           (globalThis as any).rightClickReceived = true;
         });
       }
-      const popup = Menu.prototype.popup;
       Menu.prototype.popup = function (options) {
         (globalThis as any).contextMenu = this;
         (globalThis as any).contextHost = options?.window?.id;
-        popup.call(this, options);
       };
     });
     const rightClick = async (selector: string, url = origin + "/") => {
