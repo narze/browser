@@ -152,6 +152,15 @@ test("palette overlays live split pages, navigates, switches tabs, and runs comm
     await expect(chrome.getByRole("tab", { name: "Library /three" })).toBeVisible();
     await expect(chrome.getByRole("tab")).toHaveCount(3);
     await chrome.getByRole("button", { name: "Command palette", exact: true }).click();
+    await expect(palette.locator(".palette-footer")).toContainText(
+      process.platform === "darwin" ? "⌘ ↵ Open in new tab" : "Ctrl ↵ Open in new tab",
+    );
+    await input.fill(`${origin}/four`);
+    await input.press("ControlOrMeta+Enter");
+    await expect(chrome.getByRole("tab", { name: "Library /four" })).toBeVisible();
+    await expect(chrome.getByRole("tab", { name: "Library /three" })).toBeVisible();
+    await expect(chrome.getByRole("tab")).toHaveCount(4);
+    await chrome.getByRole("button", { name: "Command palette", exact: true }).click();
     await input.fill("> settings");
     await input.press("Enter");
     await expect(chrome.getByRole("heading", { name: "Settings", exact: true })).toBeVisible();

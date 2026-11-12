@@ -6,7 +6,7 @@ A centered palette floats above the browser, including live pages and split view
 
 - `palette-open` opens from the toolbar button, Cmd/Ctrl+K (commands), or Cmd/Ctrl+L (address, current URL preselected), including while a web page has focus.
 - `palette-tab-switch` finds an open tab by title or URL and switches to it.
-- `palette-navigate` loads an address in the current tab with Enter, or in a new tab with Shift+Enter.
+- `palette-navigate` loads an address in the current tab with Enter, or in a new tab with Cmd/Ctrl+Enter or Shift+Enter.
 - `palette-commands` filters commands with `>` (new tab, settings, split, close tab, reload, back/forward, themes, tab placement).
 - `palette-reject` refuses non-HTTP(S) input with an alert.
 - `palette-dismiss` closes with Escape and returns focus.
