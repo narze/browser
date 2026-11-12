@@ -15,6 +15,8 @@
   let requestId = 0;
   let results = $derived(browserState ? paletteResults(query, browserState) : []);
   let selection = $derived(Math.min(selected, Math.max(0, results.length - 1)));
+  const mac = $derived(browserState?.platform === 'darwin');
+  const opensNewTab = (event: KeyboardEvent | MouseEvent) => event.shiftKey || event.metaKey || event.ctrlKey;
 
   async function update(next: BrowserState) {
     browserState = next;
@@ -61,7 +63,7 @@
       document.getElementById(`result-${results[selected]?.id}`)?.scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'Enter') {
       event.preventDefault();
-      await execute(results[selection], event.shiftKey);
+      await execute(results[selection], opensNewTab(event));
     }
   }
 </script>
@@ -83,7 +85,7 @@
       <button type="button" id={`result-${result.id}`} class="palette-result" class:highlighted={selection === index}
         role="option" aria-selected={selection === index} tabindex="-1" disabled={busy}
         onpointermove={() => selected = index} onmousedown={(event) => event.preventDefault()}
-        onclick={(event) => execute(result, event.shiftKey)}>
+        onclick={(event) => execute(result, opensNewTab(event))}>
         <span class="palette-result-icon"><Icon name={result.icon} size={19} /></span>
         <span class="palette-result-copy"><strong>{result.title}</strong><small>{result.detail}</small></span>
         <span class="palette-result-hint">{result.hint}</span>
@@ -91,5 +93,5 @@
     {/each}
   </div>
   {#if !results.length}<p class="palette-empty">{query.trim().startsWith('>') ? 'No matching commands.' : 'Search for a page or type > to browse commands.'}</p>{/if}
-  <footer class="palette-footer"><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Select</span><span><kbd>⇧ ↵</kbd> Open in new tab</span><span class="palette-footer-tip">Type <kbd>></kbd> for commands</span></footer>
+  <footer class="palette-footer"><span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span><span><kbd>↵</kbd> Select</span><span><kbd>{mac ? '⌘' : 'Ctrl'} ↵</kbd> Open in new tab</span><span class="palette-footer-tip">Type <kbd>></kbd> for commands</span></footer>
 </dialog>
